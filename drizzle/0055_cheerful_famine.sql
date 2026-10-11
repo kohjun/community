@@ -1,0 +1,2 @@
+ALTER TABLE "sliper"."library_entries" ADD COLUMN "event_plan" jsonb;--> statement-breakpoint
+ALTER TABLE "sliper"."library_entries" ADD CONSTRAINT "library_event_plan" CHECK ("sliper"."library_entries"."event_plan" is null or (jsonb_typeof("sliper"."library_entries"."event_plan") = 'object' and octet_length("sliper"."library_entries"."event_plan"::text) <= 150000));

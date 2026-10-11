@@ -1,0 +1,1 @@
+CREATE INDEX "event_reminder_schedule_idx" ON "sliper"."event_settings" USING btree ("starts_at","post_id") WHERE "sliper"."event_settings"."starts_at" is not null;

@@ -1,0 +1,2 @@
+ALTER TABLE "sliper"."posts" ADD COLUMN "application_url" varchar(2048);--> statement-breakpoint
+ALTER TABLE "sliper"."posts" ADD CONSTRAINT "posts_application_url" CHECK ("sliper"."posts"."application_url" is null or ("sliper"."posts"."kind" = '모집' and "sliper"."posts"."application_url" ~ '^https?://[^[:space:]]+$'));

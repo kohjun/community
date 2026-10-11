@@ -1,0 +1,1254 @@
+.lightning-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 24px 0 30px;
+}
+.lightning-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0964bd;
+  font-size: 13px;
+  font-weight: 700;
+}
+.lightning-hero h1 {
+  margin: 12px 0 10px;
+  font-size: clamp(27px, 3vw, 38px);
+  letter-spacing: -1.1px;
+  color: #17191d;
+}
+.lightning-hero p {
+  margin: 0;
+  color: #626873;
+  line-height: 1.7;
+}
+.lightning-intro {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  padding: 20px 24px;
+  border: 1px solid #e5e9ef;
+  border-radius: 16px;
+  background: #fff;
+  color: #626873;
+  font-size: 13px;
+}
+.lightning-intro span,
+.lightning-intro a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.lightning-intro a {
+  margin-left: auto;
+  color: #0964bd;
+  font-weight: 600;
+}
+.lightning-success {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 20px 24px;
+  background: #edf7ff;
+  border: 1px solid #c9e6ff;
+  border-radius: 16px;
+  color: #145080;
+}
+.lightning-success > div {
+  flex: 1;
+}
+.lightning-success p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.lightning-list-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 38px 0 16px;
+}
+.lightning-list-heading h2 {
+  margin: 0;
+  font-size: 21px;
+  letter-spacing: -0.5px;
+}
+.lightning-list-heading small {
+  margin-left: auto;
+  color: #787e88;
+  font-size: 12px;
+}
+.lightning-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.lightning-categories button {
+  padding: 9px 16px;
+  border: 1px solid #e5e9ef;
+  border-radius: 999px;
+  background: #fff;
+  color: #5b6470;
+  font-size: 13px;
+  cursor: pointer;
+}
+.lightning-categories button.active {
+  border-color: #cae5ff;
+  background: #edf7ff;
+  color: #0964bd;
+  font-weight: 700;
+}
+.lightning-categories button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+.lightning-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.lightning-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #e5e9ef;
+  border-radius: 16px;
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.lightning-card:hover {
+  border-color: #a9d1f5;
+  box-shadow: 0 8px 24px #12365d0a;
+}
+.lightning-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #0964bd;
+}
+.lightning-card-top span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 650;
+}
+.lightning-card h3 {
+  margin: 17px 0 10px;
+  font-size: 19px;
+  line-height: 1.45;
+  letter-spacing: -0.5px;
+  overflow-wrap: anywhere;
+}
+.lightning-excerpt {
+  margin: 0 0 22px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #707782;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.lightning-card-meta {
+  margin-top: auto;
+  display: grid;
+  gap: 8px;
+  color: #626873;
+  font-size: 12px;
+}
+.lightning-card-meta span {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.lightning-card-meta svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+.lightning-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 17px;
+  border-top: 1px solid #f0f2f5;
+  font-size: 12px;
+  color: #737b87;
+}
+.lightning-empty {
+  margin-top: 4px;
+}
+.lightning-more {
+  display: flex;
+  margin: 24px auto 0;
+}
+/* The dialog is portalled outside the page: keep its form styles self-contained. */
+.dialog-content.lightning-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, calc(100vw - 48px));
+  max-width: 720px;
+  height: min(880px, calc(100dvh - 48px));
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #e6eaf0;
+  border-radius: 24px;
+  background: #fff;
+  color: #20242c;
+  box-shadow:
+    0 32px 96px #1523332e,
+    0 4px 16px #1523330a;
+}
+.lightning-dialog .dialog-close {
+  top: 24px;
+  right: 24px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: #f5f6f8;
+  color: #6a717d;
+}
+.lightning-dialog .dialog-close:hover {
+  background: #e9edf2;
+  color: #20242c;
+}
+.lightning-dialog-heading {
+  flex: none;
+  padding: 28px 32px 22px;
+  border-bottom: 1px solid #edf0f4;
+}
+.lightning-dialog-intro {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-right: 36px;
+}
+.lightning-dialog-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border: 1px solid #dcecff;
+  border-radius: 16px;
+  background: #edf6ff;
+  color: #0a84fe;
+}
+.lightning-dialog-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  color: #647283;
+}
+.lightning-dialog-heading h2 {
+  margin: 3px 0 0;
+  outline: none;
+  font-size: 26px;
+  font-weight: 750;
+  line-height: 1.4;
+  letter-spacing: -0.9px;
+}
+.lightning-dialog-heading > p {
+  margin: 15px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #647283;
+}
+.lightning-dialog-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 14px;
+}
+.lightning-dialog-badges > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: #f5f7fa;
+  color: #647283;
+  font-size: 11px;
+  font-weight: 550;
+}
+.lightning-dialog-badges > span:first-child {
+  background: #edf6ff;
+  color: #0964bd;
+}
+.lightning-form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+}
+.lightning-form-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #d8dfe8 transparent;
+  scroll-padding-block: 24px;
+  padding: 26px 32px 30px;
+}
+.lightning-form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.lightning-form-fields {
+  display: grid;
+  gap: 26px;
+}
+.lightning-form-section {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.lightning-form-section + .lightning-form-section {
+  padding-top: 24px;
+  border-top: 1px solid #edf0f4;
+}
+.lightning-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 1px;
+}
+.lightning-section-number {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: #edf6ff;
+  color: #0964bd;
+  font-size: 11px;
+  font-weight: 700;
+}
+.lightning-section-heading h3 {
+  margin: 0;
+  color: #272c34;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: -0.3px;
+}
+.lightning-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  color: #434b56;
+  font-size: 13px;
+  font-weight: 600;
+}
+.lightning-field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.lightning-field-heading > svg {
+  color: #929ba8;
+}
+.lightning-required {
+  margin-left: 2px;
+  color: #0a84fe;
+}
+.lightning-form small {
+  color: #647283;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.lightning-character-count {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.lightning-dialog input:not([type="radio"]),
+.lightning-dialog select,
+.lightning-dialog textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid #dfe4eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #252b35;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.lightning-dialog input::placeholder,
+.lightning-dialog textarea::placeholder {
+  color: #a1a8b2;
+}
+.lightning-dialog input:not([type="radio"]):focus,
+.lightning-dialog select:focus,
+.lightning-dialog textarea:focus {
+  border-color: #0a84fe;
+  box-shadow: 0 0 0 3px #0a84fe14;
+}
+.lightning-dialog textarea {
+  min-height: 94px;
+  resize: vertical;
+}
+.lightning-dialog select {
+  padding-right: 34px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237f8997' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.lightning-dialog button {
+  cursor: pointer;
+}
+.lightning-dialog button:focus-visible {
+  outline: 2px solid #0a84fe;
+  outline-offset: 3px;
+}
+.lightning-dialog button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.lightning-dialog input:disabled,
+.lightning-dialog select:disabled,
+.lightning-dialog textarea:disabled {
+  background-color: #f5f7fa;
+  opacity: 0.7;
+}
+.lightning-topic-field legend {
+  margin-bottom: 9px;
+  color: #434b56;
+  font-size: 13px;
+  font-weight: 600;
+}
+.lightning-topic-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.lightning-topic-option {
+  position: relative;
+  display: inline-flex;
+  margin: 0;
+  cursor: pointer;
+}
+.lightning-topic-option input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.lightning-topic-option > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid #e2e7ed;
+  border-radius: 10px;
+  background: #fff;
+  color: #647283;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.lightning-topic-option:hover > span {
+  background: #f7f9fc;
+}
+.lightning-topic-option input:checked + span {
+  border-color: #0a84fe;
+  background: #edf6ff;
+  color: #0964bd;
+  font-weight: 650;
+}
+.lightning-topic-option input:focus-visible + span {
+  outline: 2px solid #0a84fe;
+  outline-offset: 3px;
+}
+.lightning-topic-option input:disabled + span {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.lightning-form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+.lightning-schedule-row {
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+}
+.lightning-quick-time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: -6px;
+}
+.lightning-quick-time button {
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid #e7ebf0;
+  border-radius: 8px;
+  background: #f8f9fb;
+  color: #606b79;
+  font-size: 12px;
+  font-weight: 500;
+}
+.lightning-quick-time button:hover {
+  border-color: #c8dff7;
+  background: #edf6ff;
+  color: #0964bd;
+}
+.lightning-quick-time small {
+  margin-left: auto;
+}
+.lightning-capacity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.lightning-capacity-row label {
+  color: #434b56;
+  font-size: 13px;
+  font-weight: 600;
+}
+.lightning-capacity-row p {
+  margin: 4px 0 0;
+  color: #647283;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.lightning-capacity-control {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+}
+.lightning-capacity-control > button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e0e6ef;
+  border-radius: 9px;
+  background: #fff;
+  color: #596677;
+}
+.lightning-capacity-control > button:hover:not(:disabled) {
+  border-color: #a8d1fa;
+  color: #0a84fe;
+}
+.lightning-capacity-control > div {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #4d5663;
+  font-size: 13px;
+}
+.lightning-dialog .lightning-capacity-control input {
+  width: 36px;
+  min-height: 36px;
+  padding: 3px 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.lightning-capacity-control input::-webkit-inner-spin-button,
+.lightning-capacity-control input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+.lightning-venue-card {
+  padding: 16px;
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.lightning-venue-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.lightning-venue-heading > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #505d6e;
+  font-size: 12px;
+  font-weight: 600;
+}
+.lightning-venue-status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: #e9edf2;
+  color: #647283;
+  font-size: 10px;
+  font-weight: 500;
+}
+.lightning-venue-status.is-set {
+  background: #e9f4ff;
+  color: #0964bd;
+}
+.lightning-dialog .location-field-actions {
+  gap: 8px;
+}
+.lightning-dialog .location-field-actions > button:first-child,
+.lightning-dialog .location-manual-fields button {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #dfe5ed;
+  border-radius: 9px;
+  background: #fff;
+  color: #526276;
+  font-size: 12px;
+}
+.lightning-dialog .location-manual-toggle {
+  min-height: 40px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: #647283;
+  font-size: 12px;
+}
+.lightning-dialog .location-clear {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+.lightning-dialog .location-field-note {
+  margin: 12px 0 0;
+  color: #647283;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.lightning-dialog .location-selected {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.lightning-dialog .location-selected > span {
+  font-size: 11px;
+}
+.lightning-dialog .location-manual-fields {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-top: 15px;
+}
+.lightning-dialog .location-manual-fields label {
+  font-size: 12px;
+}
+.lightning-dialog .location-manual-fields small {
+  font-size: 11px;
+}
+.lightning-dialog .event-location-field .form-error {
+  color: #c34040;
+  font-size: 12px;
+}
+.lightning-dialog-footer {
+  flex: none;
+  padding: 18px 32px 22px;
+  border-top: 1px solid #e8edf3;
+  background: #fff;
+  box-shadow: 0 -5px 18px #172d4503;
+}
+.lightning-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.lightning-footer-note strong {
+  color: #647283;
+  font-size: 13px;
+  font-weight: 500;
+}
+.lightning-footer-note strong > span {
+  margin-left: 5px;
+  color: #212936;
+  font-size: 17px;
+  font-weight: 750;
+}
+.lightning-footer-note p {
+  margin: 5px 0 0;
+  color: #647283;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.lightning-footer-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+.lightning-cancel,
+.lightning-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 46px;
+  padding: 0 17px;
+  border: 1px solid #e2e7ee;
+  border-radius: 11px;
+  background: #fff;
+  color: #778190;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.lightning-cancel:hover {
+  background: #f6f8fb;
+}
+.lightning-submit {
+  min-width: 146px;
+  border-color: #0874dc;
+  background: #0874dc;
+  color: #fff;
+  box-shadow: 0 3px 8px #0a84fe1a;
+}
+.lightning-submit:hover:not(:disabled) {
+  border-color: #0667c4;
+  background: #0667c4;
+}
+.lightning-form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #f5dedd;
+  border-radius: 9px;
+  background: #fff6f5;
+  color: #bd4141;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.lightning-form-error svg {
+  flex: none;
+  margin-top: 2px;
+}
+.lightning-submit-spinner {
+  animation: lightning-spin 0.8s linear infinite;
+}
+@keyframes lightning-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 1000px) {
+  .lightning-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lightning-intro a {
+    margin-left: 0;
+  }
+}
+@media (max-width: 640px) {
+  .lightning-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+    padding-top: 10px;
+  }
+  .lightning-hero > button,
+  .lightning-hero > a {
+    width: 100%;
+    justify-content: center;
+  }
+  .lightning-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .lightning-intro {
+    padding: 18px;
+    gap: 13px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .lightning-success {
+    flex-wrap: wrap;
+    padding: 18px;
+    gap: 12px;
+  }
+  .lightning-success > div {
+    flex-basis: calc(100% - 36px);
+  }
+  .lightning-success a {
+    flex: 1;
+    justify-content: center;
+  }
+  .lightning-categories {
+    gap: 7px;
+  }
+  .lightning-categories button {
+    padding: 8px 13px;
+  }
+}
+@media (max-width: 720px) {
+  .dialog-content.lightning-dialog {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    height: min(880px, calc(100dvh - 18px));
+    max-height: calc(100dvh - 18px);
+    border-bottom: 0;
+    border-radius: 24px 24px 0 0;
+  }
+  .lightning-dialog-heading {
+    padding: 24px 22px 18px;
+  }
+  .lightning-dialog .dialog-close {
+    top: 24px;
+    right: 20px;
+  }
+  .lightning-dialog-heading h2 {
+    font-size: 23px;
+  }
+  .lightning-dialog-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+  }
+  .lightning-dialog-intro {
+    gap: 11px;
+  }
+  .lightning-dialog-heading > p {
+    margin-top: 13px;
+    font-size: 12px;
+  }
+  .lightning-form-body {
+    padding: 22px 22px 26px;
+  }
+  .lightning-dialog input:not([type="radio"]),
+  .lightning-dialog select,
+  .lightning-dialog textarea {
+    font-size: 16px;
+  }
+  .lightning-dialog-footer {
+    padding: 16px 22px max(18px, env(safe-area-inset-bottom));
+  }
+  .lightning-footer-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .lightning-footer-note {
+    display: flex;
+    flex: 1 0 100%;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px 10px;
+  }
+  .lightning-footer-note p {
+    margin: 0;
+  }
+  .lightning-footer-actions {
+    width: 100%;
+  }
+  .lightning-submit {
+    flex: 1;
+    min-height: 48px;
+  }
+  .lightning-cancel {
+    min-width: 72px;
+    min-height: 48px;
+  }
+}
+@media (max-width: 480px) {
+  .lightning-dialog-heading h2 {
+    font-size: 21px;
+  }
+  .lightning-dialog-eyebrow {
+    font-size: 11px;
+  }
+  .lightning-schedule-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lightning-quick-time small {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+  .lightning-capacity-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .lightning-capacity-control {
+    margin-left: auto;
+  }
+  .lightning-dialog .location-manual-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .lightning-dialog .location-manual-fields button {
+    grid-column: 1 / -1;
+  }
+  .lightning-venue-card {
+    padding: 13px;
+  }
+}
+@media (max-height: 520px) {
+  .lightning-dialog-heading {
+    padding-top: 18px;
+    padding-bottom: 14px;
+  }
+  .lightning-dialog-heading > p,
+  .lightning-dialog-badges {
+    display: none;
+  }
+  .lightning-dialog-footer {
+    padding-top: 12px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .lightning-footer-note {
+    display: none;
+  }
+  .lightning-footer-actions {
+    margin-left: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lightning-card,
+  .lightning-dialog input,
+  .lightning-dialog select,
+  .lightning-dialog textarea,
+  .lightning-topic-option > span {
+    transition: none;
+  }
+  .lightning-submit-spinner {
+    animation: none;
+  }
+}
+
+.lightning-card-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+.lightning-map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 13px;
+  width: fit-content;
+  color: #0964bd;
+  font-size: 12px;
+  text-decoration: none;
+}
+.lightning-map-link:hover {
+  text-decoration: underline;
+}
+
+.lightning-map-preset {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0 0 15px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f0f7ff;
+  color: #63748b;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.lightning-map-preset > svg {
+  flex: none;
+  margin-top: 2px;
+  color: #0a84fe;
+}
+.lightning-map-preset > span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.lightning-map-preset strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #28629e;
+  font-size: 12px;
+}
+.lightning-map-preset a {
+  flex: none;
+  color: #086ed1;
+  font-size: 11px;
+  text-decoration: underline;
+}
+@media (max-width: 480px) {
+  .lightning-map-preset {
+    flex-wrap: wrap;
+  }
+}
+
+.lightning-discovery-panel {
+  margin-bottom: 24px;
+  padding: 22px;
+  border: 1px solid #e5e9ef;
+  border-radius: 16px;
+  background: #fff;
+}
+.lightning-browse-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 18px;
+}
+.lightning-browse-tags > span {
+  width: 100%;
+  margin-bottom: 3px;
+  color: #707b88;
+  font-size: 12px;
+}
+.lightning-browse-tags button,
+.lightning-tag-suggestions button,
+.lightning-selected-tags button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid #e5eaf0;
+  border-radius: 8px;
+  background: #f8f9fb;
+  color: #5a6575;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.lightning-browse-tags button.is-selected,
+.lightning-tag-suggestions button[aria-pressed="true"],
+.lightning-selected-tags button {
+  border-color: #c7e3ff;
+  background: #edf6ff;
+  color: #0964bd;
+}
+.lightning-browse-tags button:focus-visible,
+.lightning-tag-suggestions button:focus-visible,
+.lightning-selected-tags button:focus-visible,
+.lightning-active-filters button:focus-visible {
+  outline: 2px solid #0a84fe;
+  outline-offset: 3px;
+}
+.lightning-search-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 5px 6px 5px 13px;
+  border: 1px solid #dfe5ed;
+  border-radius: 10px;
+  color: #8692a3;
+}
+.lightning-search-form:focus-within {
+  border-color: #0a84fe;
+  box-shadow: 0 0 0 3px #0a84fe12;
+}
+.lightning-search-form > svg {
+  flex: none;
+}
+.lightning-search-form input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #303945;
+  font: inherit;
+  font-size: 13px;
+}
+.lightning-search-form input::placeholder {
+  color: #8d96a3;
+}
+.lightning-search-form button,
+.lightning-custom-tag button {
+  flex: none;
+  min-height: 38px;
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 7px;
+  background: #edf6ff;
+  color: #0964bd;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lightning-search-form button:disabled,
+.lightning-custom-tag button:disabled,
+.lightning-tag-suggestions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.lightning-active-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  color: #647283;
+  font-size: 12px;
+}
+.lightning-active-filters span {
+  overflow-wrap: anywhere;
+}
+.lightning-active-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  color: #0964bd;
+  font: inherit;
+  cursor: pointer;
+}
+.lightning-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: -10px 0 17px;
+}
+.lightning-card-tags span {
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: #f3f7fc;
+  color: #6b7c90;
+  font-size: 11px;
+}
+.lightning-activity-tags {
+  display: grid;
+  gap: 9px;
+  color: #434b56;
+  font-size: 13px;
+  font-weight: 600;
+}
+.lightning-activity-tags > p {
+  margin: 0;
+  color: #748192;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.lightning-tag-suggestions,
+.lightning-selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lightning-custom-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lightning-custom-tag button {
+  min-height: 46px;
+  padding-inline: 16px;
+}
+.lightning-activity-tags > p.lightning-tag-error {
+  color: #c43548;
+}
+.lightning-theme-details {
+  padding: 12px 14px;
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 12px;
+  color: #657487;
+}
+.lightning-theme-details summary {
+  cursor: pointer;
+}
+.lightning-theme-details[open] summary {
+  margin-bottom: 12px;
+}
+.lightning-theme-details .lightning-field {
+  font-size: 12px;
+}
+.lightning-empty .participation-secondary {
+  margin: 0 8px 8px 0;
+}
+@media (max-width: 640px) {
+  .lightning-discovery-panel {
+    padding: 16px 13px;
+  }
+  .lightning-browse-tags {
+    gap: 6px;
+  }
+  .lightning-browse-tags button,
+  .lightning-tag-suggestions button,
+  .lightning-selected-tags button {
+    min-height: 40px;
+  }
+  .lightning-search-form {
+    gap: 7px;
+    padding-left: 9px;
+  }
+  .lightning-search-form input {
+    font-size: 16px;
+  }
+  .lightning-search-form button {
+    padding-inline: 12px;
+  }
+  .lightning-custom-tag input {
+    font-size: 16px;
+  }
+}
+
+.lightning-discovery-panel .lightning-category-picker--browse {
+  margin: 0;
+}

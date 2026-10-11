@@ -1,0 +1,22 @@
+node_modules/
+.npm-cache/
+.env
+.env.*
+!.env.example
+.next/
+out/
+coverage/
+*.tsbuildinfo
+.DS_Store
+.local/
+
+# Private credentials and local tooling
+*.pem
+*.p12
+*.pfx
+*.key
+id_rsa
+id_ed25519
+credentials.json
+service-account*.json
+secrets/

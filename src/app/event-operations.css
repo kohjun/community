@@ -1,0 +1,406 @@
+.ops-page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 20px 0 48px;
+  color: #243346;
+}
+.ops-heading,
+.ops-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.ops-heading {
+  margin-bottom: 22px;
+}
+.ops-heading h1 {
+  font-size: 25px;
+  letter-spacing: -0.04em;
+  margin: 8px 0;
+}
+.ops-heading p {
+  font-size: 14px;
+  color: #677588;
+}
+.ops-eyebrow {
+  font-size: 11px;
+  color: #0879e9;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+}
+.ops-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.ops-summary > div {
+  padding: 16px 20px;
+  border: 1px solid #e5edf7;
+  background: #f5f9ff;
+  border-radius: 12px;
+}
+.ops-summary small {
+  color: #677b93;
+  display: block;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.ops-summary strong {
+  font-size: 26px;
+  color: #126bc5;
+}
+.ops-summary strong span {
+  font-size: 12px;
+  margin-left: 5px;
+  font-weight: 500;
+}
+.ops-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.ops-card {
+  padding: 22px;
+  min-width: 0;
+}
+.ops-card h2 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 17px;
+  margin-bottom: 12px;
+}
+.ops-card h3 {
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+.ops-note {
+  font-size: 12px;
+  color: #6c7c8f;
+  line-height: 1.7;
+  margin: 10px 0;
+}
+.ops-card label,
+.ops-code {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ops-card input,
+.ops-card textarea,
+.ops-card select,
+.ops-code input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #dce5ef;
+  border-radius: 9px;
+  font-size: 16px;
+  color: #25384e;
+  background: #fff;
+  box-sizing: border-box;
+}
+.ops-card textarea {
+  resize: vertical;
+}
+.ops-card fieldset {
+  border: 0;
+  display: grid;
+  gap: 14px;
+  padding: 0;
+  margin: 14px 0 0;
+  min-width: 0;
+}
+.ops-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.ops-manual {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #edf1f6;
+}
+.ops-manual button,
+.ops-payment-entry form button {
+  margin-top: 10px;
+}
+.ops-scanner video {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+  background: #16283b;
+  border-radius: 12px;
+}
+.ops-file {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  font-size: 13px !important;
+  display: inline-flex !important;
+  align-items: center;
+}
+.ops-file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.ops-candidate {
+  padding: 18px;
+  border-radius: 12px;
+  background: #f0f7ff;
+  border: 1px solid #d9eafb;
+  margin-top: 18px;
+}
+.ops-candidate h3 {
+  font-size: 22px;
+  margin: 10px 0;
+}
+.ops-candidate p,
+.ops-candidate small {
+  font-size: 13px;
+  color: #536982;
+  line-height: 1.7;
+}
+.ops-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0b72d8;
+  font-size: 13px;
+  padding: 10px 0;
+}
+.ops-search {
+  display: flex;
+  gap: 7px;
+  margin: 15px 0;
+}
+.ops-roster > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid #edf1f6;
+}
+.ops-roster strong {
+  display: block;
+  font-size: 13px;
+}
+.ops-roster small {
+  display: block;
+  font-size: 11px;
+  color: #7a8798;
+  margin-top: 5px;
+}
+.ops-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ebf5ff;
+  color: #1871c4;
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.ops-status.pending {
+  background: #f2f5f8;
+  color: #8290a0;
+}
+.ops-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  font-size: 13px;
+  margin-top: 18px;
+}
+.ops-payment-entry {
+  border-top: 1px solid #e5edf5;
+  margin-top: 18px;
+  padding: 22px 0 0;
+  overflow-wrap: anywhere;
+}
+.ops-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+.ops-tags span {
+  font-size: 12px;
+  color: #2976c1;
+  background: #f0f7ff;
+  padding: 6px 9px;
+  border-radius: 6px;
+}
+.ops-payment-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 15px 0;
+}
+.ops-payment-facts dt {
+  font-size: 11px;
+  color: #7d8a9b;
+  margin-bottom: 5px;
+}
+.ops-payment-facts dd {
+  font-size: 13px;
+  margin: 0;
+}
+.ops-review-note {
+  padding: 12px 14px;
+  background: #f5f8fc;
+  margin: 10px 0;
+  border-radius: 8px;
+}
+.ops-review-note small {
+  font-size: 11px;
+  color: #758496;
+}
+.ops-review-note p {
+  font-size: 13px;
+  white-space: pre-wrap;
+  margin: 8px 0 0;
+}
+.ops-empty {
+  padding: 35px 0;
+  color: #72859a;
+}
+.ops-empty h3 {
+  margin-top: 14px;
+}
+.ops-empty p {
+  font-size: 13px;
+}
+.ops-public-review {
+  border-top: 1px solid #e6edf5;
+  padding-top: 18px;
+  margin-top: 18px;
+}
+.ops-public-review h3 {
+  margin: 12px 0 8px;
+  color: #25384c;
+}
+.ops-public-review p {
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ops-public-review small {
+  font-size: 11px;
+  color: #7d8b9b;
+}
+.ops-review-form {
+  margin: 16px 0;
+  border: 1px solid #e2edf8;
+  background: #f8fbff;
+  border-radius: 10px;
+  padding: 15px;
+}
+.ops-review-form summary,
+.ops-code summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: #1476d5;
+}
+.admission-ticket-dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+.admission-ticket {
+  border: 1px solid #e0ebf7;
+  background: #f9fcff;
+  padding: 20px;
+  border-radius: 14px;
+  margin: 15px 0;
+  text-align: center;
+}
+.admission-ticket h3 {
+  font-size: 17px;
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.admission-ticket img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px auto;
+  border-radius: 10px;
+}
+.admission-ticket strong,
+.admission-ticket small {
+  display: block;
+  margin-top: 10px;
+}
+.admission-ticket small {
+  color: #77889b;
+  font-size: 11px;
+}
+.ops-code {
+  margin-top: 16px;
+}
+.ops-code input {
+  font-family: monospace;
+  font-size: 12px;
+  margin-top: 10px;
+}
+.verified-review-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0879e9;
+  background: #edf6ff;
+  border-radius: 5px;
+  padding: 4px 7px;
+  font-size: 11px;
+}
+.ops-page :focus-visible,
+.ops-card :focus-visible {
+  outline: 2px solid #0a84fe;
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .ops-columns {
+    grid-template-columns: 1fr;
+  }
+  .ops-card {
+    padding: 18px;
+  }
+  .ops-heading {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ops-heading h1 {
+    font-size: 21px;
+  }
+  .ops-summary {
+    gap: 7px;
+  }
+  .ops-summary > div {
+    padding: 13px 12px;
+  }
+  .ops-summary strong {
+    font-size: 23px;
+  }
+  .ops-page {
+    padding-top: 12px;
+  }
+  .ops-actions > * {
+    min-height: 44px;
+  }
+  .ops-payment-facts {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,13 @@
+/* Keep visited titles subdued in every list, including hover and keyboard focus. */
+.post-title-open .title-is-read,
+.post-title-open:hover .title-is-read,
+.post-title-open:focus-visible .title-is-read,
+.feature-info .title-is-read,
+.feature-open:hover .feature-info .title-is-read,
+.hot-copy .title-is-read,
+.hot-story-grid > a:hover .title-is-read,
+.lightning-card .title-is-read,
+.lightning-card-main:hover .title-is-read,
+.my-post-list > a > .title-is-read {
+  color: #6b7280;
+}

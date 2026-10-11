@@ -1,0 +1,3 @@
+#!/bin/sh
+# Inspect staged blobs, including content removed only from the working tree.
+exec node --import tsx scripts/check-secrets.ts --staged

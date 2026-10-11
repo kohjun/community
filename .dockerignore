@@ -1,0 +1,12 @@
+.git
+.next
+.local
+.npm-cache
+node_modules
+.env
+.env.*
+assets
+public
+docs
+tests
+*.log

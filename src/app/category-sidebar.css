@@ -1,0 +1,123 @@
+/* Home and stories share one category selection across responsive menus. */
+.community-category-sidebar {
+  display: none;
+}
+
+@media (min-width: 1001px) {
+  .site-header--community .header-inner {
+    max-width: 1360px;
+  }
+
+  .page-layout--categories {
+    max-width: 1360px;
+    grid-template-columns: 176px minmax(0, 1fr) 224px;
+    gap: 28px;
+  }
+
+  .page-layout--categories .mobile-categories {
+    display: none;
+  }
+
+  .community-category-sidebar {
+    display: block;
+    align-self: stretch;
+    min-width: 0;
+  }
+
+  .community-category-sticky {
+    position: sticky;
+    top: 126px;
+    max-height: calc(100dvh - 150px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #dce5ef transparent;
+    padding: 4px 16px 8px 0;
+    border-right: 1px solid #edf0f4;
+  }
+
+  .community-category-sticky h2 {
+    margin: 0 10px 14px;
+    color: #8a94a2;
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 20px;
+  }
+
+  .community-category-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .community-category-nav button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 39px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #606875;
+    font-size: 12px;
+    font-weight: 550;
+    line-height: 20px;
+    text-align: left;
+    white-space: nowrap;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .community-category-nav button svg {
+    flex: none;
+    width: 17px;
+    height: 17px;
+    color: #8994a3;
+  }
+
+  .community-category-nav button:hover {
+    color: #29394e;
+    background: #f5f7fa;
+  }
+
+  .community-category-nav button.active {
+    color: #0875df;
+    background: #eef6ff;
+    font-weight: 750;
+  }
+
+  .community-category-nav button.active svg {
+    color: #0a84fe;
+  }
+
+  .community-category-nav button.active::before {
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 0;
+    width: 3px;
+    border-radius: 3px;
+    background: #0a84fe;
+    content: "";
+  }
+
+  .community-category-nav button:focus-visible {
+    outline: 2px solid #0a84fe;
+    outline-offset: -2px;
+  }
+}
+
+@media (min-width: 1001px) and (max-width: 1279px) {
+  .page-layout--categories {
+    grid-template-columns: 176px minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .page-layout--categories > .right-sidebar {
+    display: none;
+  }
+}

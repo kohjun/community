@@ -1,0 +1,434 @@
+.rich-post-editor {
+  border: 1px solid #dce4ed;
+  border-radius: 12px;
+  background: #fff;
+  overflow: clip;
+}
+.rich-post-editor:focus-within {
+  border-color: #8ac3fc;
+  box-shadow: 0 0 0 3px #0a84fe0a;
+}
+.rich-editor-toolbar {
+  position: sticky;
+  top: -1px;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e4eaf1;
+}
+.rich-editor-toolbar select {
+  width: 90px;
+  min-height: 34px;
+  border: 1px solid #dfe6ee;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+  padding: 0 7px;
+  color: #344258;
+}
+.rich-tools-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  border-left: 1px solid #dfe6ee;
+}
+.rich-tools-group button,
+.rich-node-label button,
+.rich-link-panel-heading button {
+  min-width: 32px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 6px;
+  color: #526274;
+  font-size: 12px;
+}
+.rich-tools-group button:hover:not(:disabled),
+.rich-node-label button:hover,
+.rich-link-panel-heading button:hover {
+  background: #eaf3fd;
+  color: #0971db;
+}
+.rich-tools-group button.active {
+  background: #e4f1ff;
+  color: #0578ea;
+}
+.rich-tools-group button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.rich-insert-tools button {
+  padding: 0 7px;
+}
+.rich-history-tools {
+  margin-left: auto;
+}
+.rich-editor-content,
+.rich-editor-loading {
+  min-height: 280px;
+  max-height: 550px;
+  overflow-y: auto;
+  outline: none;
+  padding: 22px;
+  font-size: 14px;
+  line-height: 1.9;
+  color: #263342;
+  overflow-wrap: anywhere;
+}
+.rich-editor-content > * + * {
+  margin-top: 14px;
+}
+.rich-editor-content p {
+  min-height: 1.9em;
+}
+.rich-editor-content h2 {
+  font-size: 21px;
+  line-height: 1.5;
+  font-weight: 700;
+}
+.rich-editor-content h3 {
+  display: block;
+  margin-bottom: 0;
+  font-size: 17px;
+  line-height: 1.5;
+  font-weight: 650;
+}
+.rich-editor-content ul {
+  list-style: disc;
+  padding-left: 23px;
+}
+.rich-editor-content ol {
+  list-style: decimal;
+  padding-left: 23px;
+}
+.rich-editor-content li p {
+  min-height: 0;
+  margin: 0;
+}
+.rich-editor-content blockquote {
+  border-left: 3px solid #b6d9ff;
+  padding-left: 14px;
+  color: #607082;
+}
+.rich-editor-content a {
+  color: #0878e9;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rich-editor-content code {
+  background: #f0f3f6;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.rich-editor-content hr {
+  border: 0;
+  border-top: 1px solid #e3e9ef;
+  margin: 20px 0;
+}
+.rich-editor-content > p:first-child:last-child:empty::before {
+  content: "함께 나누고 싶은 이야기를 적어주세요.";
+  color: #8a96a4;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.rich-editor-caption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 5px 12px;
+  padding: 10px 14px;
+  color: #7c8998;
+  border-top: 1px solid #edf0f4;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.rich-editor-caption small {
+  font-size: 10px;
+}
+.rich-link-panel {
+  margin: 10px;
+  border: 1px solid #cfe3fa;
+  border-radius: 8px;
+  background: #f7fbff;
+  padding: 12px;
+}
+.rich-link-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+.rich-link-panel-heading strong {
+  color: #33475a;
+  font-size: 12px;
+}
+.rich-link-input-row {
+  display: flex;
+  gap: 8px;
+}
+.rich-link-input-row input {
+  min-width: 0;
+  flex: 1;
+  background: #fff;
+  border: 1px solid #d6e1ed;
+  border-radius: 6px;
+  padding: 9px;
+  font-size: 13px;
+}
+.rich-link-panel .rich-insert-button {
+  background: #0a84fe;
+  color: #fff;
+  font-weight: 600;
+  padding: 0 15px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.rich-link-panel p {
+  font-size: 11px;
+  color: #6b7e91;
+  margin-top: 8px;
+  line-height: 1.65;
+}
+.rich-link-panel .rich-panel-error {
+  color: #a34444;
+}
+.rich-remove-link {
+  color: #1674d0;
+  font-size: 11px;
+  margin-top: 8px;
+  text-decoration: underline;
+}
+.rich-node-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 9px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e4eaf1;
+}
+.rich-node-label > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #738398;
+  font-size: 11px;
+}
+.rich-node-label [data-drag-handle] {
+  cursor: grab;
+}
+.rich-image-node,
+.rich-video-node,
+.rich-legacy-node {
+  border: 1px solid #e0e7ef;
+  border-radius: 9px;
+  overflow: hidden;
+  margin: 15px 0;
+  background: #fff;
+}
+.rich-image-node.is-selected,
+.rich-video-node.is-selected,
+.rich-legacy-node.is-selected {
+  border-color: #69adf4;
+  box-shadow: 0 0 0 2px #0a84fe1a;
+}
+.rich-image-node > img {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  background: #f8fafc;
+}
+.rich-image-node > input {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 12px;
+  border: 0;
+  border-top: 1px solid #edf0f4;
+}
+.rich-image-node > input::placeholder {
+  color: #97a2ad;
+}
+.rich-image-node > p {
+  padding: 16px;
+  color: #8090a0;
+}
+.rich-video-placeholder {
+  min-height: 155px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 14px;
+  background: linear-gradient(130deg, #f0f7ff, #f8fafc);
+  text-align: center;
+}
+.rich-video-placeholder > span {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: #e2efff;
+  border-radius: 50%;
+  color: #087deb;
+  margin-bottom: 4px;
+}
+.rich-video-placeholder strong {
+  font-size: 12px;
+  font-weight: 600;
+  color: #61758a;
+}
+.rich-video-placeholder small {
+  font-size: 11px;
+  color: #8b9bac;
+}
+.rich-legacy-node > .markdown {
+  padding: 14px;
+}
+.rich-legacy-node > small {
+  display: block;
+  font-size: 10px;
+  color: #7e8d9c;
+  background: #fafbfd;
+  padding: 9px 12px;
+  line-height: 1.6;
+}
+.rich-legacy-node > textarea {
+  width: 100%;
+  min-height: 200px;
+  resize: vertical;
+  font-size: 13px;
+  line-height: 1.8;
+  padding: 14px;
+}
+.rich-post-editor.is-disabled .rich-editor-content {
+  opacity: 0.7;
+}
+.organized-editor .rich-editor-preview {
+  padding: 20px;
+  border: 1px solid #dce4ed;
+  border-radius: 10px;
+  min-height: 230px;
+  background: #fff;
+}
+.organized-editor .editor-toolbar.rich-mode-switch {
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 10px;
+  background: transparent;
+}
+.organized-editor .rich-mode-switch button {
+  padding: 7px 0;
+  color: #7a8897;
+}
+.organized-editor .rich-mode-switch button.active {
+  color: #087ceb;
+}
+.organized-editor .rich-mode-switch > div {
+  gap: 18px;
+}
+.organized-editor .rich-mode-switch > button {
+  font-size: 11px;
+}
+@media (max-width: 620px) {
+  .rich-editor-toolbar {
+    gap: 5px;
+    padding: 7px;
+  }
+  .rich-tools-group {
+    padding: 0 2px;
+    gap: 0;
+  }
+  .rich-tools-group button {
+    min-width: 34px;
+    min-height: 36px;
+  }
+  .rich-insert-tools {
+    width: calc(100% - 74px);
+    border-left: 0;
+  }
+  .rich-history-tools {
+    margin-left: 0;
+  }
+  .rich-editor-toolbar select {
+    width: 84px;
+  }
+  .rich-editor-content,
+  .rich-editor-loading {
+    padding: 15px;
+    min-height: 250px;
+    max-height: 440px;
+    font-size: 15px;
+  }
+  .rich-editor-content h2 {
+    font-size: 20px;
+  }
+  .rich-editor-content h3 {
+    font-size: 17px;
+  }
+  .rich-editor-caption {
+    padding: 9px 11px;
+  }
+  .rich-link-panel {
+    margin: 7px;
+    padding: 10px;
+  }
+  .rich-link-input-row input,
+  .rich-image-node > input {
+    font-size: 16px;
+  }
+  .organized-editor .rich-editor-preview {
+    padding: 14px;
+  }
+}
+
+/* Uploaded media uses the same compact editor and blue controls. */
+.rich-video-upload-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 0 16px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line, #e9edf2);
+}
+.rich-video-upload-choice button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rich-video-upload-choice span,
+.rich-video-upload-choice small,
+.rich-uploaded-video-info {
+  color: #7b8593;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.rich-video-node > video,
+.post-uploaded-video > video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 480px;
+  border-radius: 12px;
+  background: #111827;
+  object-fit: contain;
+}
+.rich-uploaded-video-info {
+  display: block;
+  padding: 8px 12px;
+}
+.rich-editor-caption {
+  flex-wrap: wrap;
+}

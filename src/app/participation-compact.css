@@ -1,0 +1,682 @@
+/* Compact participation surfaces; public event and library pages retain their own layout. */
+.participation-workspace {
+  padding-bottom: 12px;
+  color: #263345;
+}
+.participation-workspace .participation-heading {
+  padding: 26px 0 22px;
+}
+.participation-workspace .participation-heading h1 {
+  font-size: 25px;
+  line-height: 1.4;
+  letter-spacing: -0.7px;
+  margin: 6px 0 7px;
+}
+.participation-workspace .participation-heading p {
+  font-size: 13px;
+  line-height: 1.65;
+}
+.participation-workspace .participation-heading > span,
+.participation-workspace .dashboard-heading span {
+  font-size: 10px;
+  color: #6681a1;
+}
+.participation-workspace .participation-card {
+  padding: 18px;
+  margin-bottom: 14px;
+  border-color: #e5eaf0;
+  border-radius: 12px;
+  box-shadow: none;
+}
+.participation-workspace .participation-card h2 {
+  color: #253348;
+  font-size: 16px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+.participation-workspace .participation-card h3 {
+  font-size: 14px;
+  margin: 10px 0 6px;
+}
+.participation-workspace .participation-card > p,
+.participation-workspace .participation-muted {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.participation-workspace .participation-primary,
+.participation-workspace .participation-secondary {
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  gap: 6px;
+}
+.participation-workspace .participation-primary:focus-visible,
+.participation-workspace .participation-secondary:focus-visible,
+.participation-workspace .workspace-disclosure > summary:focus-visible {
+  outline: 2px solid #0a84fe;
+  outline-offset: 3px;
+}
+.participation-workspace label {
+  font-size: 12px;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.participation-workspace input:not([type="checkbox"]):not([type="radio"]),
+.participation-workspace textarea,
+.participation-workspace select {
+  min-height: 38px;
+  padding: 9px 11px;
+  font-size: 13px;
+  background: #fff;
+  border-color: #dde5ed;
+  border-radius: 8px;
+}
+.participation-workspace .participation-status {
+  flex: none;
+  padding: 3px 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #527293;
+  background: #f0f5fb;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.participation-workspace .participation-status.confirmed {
+  color: #096bc8;
+  background: #e6f2ff;
+}
+.participation-workspace .participation-status.pending_payment,
+.participation-workspace .participation-status.pending_approval,
+.participation-workspace .participation-status.review {
+  color: #3673b0;
+  background: #edf5ff;
+}
+.participation-workspace .participation-status.rejected {
+  color: #67788b;
+  background: #f1f4f8;
+}
+.participation-workspace .participation-test-note {
+  color: #456a93;
+  background: #f0f7ff;
+}
+.participation-workspace .participation-error {
+  padding: 11px 13px;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+.participation-workspace .participation-empty {
+  padding: 28px 18px;
+  margin-top: 0;
+  gap: 10px;
+}
+.participation-workspace .participation-empty h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.participation-workspace .participation-empty > p {
+  font-size: 12px;
+}
+.participation-workspace .participation-section-title {
+  font-size: 16px;
+  gap: 7px;
+  margin: 22px 0 12px;
+}
+.participation-workspace .participation-section-title svg {
+  width: 18px;
+  height: 18px;
+  color: #2483dc;
+}
+.participation-overview > section:first-of-type .participation-section-title {
+  margin-top: 0;
+}
+.participation-workspace .room-grid {
+  gap: 10px;
+}
+.participation-workspace .room-preview {
+  gap: 12px;
+  padding: 15px 16px;
+  margin: 0;
+  transition: border-color 0.15s ease;
+}
+.participation-workspace .room-preview:hover,
+.participation-workspace .application-list-row:hover {
+  border-color: #b9d8f7;
+}
+.participation-workspace .room-preview-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: #1678d5;
+  background: #edf5ff;
+}
+.participation-workspace .room-preview-icon svg {
+  width: 19px;
+  height: 19px;
+}
+.participation-workspace .room-preview h3 {
+  margin: 3px 0 4px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.participation-workspace .room-preview p {
+  font-size: 11px;
+}
+.participation-workspace .room-preview > svg,
+.participation-workspace .application-list-row > svg {
+  flex: none;
+  color: #8295a9;
+}
+.participation-workspace .application-list {
+  gap: 8px;
+}
+.participation-workspace .application-list-row {
+  padding: 14px 16px;
+  margin: 0;
+  gap: 12px;
+  transition: border-color 0.15s ease;
+}
+.participation-workspace .application-list-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  flex: 1;
+}
+.participation-workspace .application-list-copy {
+  min-width: 0;
+}
+.participation-workspace .application-list-copy h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.participation-workspace .managed-event-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+.participation-workspace .managed-event-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.7fr) auto;
+  align-items: center;
+  gap: 4px 24px;
+  margin: 0;
+  padding: 16px 18px;
+}
+.participation-workspace .managed-event-card > div:first-child {
+  grid-column: 1;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 0;
+}
+.participation-workspace .managed-event-card > h2 {
+  grid-column: 1;
+  font-size: 15px;
+  margin: 3px 0 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.participation-workspace .managed-event-stats {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  border: 0;
+  padding: 0;
+  gap: 18px;
+}
+.participation-workspace .managed-event-stats span {
+  font-size: 11px;
+}
+.participation-workspace .managed-event-stats strong {
+  margin-top: 4px;
+  font-size: 21px;
+  line-height: 1.25;
+  color: #263a52;
+}
+.participation-workspace .managed-event-card footer {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  margin: 0;
+  color: #2879c7;
+  font-size: 12px;
+  gap: 6px;
+}
+.participation-workspace .dashboard-heading {
+  gap: 14px;
+}
+.participation-workspace .dashboard-heading > a {
+  flex: none;
+}
+.participation-workspace .dashboard-summary {
+  gap: 0;
+  border: 1px solid #e2eaf3;
+  border-radius: 12px;
+  background: #fff;
+  margin-bottom: 14px;
+}
+.participation-workspace .dashboard-metric {
+  padding: 14px 16px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.participation-workspace .dashboard-metric + .dashboard-metric {
+  border-left: 1px solid #edf1f6;
+}
+.participation-workspace .dashboard-metric:first-child {
+  border-radius: 11px 0 0 11px;
+}
+.participation-workspace .dashboard-metric > small {
+  font-size: 12px;
+}
+.participation-workspace .dashboard-metric > strong {
+  margin-top: 4px;
+  font-size: 23px;
+  line-height: 1.25;
+  color: #253c57;
+}
+.participation-workspace .dashboard-metric.blue {
+  background: #f0f7ff;
+}
+.participation-workspace .dashboard-metric.blue > strong {
+  color: #0973d5;
+}
+.participation-workspace .dashboard-metric.blue-soft {
+  background: #f8fbff;
+}
+.participation-workspace .dashboard-toolbar-links {
+  margin-bottom: 16px;
+  gap: 8px;
+}
+.participation-workspace .dashboard-layout,
+.participation-workspace .room-layout {
+  grid-template-columns: minmax(0, 1fr) 270px;
+  gap: 16px;
+}
+.participation-workspace .dashboard-section-heading {
+  margin-bottom: 14px;
+}
+.participation-workspace .dashboard-section-heading h2 {
+  margin: 0;
+}
+.participation-workspace .dashboard-filters {
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.participation-workspace .dashboard-filters label {
+  margin: 0;
+}
+.participation-workspace .dashboard-filters > label {
+  width: 138px;
+}
+.participation-workspace .dashboard-filters form button {
+  height: 38px;
+  min-height: 38px;
+  padding: 8px 11px;
+}
+.participation-workspace .dashboard-table-wrap {
+  margin-bottom: 10px;
+}
+.participation-workspace .dashboard-table th {
+  font-size: 11px;
+  padding: 10px;
+  background: #f5f8fc;
+}
+.participation-workspace .dashboard-table td {
+  padding: 12px 10px;
+  font-size: 12px;
+}
+.participation-workspace .dashboard-table td small {
+  margin-top: 4px;
+}
+.participation-workspace .dashboard-row-actions {
+  gap: 6px;
+}
+.participation-workspace .dashboard-row-actions button,
+.participation-workspace .dashboard-refund {
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: 11px;
+  color: #2d73b4;
+  background: #eff6ff;
+  border-color: #dbeafb;
+}
+.participation-workspace .dashboard-row-actions button:nth-child(2),
+.participation-workspace .dashboard-refund {
+  color: #547294;
+  background: #f4f8fd;
+  border-color: #e0e9f4;
+}
+.participation-workspace .dashboard-decision-panel {
+  margin-top: 16px;
+  padding: 16px;
+}
+.participation-workspace .dashboard-decision-panel > p {
+  margin-bottom: 14px;
+  line-height: 1.7;
+}
+.participation-workspace .workspace-disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #2c405a;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
+  cursor: pointer;
+  list-style: none;
+}
+.participation-workspace .workspace-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.participation-workspace .workspace-disclosure > summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin: 0 2px 3px auto;
+  border-right: 1.5px solid #778ba3;
+  border-bottom: 1.5px solid #778ba3;
+  transform: rotate(45deg);
+  flex: none;
+}
+.participation-workspace .workspace-disclosure[open] > summary {
+  margin-bottom: 16px;
+}
+.participation-workspace .workspace-disclosure[open] > summary::after {
+  transform: rotate(225deg);
+  margin-bottom: -3px;
+}
+.participation-workspace .host-settings form > small {
+  display: block;
+  line-height: 1.65;
+  margin: 8px 0 14px;
+}
+.participation-workspace .host-settings .location-field-actions {
+  gap: 6px;
+}
+.participation-workspace .host-settings .location-field-actions button {
+  min-height: 34px;
+  font-size: 11px;
+  padding: 7px 9px;
+}
+.participation-workspace .workspace-resource-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.participation-workspace .workspace-resource-card h2 {
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+.participation-workspace .workspace-resource-card p {
+  font-size: 12px;
+  color: #63748b;
+}
+.participation-workspace .workspace-resource-card > a {
+  flex: none;
+}
+.participation-workspace .workspace-detail-section > .participation-card,
+.participation-workspace .workspace-detail-section .refund-panel > .participation-card {
+  padding: 0;
+  margin: 16px 0 0;
+  border: 0;
+}
+.participation-workspace .workspace-detail-section .player-section-heading {
+  gap: 12px;
+}
+.participation-workspace .workspace-detail-section .player-section-heading h2 {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.participation-workspace .workspace-detail-section .player-record-list > div {
+  padding: 11px 0;
+}
+.participation-workspace .workspace-detail-section .refund-steps {
+  margin: 14px 0;
+}
+.participation-workspace .workspace-detail-section .refund-steps > div {
+  padding: 9px 6px;
+}
+.participation-workspace .workspace-detail-section .refund-steps strong {
+  margin-top: 4px;
+  font-size: 17px;
+}
+.participation-workspace .announcement-channel {
+  padding: 0;
+}
+.participation-workspace .announcement-channel > header {
+  padding: 14px 18px;
+}
+.participation-workspace .announcement-channel > header > div {
+  font-size: 13px;
+}
+.participation-workspace .room-connection i {
+  background: #0a84fe;
+}
+.participation-workspace .announcement-messages {
+  padding: 16px;
+  min-height: 180px;
+  max-height: 58vh;
+  background: #f8fafd;
+}
+.participation-workspace .announcement-bubble {
+  padding: 15px 16px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+}
+.participation-workspace .announcement-bubble:last-child {
+  margin-bottom: 0;
+}
+.participation-workspace .announcement-bubble .markdown {
+  font-size: 13px;
+  line-height: 1.8;
+}
+.participation-workspace .announcement-bubble .markdown > :first-child {
+  margin-top: 0;
+}
+.participation-workspace .announcement-bubble .markdown > :last-child {
+  margin-bottom: 0;
+}
+.participation-workspace .announcement-bubble .markdown h2 {
+  font-size: 16px;
+  margin: 18px 0 8px;
+}
+.participation-workspace .announcement-bubble .markdown h3 {
+  font-size: 14px;
+  margin: 15px 0 7px;
+}
+.participation-workspace .announcement-author {
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.participation-workspace .announcement-compose {
+  padding: 16px 18px;
+}
+.participation-workspace .announcement-compose > label {
+  margin-bottom: 8px;
+  gap: 4px;
+}
+.participation-workspace .announcement-compose > button {
+  margin-top: 10px;
+}
+.participation-workspace .announcement-readonly {
+  padding: 13px 18px;
+  gap: 8px;
+  line-height: 1.7;
+}
+.participation-workspace .room-layout > aside > .participation-primary {
+  width: 100%;
+  margin-bottom: 12px;
+}
+.participation-workspace .room-management > p {
+  margin: 0 0 12px;
+  line-height: 1.7;
+}
+.participation-workspace .attendee-list article {
+  padding: 11px 0;
+}
+.participation-workspace .manager-list li {
+  padding: 10px 0;
+}
+@media (max-width: 1000px) {
+  .participation-workspace .dashboard-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .participation-workspace .dashboard-metric:nth-child(3n + 1) {
+    border-left: 0;
+  }
+  .participation-workspace .dashboard-metric:nth-child(n + 4) {
+    border-top: 1px solid #edf1f6;
+  }
+  .participation-workspace .dashboard-layout,
+  .participation-workspace .room-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .participation-workspace .dashboard-layout > aside,
+  .participation-workspace .room-layout > aside {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 12px;
+  }
+  .participation-workspace .dashboard-layout > aside > *,
+  .participation-workspace .room-layout > aside > * {
+    margin-bottom: 0;
+  }
+  .participation-workspace .managed-event-card {
+    grid-template-columns: minmax(0, 1fr) minmax(210px, 0.7fr);
+    gap: 6px 18px;
+  }
+  .participation-workspace .managed-event-card footer {
+    grid-column: 1;
+    grid-row: 3;
+    font-size: 11px;
+  }
+  .participation-workspace .managed-event-card footer svg:last-child {
+    margin-left: 0;
+  }
+}
+@media (max-width: 720px) {
+  .participation-workspace .participation-heading {
+    padding: 20px 0 18px;
+  }
+  .participation-workspace .participation-heading h1 {
+    font-size: 23px;
+  }
+  .participation-workspace .participation-card {
+    padding: 16px;
+  }
+  .participation-workspace .participation-primary,
+  .participation-workspace .participation-secondary {
+    min-height: 40px;
+  }
+  .participation-workspace .room-grid {
+    gap: 8px;
+  }
+  .participation-workspace .room-preview {
+    padding: 13px 14px;
+  }
+  .participation-workspace .application-list-row {
+    padding: 13px 14px;
+    align-items: center;
+  }
+  .participation-workspace .application-list-info {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .participation-workspace .dashboard-heading {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .participation-workspace .dashboard-heading > div {
+    min-width: 0;
+  }
+  .participation-workspace .dashboard-heading > a {
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+  .participation-workspace .dashboard-metric {
+    padding: 12px;
+  }
+  .participation-workspace .dashboard-metric > strong {
+    font-size: 21px;
+  }
+  .participation-workspace .dashboard-metric > small {
+    font-size: 11px;
+  }
+  .participation-workspace .dashboard-toolbar-links > .participation-muted {
+    margin-top: 0;
+  }
+  .participation-workspace .dashboard-filters {
+    gap: 10px;
+  }
+  .participation-workspace .dashboard-filters > label {
+    width: 100%;
+  }
+  .participation-workspace .dashboard-filters form button {
+    min-height: 38px;
+  }
+  .participation-workspace .dashboard-layout > aside,
+  .participation-workspace .room-layout > aside {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .participation-workspace .managed-event-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+  }
+  .participation-workspace .managed-event-card > div:first-child,
+  .participation-workspace .managed-event-card > h2 {
+    grid-column: 1 / -1;
+  }
+  .participation-workspace .managed-event-stats {
+    grid-column: 1;
+    grid-row: 3;
+    margin-top: 6px;
+    gap: 12px;
+  }
+  .participation-workspace .managed-event-stats strong {
+    font-size: 19px;
+  }
+  .participation-workspace .managed-event-card footer {
+    grid-column: 2;
+    grid-row: 3;
+    margin-top: 6px;
+  }
+  .participation-workspace .managed-event-card footer svg:first-child {
+    display: none;
+  }
+  .participation-workspace .announcement-channel {
+    padding: 0;
+  }
+  .participation-workspace .announcement-channel > header,
+  .participation-workspace .announcement-compose {
+    padding: 13px 15px;
+  }
+  .participation-workspace .announcement-messages {
+    padding: 12px;
+    min-height: 160px;
+    max-height: 55vh;
+  }
+  .participation-workspace .announcement-bubble {
+    padding: 13px;
+  }
+  .participation-workspace .announcement-readonly {
+    padding: 12px 15px;
+  }
+  .participation-workspace .workspace-resource-card {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .participation-workspace .room-preview,
+  .participation-workspace .application-list-row {
+    transition: none;
+  }
+}

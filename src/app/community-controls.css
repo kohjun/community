@@ -1,0 +1,91 @@
+/* Keep recruitment and reaction controls together beneath each post. */
+.expanded-post-row .post-row-tags {
+  margin: 12px 0 0;
+  gap: 6px;
+}
+
+.expanded-post-row .post-row-tags .post-tag {
+  max-width: 100%;
+  padding: 4px 7px;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.expanded-post-row .post-row-actions {
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  margin-top: 12px;
+}
+
+.expanded-post-row .post-row-actions .apply-button {
+  height: 36px;
+  min-height: 36px;
+  margin-top: 0;
+  padding: 0 12px;
+  border-radius: 9px;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.expanded-post-row .post-row-actions .apply-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.expanded-post-row .post-row-reactions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.expanded-post-row .post-row-reactions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: #718096;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.expanded-post-row .post-row-reactions > button:hover:not(:disabled) {
+  background: #f2f7fd;
+  color: #0874dc;
+}
+
+.expanded-post-row .post-row-reactions > button.active {
+  color: #0874dc;
+}
+
+.expanded-post-row .post-row-reactions > button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.expanded-post-row .post-row-reactions > button:focus-visible {
+  outline: 2px solid #0a84fe;
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .expanded-post-row .post-row-actions {
+    gap: 8px;
+  }
+
+  .expanded-post-row .post-row-actions .apply-button {
+    padding-inline: 10px;
+  }
+
+  .expanded-post-row .post-row-reactions > button {
+    padding-inline: 6px;
+  }
+}

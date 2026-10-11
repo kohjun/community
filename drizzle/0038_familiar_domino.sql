@@ -1,0 +1,3 @@
+ALTER TABLE "sliper"."event_settings" ADD COLUMN "activity_category" varchar(32);--> statement-breakpoint
+CREATE INDEX "event_lightning_category_idx" ON "sliper"."event_settings" USING btree ("activity_category","post_id") WHERE "sliper"."event_settings"."meetup_type" = 'lightning';--> statement-breakpoint
+ALTER TABLE "sliper"."event_settings" ADD CONSTRAINT "event_activity_category" CHECK ("sliper"."event_settings"."activity_category" is null or ("sliper"."event_settings"."meetup_type" = 'lightning' and "sliper"."event_settings"."activity_category" in ('food-cafe', 'drinks', 'games', 'culture', 'sports', 'outdoors', 'crafting', 'music', 'photography', 'pets', 'attractions', 'social', 'other')));

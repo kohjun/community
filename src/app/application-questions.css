@@ -1,0 +1,293 @@
+.participation-page .applicant-profile {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 17px;
+  border: 1px solid #e6edf5;
+  border-radius: 12px;
+  background: #f7faff;
+  margin-bottom: 24px;
+}
+.participation-page .applicant-profile > svg {
+  flex: none;
+  color: #0a84fe;
+  margin-top: 2px;
+}
+.participation-page .applicant-profile > div {
+  min-width: 0;
+  flex: 1;
+}
+.participation-page .applicant-profile strong {
+  color: #263549;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.participation-page .applicant-profile p {
+  font-size: 12px;
+  color: #627287;
+  line-height: 1.8;
+  margin: 4px 0;
+}
+.participation-page .applicant-profile small {
+  display: block;
+  line-height: 1.7;
+}
+.participation-page .applicant-profile > a {
+  color: #0875dd;
+  font-size: 12px;
+  font-weight: 650;
+  flex: none;
+  padding: 2px 0;
+}
+.participation-page .applicant-profile-incomplete .participation-primary {
+  margin-top: 12px;
+  min-height: 36px;
+}
+.participation-page .application-questions {
+  margin: 24px 0;
+}
+.participation-page .application-question-heading h3 {
+  font-size: 15px;
+  color: #263549;
+  margin: 0 0 5px;
+}
+.participation-page .application-question-heading p {
+  margin: 0 0 20px;
+  color: #627287;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.participation-page .application-question {
+  margin-bottom: 22px;
+}
+.participation-page .application-question > label {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 7px;
+  line-height: 1.8;
+  margin-bottom: 10px;
+  color: #263549;
+  font-weight: 650;
+}
+.participation-page .application-question > label > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.participation-page .application-question-number {
+  font-size: 11px;
+  color: #0a84fe;
+  font-weight: 700;
+}
+.participation-page .application-question > label small {
+  flex: none;
+  font-size: 10px;
+}
+.participation-page .application-question > label .is-required {
+  color: #0875dd;
+  font-weight: 650;
+}
+.participation-page .application-response-details {
+  margin: 12px 0;
+  border: 1px solid #e6edf5;
+  border-radius: 9px;
+  background: #fafcfe;
+  min-width: 0;
+}
+.participation-page .application-response-details > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 11px;
+  color: #4b627e;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+.participation-page .application-response-details > summary::-webkit-details-marker {
+  display: none;
+}
+.participation-page .application-response-details > summary::after {
+  content: "";
+  height: 6px;
+  width: 6px;
+  border-right: 1px solid #7b8da2;
+  border-bottom: 1px solid #7b8da2;
+  transform: rotate(45deg);
+  margin: 0 2px 3px auto;
+  flex: none;
+}
+.participation-page .application-response-details[open] > summary::after {
+  transform: rotate(225deg);
+  margin-bottom: -3px;
+}
+.participation-page .application-response-details > summary svg {
+  flex: none;
+  color: #0a84fe;
+}
+.participation-page .application-response-details > summary small {
+  color: #0875dd;
+  font-size: 10px;
+}
+.participation-page .application-response-details dl {
+  padding: 0 12px 12px;
+  margin: 0;
+}
+.participation-page .application-response-details dl > div + div {
+  border-top: 1px solid #e9eef5;
+  padding-top: 10px;
+  margin-top: 10px;
+}
+.participation-page .application-response-details dt {
+  color: #61738b;
+  font-weight: 600;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.participation-page .application-response-details dd {
+  color: #29394d;
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 3px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.participation-page .application-response-details > p {
+  padding: 0 12px 8px;
+  color: #63748b;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.participation-page .event-question-editor {
+  padding-top: 18px;
+  border-top: 1px solid #e8edf4;
+  margin: 22px 0;
+}
+.participation-page .event-question-editor-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.participation-page .event-question-editor-heading > div {
+  flex: 1;
+  min-width: 0;
+}
+.participation-page .event-question-editor-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #263549;
+  font-size: 13px;
+  margin: 0 0 5px;
+}
+.participation-page .event-question-editor-heading h3 svg {
+  color: #0a84fe;
+  flex: none;
+}
+.participation-page .event-question-editor-heading p,
+.participation-page .event-question-snapshot-note {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #63748b;
+  margin: 0 0 14px;
+}
+.participation-page .event-question-editor-heading > small {
+  flex: none;
+  color: #0875dd;
+}
+.participation-page .event-question-edit-card {
+  min-width: 0;
+  border: 1px solid #e6edf5;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 0 0 15px;
+  background: #fafcfe;
+}
+.participation-page .event-question-edit-card legend {
+  font-size: 11px;
+  font-weight: 650;
+  color: #0875dd;
+  padding: 0 5px;
+}
+.participation-page .event-question-edit-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.participation-page .event-question-edit-toolbar label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.participation-page .event-question-remove,
+.participation-page .event-question-option > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 38px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #697c91;
+  background: #fff;
+  cursor: pointer;
+  flex: none;
+}
+.participation-page .event-question-remove:hover:not(:disabled),
+.participation-page .event-question-option > button:hover:not(:disabled) {
+  background: #edf6ff;
+  color: #0875dd;
+}
+.participation-page .event-question-editor button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.participation-page .event-question-options > span {
+  display: block;
+  color: #51647e;
+  font-size: 11px;
+  font-weight: 650;
+  margin: 0 0 9px;
+}
+.participation-page .event-question-options > span small {
+  display: block;
+}
+.participation-page .event-question-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.participation-page .event-question-option label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.participation-page .event-question-edit-card .participation-text-link {
+  margin: 2px 0 12px;
+  color: #0875dd;
+}
+.participation-page .event-question-edit-card .event-question-required {
+  margin: 4px 0 0;
+}
+.participation-page .event-question-add {
+  min-height: 36px;
+  width: 100%;
+}
+.participation-page .event-question-snapshot-note {
+  margin: 10px 0 0;
+}
+@media (max-width: 560px) {
+  .participation-page .applicant-profile {
+    padding: 14px;
+    gap: 9px;
+  }
+  .participation-page .application-response-details > summary {
+    flex-wrap: wrap;
+  }
+  .participation-page .event-question-edit-card {
+    padding: 10px;
+  }
+}

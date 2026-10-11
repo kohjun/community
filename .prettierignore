@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.npm-cache/
+.local/
+drizzle/
+assets/
+public/
+package-lock.json
+*.tsbuildinfo

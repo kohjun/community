@@ -1,0 +1,2 @@
+ALTER TABLE "sliper"."posts" ADD COLUMN "body_document" jsonb;--> statement-breakpoint
+ALTER TABLE "sliper"."posts" ADD CONSTRAINT "posts_body_document_shape" CHECK ("sliper"."posts"."body_document" is null or (jsonb_typeof("sliper"."posts"."body_document") = 'object' and "sliper"."posts"."body_document"->>'version' = '1' and "sliper"."posts"."body_document"->>'type' = 'doc' and jsonb_typeof("sliper"."posts"."body_document"->'content') = 'array' and octet_length("sliper"."posts"."body_document"::text) <= 204800));

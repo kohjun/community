@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "library_record_owner_draft_unique" ON "sliper"."library_entries" USING btree ("source_record_post_id","owner_id") WHERE "sliper"."library_entries"."source_record_post_id" is not null and "sliper"."library_entries"."status" <> 'deleted';

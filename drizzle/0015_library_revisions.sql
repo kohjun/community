@@ -1,0 +1,2 @@
+ALTER TABLE "sliper"."library_access_requests" ADD COLUMN "updated_at" timestamp with time zone DEFAULT now() NOT NULL;--> statement-breakpoint
+ALTER TABLE "sliper"."library_entries" ADD COLUMN "updated_at" timestamp with time zone DEFAULT now() NOT NULL;

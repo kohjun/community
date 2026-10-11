@@ -1,0 +1,4 @@
+ALTER TABLE "sliper"."media_assets" ADD COLUMN "record_origin_post_id" uuid;--> statement-breakpoint
+ALTER TABLE "sliper"."video_assets" ADD COLUMN "record_origin_post_id" uuid;--> statement-breakpoint
+ALTER TABLE "sliper"."media_assets" ADD CONSTRAINT "media_assets_record_origin_post_id_event_records_post_id_fk" FOREIGN KEY ("record_origin_post_id") REFERENCES "sliper"."event_records"("post_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sliper"."video_assets" ADD CONSTRAINT "video_assets_record_origin_post_id_event_records_post_id_fk" FOREIGN KEY ("record_origin_post_id") REFERENCES "sliper"."event_records"("post_id") ON DELETE restrict ON UPDATE no action;

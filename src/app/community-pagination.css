@@ -1,0 +1,126 @@
+.community-pagination {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px 0 8px;
+}
+.community-page-nav,
+.community-page-numbers,
+.community-page-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+}
+.community-page-nav {
+  gap: 12px;
+}
+.community-page-nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #728094;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.community-page-nav button:hover:not(:disabled) {
+  background: #f2f7fd;
+  color: #0874dc;
+}
+.community-page-nav button[aria-current="page"] {
+  border-color: #d2e7ff;
+  background: #edf6ff;
+  color: #0867c5;
+  font-weight: 700;
+}
+.community-page-nav button:focus-visible {
+  outline: 2px solid #0a84fe;
+  outline-offset: 3px;
+}
+.community-page-nav button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.community-page-nav .community-page-direction {
+  gap: 4px;
+  padding-inline: 8px;
+}
+.community-page-ellipsis {
+  min-width: 12px;
+  text-align: center;
+  color: #a3adba;
+  font-size: 12px;
+}
+.community-pagination > p {
+  margin: 0;
+  color: #8993a2;
+  font-size: 11px;
+}
+.site-header .top-nav {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.site-header .top-nav > a,
+.site-header .top-nav > button {
+  flex: none;
+}
+@media (max-width: 480px) {
+  .community-page-nav {
+    gap: 5px;
+  }
+  .community-page-numbers,
+  .community-page-item {
+    gap: 3px;
+  }
+  .community-page-nav button {
+    min-width: 30px;
+    height: 34px;
+    padding-inline: 5px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+  .community-page-nav .community-page-direction {
+    min-width: 30px;
+    padding-inline: 4px;
+  }
+  .community-page-direction > span {
+    display: none;
+  }
+  .community-page-ellipsis {
+    min-width: 10px;
+  }
+}
+
+.community-feed-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 15px 16px;
+  margin: 12px 0;
+  border: 1px solid #d8e8fb;
+  border-radius: 10px;
+  background: #f3f8ff;
+  color: #466489;
+}
+.community-feed-error p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.community-feed-error button {
+  flex: none;
+  min-height: 36px;
+  font-size: 12px;
+}

@@ -1,0 +1,255 @@
+.filterPanel {
+  margin: 0 0 22px;
+  padding: 18px;
+  border: 1px solid #e5eaf0;
+  border-radius: 14px;
+  background: #fff;
+}
+.searchRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.filterPanel .searchField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding-left: 12px;
+  border: 1px solid #dfe5ec;
+  border-radius: 8px;
+  color: #778394;
+}
+.searchField:focus-within {
+  outline: 2px solid #0a84fe;
+  outline-offset: 2px;
+}
+.filterPanel .searchField input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  margin: 0;
+  padding: 0 12px 0 0;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.filterPanel .searchField input:focus-visible {
+  outline: none;
+}
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.filterPanel .field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  color: #526073;
+  font-size: 12px;
+  font-weight: 600;
+}
+.filterPanel .field input,
+.filterPanel .field select {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid #dfe5ec;
+  border-radius: 8px;
+  background: #fff;
+  color: #242c38;
+  font-size: 14px;
+  font-weight: 400;
+}
+.filterPanel .field input:focus-visible,
+.filterPanel .field select:focus-visible,
+.mineToggle:focus-visible {
+  outline: 2px solid #0a84fe;
+  outline-offset: 2px;
+}
+.advanced {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #edf0f4;
+}
+.advanced summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  cursor: pointer;
+  color: #526073;
+  font-size: 12px;
+  font-weight: 600;
+}
+.advanced summary::after {
+  content: "+";
+  margin-left: 5px;
+  font-size: 16px;
+}
+.advanced[open] summary::after {
+  content: "−";
+}
+.advancedGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.hint {
+  margin: 10px 0 0;
+  color: #7b8797;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.filterFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 18px;
+}
+.filterButtons {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.mineToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: none;
+  background: transparent;
+  color: #526073;
+  padding: 8px 0;
+  font-size: 12px;
+}
+.mineToggle > span {
+  display: inline-block;
+  position: relative;
+  width: 30px;
+  height: 18px;
+  border-radius: 10px;
+  background: #d9e1eb;
+}
+.mineToggle > span::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+}
+.mineToggle[aria-checked="true"] > span {
+  background: #0a84fe;
+}
+.mineToggle[aria-checked="true"] > span::after {
+  left: 15px;
+}
+.appliedFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.appliedFilters span {
+  border-radius: 6px;
+  background: #eef6ff;
+  color: #1d6cb9;
+  padding: 5px 9px;
+  font-size: 11px;
+}
+.metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 14px;
+  padding: 12px 0;
+  border-top: 1px solid #f0f2f5;
+  border-bottom: 1px solid #f0f2f5;
+  margin: 12px 0;
+  font-size: 11px;
+}
+.metadata > div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.metadata dt {
+  color: #7b8797;
+}
+.metadata dd {
+  margin: 0;
+  color: #424f60;
+  font-weight: 500;
+}
+.publicMetadataNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  margin: 0 0 18px;
+  border-radius: 10px;
+  background: #f2f7fd;
+  color: #476888;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.publicMetadataNote svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 640px) {
+  .filterPanel {
+    padding: 14px;
+  }
+  .searchRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .filterGrid,
+  .advancedGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 10px;
+  }
+  .advancedGrid > :last-child {
+    grid-column: 1 / -1;
+  }
+  .filterButtons {
+    width: 100%;
+  }
+  .filterButtons button {
+    flex: 1;
+  }
+  .filterPanel .field input,
+  .filterPanel .field select,
+  .filterPanel .searchField input {
+    font-size: 16px;
+  }
+}
+
+.visibleCases {
+  color: #1d6cb9;
+}

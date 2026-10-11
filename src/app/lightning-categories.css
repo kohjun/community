@@ -1,0 +1,295 @@
+.lightning-category-picker {
+  min-width: 0;
+}
+
+.lightning-category-picker--browse {
+  margin: 24px 0 18px;
+}
+
+.lightning-category-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.lightning-category-heading h2 {
+  margin: 0;
+  color: #20262e;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.4;
+}
+
+.lightning-category-heading p {
+  margin: 5px 0 0;
+  color: #737d89;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.lightning-category-reset {
+  flex: none;
+  min-height: 44px;
+  padding: 9px 17px;
+  border: 1px solid #e2e7ee;
+  border-radius: 11px;
+  background: #fff;
+  color: #606b79;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lightning-category-reset[aria-pressed="true"] {
+  border-color: #c7e2ff;
+  background: #eef6ff;
+  color: #0864be;
+}
+
+.lightning-category-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.lightning-category-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 88px;
+  padding: 14px 13px;
+  border: 1px solid #e7ebf0;
+  border-radius: 12px;
+  background: #fff;
+  color: #4d5867;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.lightning-category-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  color: #697687;
+}
+
+.lightning-category-label {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.25px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.lightning-category-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #0a84fe;
+}
+
+.lightning-category-tile[aria-pressed="true"],
+.lightning-category-radio input:checked + .lightning-category-tile {
+  border-color: #0a84fe;
+  background: #eef6ff;
+  color: #075fac;
+}
+
+.lightning-category-tile[aria-pressed="true"] .lightning-category-icon,
+.lightning-category-radio input:checked + .lightning-category-tile .lightning-category-icon {
+  color: #0a84fe;
+}
+
+.lightning-category-tile--other,
+.lightning-category-radio--other {
+  grid-column: 1 / -1;
+}
+
+.lightning-category-tile--other,
+.lightning-category-radio--other .lightning-category-tile {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  min-height: 44px;
+  padding-block: 10px;
+}
+
+.lightning-category-tile--other .lightning-category-check,
+.lightning-category-radio--other .lightning-category-check {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.lightning-category-reset:focus-visible,
+.lightning-category-tile:focus-visible,
+.lightning-category-radio input:focus-visible + .lightning-category-tile {
+  outline: 2px solid #0a84fe;
+  outline-offset: 3px;
+}
+
+.lightning-category-reset:disabled,
+.lightning-category-tile:disabled,
+.lightning-category-radio input:disabled + .lightning-category-tile {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lightning-category-picker--form {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.lightning-category-legend {
+  margin-bottom: 10px;
+  padding: 0;
+  color: #434b56;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.lightning-category-required {
+  margin-left: 6px;
+  color: #697687;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.lightning-category-picker--form .lightning-category-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.lightning-category-radio {
+  position: relative;
+  display: block;
+  min-width: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.lightning-category-radio input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.lightning-category-picker--form .lightning-category-tile {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  min-height: 52px;
+  height: 100%;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.lightning-category-picker--form .lightning-category-label {
+  font-size: 11px;
+}
+
+.lightning-category-picker--form .lightning-category-check {
+  top: 4px;
+  right: 4px;
+}
+
+.lightning-category-picker--form .lightning-category-radio--other .lightning-category-tile {
+  min-height: 44px;
+}
+
+.lightning-category-picker--form .lightning-category-radio--other .lightning-category-check {
+  top: 50%;
+  right: 10px;
+}
+
+@media (hover: hover) {
+  .lightning-category-reset:not(:disabled):hover {
+    border-color: #a9d1fb;
+    color: #075fac;
+  }
+
+  .lightning-category-picker--browse
+    .lightning-category-tile:not(:disabled):not([aria-pressed="true"]):hover,
+  .lightning-category-radio input:not(:disabled):not(:checked) + .lightning-category-tile:hover {
+    border-color: #bed7ef;
+    background: #f7faff;
+    color: #075fac;
+  }
+}
+
+@media (max-width: 760px) {
+  .lightning-category-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lightning-category-picker--form .lightning-category-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lightning-category-picker--form .lightning-category-tile {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px;
+    min-height: 72px;
+  }
+
+  .lightning-category-picker--form .lightning-category-radio--other .lightning-category-tile {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .lightning-category-heading {
+    gap: 12px;
+    margin-bottom: 13px;
+  }
+
+  .lightning-category-heading h2 {
+    font-size: 17px;
+  }
+
+  .lightning-category-grid {
+    gap: 7px;
+  }
+
+  .lightning-category-tile {
+    min-height: 85px;
+    padding: 12px 10px;
+  }
+
+  .lightning-category-tile--other {
+    min-height: 44px;
+    padding-block: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightning-category-tile {
+    transition: none;
+  }
+}
