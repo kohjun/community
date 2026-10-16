@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { useAdSense } from "./adsense-provider";
+import { AdSenseUnit } from "./adsense-unit";
 import { useState } from "react";
 import { ArrowUpRight, Pause, Play } from "lucide-react";
 import type { CategorySlug } from "@/domain/categories";
@@ -38,7 +40,7 @@ const ads = [
     symbol: "⚑",
   },
 ];
-export function AdSlot({
+function HouseAdSlot({
   onCategory,
   compact = false,
 }: {
@@ -109,4 +111,19 @@ export function AdSlot({
       </div>
     </section>
   );
+}
+
+export function AdSlot({
+  onCategory,
+  compact = false,
+  disabled = false,
+}: {
+  onCategory?: (category: CategorySlug) => void;
+  compact?: boolean;
+  disabled?: boolean;
+}) {
+  const { config, locationKey } = useAdSense();
+  if (disabled) return null;
+  if (config.enabled) return <AdSenseUnit key={locationKey} placement="inline" />;
+  return <HouseAdSlot {...(onCategory ? { onCategory } : {})} compact={compact} />;
 }

@@ -1,0 +1,124 @@
+.topic-connection-related {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 17px 0;
+}
+.topic-connection-label {
+  color: #526073;
+  font-size: 12px;
+  font-weight: 650;
+}
+.topic-connection-label small {
+  margin-left: 5px;
+  color: #98a2b3;
+  font-size: 11px;
+  font-weight: 400;
+}
+.topic-connection-links,
+.topic-connection-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.topic-connection-topic-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: #edf6ff;
+  color: #1477d4;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.4;
+}
+.topic-connection-topic-link:hover {
+  background: #dceeff;
+}
+.topic-connection-topic-link:focus-visible,
+.topic-connection-choice:focus-visible {
+  outline: 2px solid #0a84fe;
+  outline-offset: 2px;
+}
+.topic-connection-picker {
+  margin: 1px 0 0;
+  padding: 14px;
+  border: 1px solid #e5edf5;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+.topic-connection-picker-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.topic-connection-limit {
+  color: #98a2b3;
+  font-size: 11px;
+}
+.topic-connection-description {
+  margin: 7px 0 11px;
+  color: #798696;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.topic-connection-choices .topic-connection-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 10px;
+  min-height: 34px;
+  border: 1px solid #dce8f4;
+  border-radius: 8px;
+  background: #fff;
+  color: #526073;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.topic-connection-choices .topic-connection-choice:not(:disabled):hover {
+  border-color: #85c2ff;
+  color: #0879ea;
+}
+.topic-connection-choices .topic-connection-choice:disabled {
+  cursor: default;
+  background: #f4f7fa;
+  color: #98a2b3;
+}
+.topic-connection-choices .topic-connection-choice[aria-pressed="true"] {
+  border-color: #a7d3ff;
+  background: #edf6ff;
+  color: #0879ea;
+}
+.topic-connection-selected-label {
+  font-size: 10px;
+  font-weight: 450;
+}
+.topic-connection-preview {
+  margin: 10px 0 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .topic-connection-related {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .topic-connection-picker {
+    padding: 12px;
+  }
+  .topic-connection-choices {
+    gap: 6px;
+  }
+  .topic-connection-choices .topic-connection-choice {
+    padding: 8px;
+  }
+}

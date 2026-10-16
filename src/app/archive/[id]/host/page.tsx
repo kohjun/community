@@ -1,19 +1,37 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ZodError } from "zod";
 import { AppError } from "@/server/errors";
 import { getDatabase } from "@/db/client";
 import { currentActor } from "@/server/identity";
 import { libraryService } from "@/server/library-service";
 import { TemplateHost } from "@/components/template-host";
-import { ParticipationLogin, ParticipationShell } from "@/components/participation-shell";
+import { templateRehostingOrigin } from "@/server/template-rehosting";
+import { uuidSchema } from "@/domain/validation";
+import { ParticipationShell } from "@/components/participation-shell";
 export const dynamic = "force-dynamic";
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ fromRecord?: string | string[] }>;
+}) {
+  const { id } = await params,
+    query = await searchParams;
+  if (
+    !uuidSchema.safeParse(id).success ||
+    (query.fromRecord !== undefined &&
+      (typeof query.fromRecord !== "string" || !uuidSchema.safeParse(query.fromRecord).success))
+  )
+    notFound();
   const actor = await currentActor();
-  if (!actor) return <ParticipationLogin />;
+  if (!actor) {
+    const suffix = query.fromRecord ? "?fromRecord=" + query.fromRecord : "";
+    redirect("/login?returnTo=" + encodeURIComponent("/archive/" + id + "/host" + suffix));
+  }
   try {
-    const { id } = await params,
-      template = await libraryService(getDatabase()).detail(actor, id);
+    const template = await libraryService(getDatabase()).detail(actor, id);
     if (!template.canHost)
       return (
         <ParticipationShell>
@@ -26,7 +44,17 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </section>
         </ParticipationShell>
       );
-    return <TemplateHost key={id} template={template} />;
+    const origin =
+      typeof query.fromRecord === "string"
+        ? await templateRehostingOrigin(getDatabase(), actor, template, query.fromRecord)
+        : undefined;
+    return (
+      <TemplateHost
+        key={id + ":" + (origin?.postId ?? "")}
+        template={template}
+        {...(origin ? { origin } : {})}
+      />
+    );
   } catch (error) {
     if (error instanceof ZodError || (error instanceof AppError && error.code === "NOT_FOUND"))
       notFound();

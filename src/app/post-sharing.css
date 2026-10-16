@@ -40,11 +40,65 @@
 .post-page-card .detail-author {
   margin-top: 15px;
 }
+.post-page-card .detail-support-actions,
+.post-dialog .detail-support-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 18px;
+}
+.post-page-card .detail-support-actions > button,
+.post-dialog .detail-support-actions > button {
+  min-height: 36px;
+  height: 36px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.post-page-card .detail-footer,
+.post-dialog .detail-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  min-width: 0;
+  gap: 10px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.post-page-card .detail-footer .detail-tags,
+.post-dialog .detail-footer .detail-tags {
+  flex: 1 1 0;
+  flex-wrap: nowrap;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  min-height: 36px;
+}
+.post-page-card .detail-footer .detail-tags span,
+.post-dialog .detail-footer .detail-tags span {
+  flex: none;
+  white-space: nowrap;
+}
 .post-page-card .detail-reactions,
 .post-dialog .detail-reactions {
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex: none;
+  margin-left: auto;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 0;
+  border-bottom: 0;
+}
+.post-page-card .detail-reactions > button,
+.post-dialog .detail-reactions > button {
+  flex: none;
+  min-width: 36px;
+  min-height: 36px;
+  white-space: nowrap;
 }
 .post-detail-status,
 .post-page-feedback {

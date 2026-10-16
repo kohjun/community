@@ -17,10 +17,14 @@ import type { CommunityPost } from "@/domain/community";
 import type { PublicImage, PublicVideo } from "@/domain/contracts";
 import { cn } from "@/lib/utils";
 import { prepareImageForUpload } from "@/lib/image-precompression";
+import { topicForSlug, topicsForTags, type TopicSlug } from "@/domain/topics";
+import { TopicTagPicker } from "./topic-connections";
 export function WriteDialog({
   open,
   onOpenChange,
   initialCategory,
+  initialTopic,
+  initialKind,
   post,
   onPublish,
   upload,
@@ -28,13 +32,16 @@ export function WriteDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialCategory: CategorySlug;
+  initialTopic?: TopicSlug | undefined;
+  initialKind?: "이야기" | "모집" | "투표" | undefined;
   post: CommunityPost | null;
   onPublish: (input: CreatePostInput) => Promise<boolean>;
   upload: (file: File) => Promise<PublicImage>;
 }) {
+  const connectedTopic = initialTopic ? topicForSlug(initialTopic) : null;
   const [category, setCategory] = useState<CategorySlug>(post?.category ?? initialCategory);
   const [kind, setKind] = useState<"이야기" | "모집" | "투표">(
-    post?.kind === "후기" ? "이야기" : (post?.kind ?? "이야기"),
+    post?.kind === "후기" ? "이야기" : (post?.kind ?? initialKind ?? "이야기"),
   );
   const [discussionType, setDiscussionType] = useState<DiscussionType>(
     post?.discussionType ?? "free",
@@ -80,7 +87,7 @@ export function WriteDialog({
   );
   const [venueChanged, setVenueChanged] = useState(false);
   const [topic, setTopic] = useState(post?.topic ?? ""),
-    [tags, setTags] = useState(post?.tags.join(", ") ?? "");
+    [tags, setTags] = useState(post ? post.tags.join(", ") : (connectedTopic?.aliases[0] ?? ""));
   const [question, setQuestion] = useState(post?.poll?.question ?? ""),
     [options, setOptions] = useState(
       post?.poll?.options.map((option) => option.label) ?? ["찬성", "반대"],
@@ -94,6 +101,24 @@ export function WriteDialog({
   const lockedPoll = !!post?.poll?.total;
   const lightning = post?.meetupType === "lightning";
   const verified = !!post?.verifiedParticipation;
+  const selectedTags = tags
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  function addTopicTag(value: string) {
+    const linked = topicsForTags([value])[0];
+    if (!linked) return;
+    setTags((previous) => {
+      const current = previous
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+      if (current.length >= 5 || topicsForTags(current).some((topic) => topic.slug === linked.slug))
+        return previous;
+      if (!previous.trim()) return value;
+      return previous + (previous.trimEnd().endsWith(",") ? " " : ", ") + value;
+    });
+  }
   async function uploadPreparedImage(file: File) {
     const controller = new AbortController();
     imagePreparation.current = controller;
@@ -292,6 +317,18 @@ export function WriteDialog({
                 />
                 <small>쉼표로 구분해주세요. 작품명·기법·준비물을 태그로 모을 수 있어요.</small>
               </label>
+              {kind === "모집" || !spoiler ? (
+                <TopicTagPicker
+                  tags={selectedTags}
+                  onAddTag={addTopicTag}
+                  disabled={pending}
+                  maxTags={5}
+                />
+              ) : (
+                <small className="field-count">
+                  스포일러가 있는 글은 주제 탐색에 연결되지 않아요.
+                </small>
+              )}
             </section>
             {kind !== "모집" && (
               <section className="editor-section spoiler-editor">
@@ -425,12 +462,12 @@ export function WriteDialog({
                     />
                   </label>
                   <label className="field-label">
-                    참여·문의 안내 <span className="optional-label">선택</span>
+                    공개 참여·문의 안내 <span className="optional-label">선택</span>
                     <input
                       value={contact}
                       onChange={(event) => setContact(event.target.value)}
                       maxLength={300}
-                      placeholder="댓글에 참여 의사를 남겨주세요"
+                      placeholder="댓글로 문의해주세요 · 모두에게 보이는 안내예요"
                     />
                   </label>
                 </div>
@@ -451,7 +488,8 @@ export function WriteDialog({
                     : mode === "external"
                       ? "등록 후 내 행사 관리에서 금액·정원·승인 방식을 설정하세요. 외부 플랫폼에서 신청과 결제를 완료한 참가자를 확인하고 공지방에 초대할 수 있어요."
                       : "등록 후 내 행사 관리에서 참가 금액과 정원을 설정하면 사이트 내 신청을 받을 수 있어요."}{" "}
-                  모임 내용과 규칙은 아래 본문에 적어주세요.
+                  확정 참가자에게만 제공할 연락처는 내 행사 관리에서 따로 등록할 수 있어요. 모임
+                  내용과 규칙은 아래 본문에 적어주세요.
                 </p>
               </section>
             )}

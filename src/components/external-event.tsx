@@ -13,6 +13,7 @@ import {
 import { externalClaimSchema, STATUS_LABELS, type EventOverview } from "@/domain/participation";
 import { participationRequest as request } from "@/lib/participation-client";
 import { RequestError } from "@/lib/api-client";
+import { EventPrivateContact } from "./event-private-contact";
 import { AdmissionTicket } from "./admission-ticket";
 import { RecordBacklink } from "./record-discovery";
 import { VerifiedEventReviews } from "./verified-event-reviews";
@@ -316,6 +317,7 @@ export function ExternalEvent({ initial }: { initial: EventOverview }) {
                     <CheckCircle2 size={18} />
                     공지방 입장
                   </Link>
+                  <EventPrivateContact postId={event.postId} />
                   {!cancelled && <AdmissionTicket postId={event.postId} applicationId={app.id} />}
                   {cancelled && (
                     <p className="lifecycle-cancelled-note">

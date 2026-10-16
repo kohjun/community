@@ -104,3 +104,71 @@
     grid-template-columns: 1fr;
   }
 }
+.operations-health-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: #0874dc;
+}
+.operations-health-links form {
+  margin-left: auto;
+}
+.operations-health-queues strong small {
+  font-size: 12px;
+  margin-left: 6px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.operations-health-counts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+  font-size: 12px;
+}
+.operations-health-counts dt {
+  color: #64748b;
+}
+.operations-health-counts dd {
+  font-weight: 600;
+  color: #27354a;
+  margin: 3px 0 0;
+}
+.operations-health-settings {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+  font-size: 13px;
+}
+.operations-health-settings > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+.operations-health-settings dt {
+  color: #64748b;
+}
+.operations-health-settings dd {
+  color: #334155;
+  font-weight: 500;
+  margin: 0;
+  text-align: right;
+}
+.library-market-dispute[id] {
+  scroll-margin-top: 110px;
+}
+@media (max-width: 720px) {
+  .operations-health-queues {
+    grid-template-columns: 1fr;
+  }
+  .operations-health-settings > div {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .operations-health-settings dd {
+    text-align: left;
+  }
+}

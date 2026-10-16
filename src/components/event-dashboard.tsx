@@ -20,6 +20,7 @@ import {
   type EventDashboard,
   type ApplicationView,
 } from "@/domain/participation";
+import { EventPrivateContact } from "./event-private-contact";
 import { EventQuestionEditor } from "./event-question-editor";
 import { SubmittedApplicationDetails } from "./application-question-fields";
 import { participationRequest as request } from "@/lib/participation-client";
@@ -29,7 +30,7 @@ import { RefundPanel } from "./refund-panel";
 import { EventCompletionPanel } from "./record-discovery";
 import { EventCreditManager } from "./event-credits";
 import { PlayerRecordManager } from "./player-record-manager";
-import { koreanDateTimeInput, koreanDateTimeISO } from "@/domain/refund";
+import { koreanDateTimeInput, koreanDateTimeISO, formatKoreanDate } from "@/domain/refund";
 import { ParticipationShell } from "./participation-shell";
 import { EventLifecyclePanel } from "./event-lifecycle-panel";
 type Decision = "approve" | "reject" | "refund";
@@ -337,7 +338,7 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
                       <td>
                         <span>{app.source === "external" ? "외부 신청" : "슬리퍼 신청"}</span>
                         <small>{app.externalReference || "내부 신청 내역"}</small>
-                        <small>{new Date(app.createdAt).toLocaleDateString("ko-KR")}</small>
+                        <small>{formatKoreanDate(app.createdAt)}</small>
                       </td>
                       <td>
                         <span className={`participation-status ${app.status}`}>
@@ -471,6 +472,9 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
             )}
           </section>
           <aside>
+            <section className="participation-card">
+              <EventPrivateContact postId={postId} manage={event.isOwner} />
+            </section>
             {event.isOwner && (
               <details
                 className="participation-card host-settings workspace-disclosure"
@@ -631,11 +635,17 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
             onCompleted={() => refresh(undefined, true)}
           />
         )}
-        <details className="participation-card workspace-disclosure workspace-detail-section">
+        <details
+          id="event-credits"
+          className="participation-card workspace-disclosure workspace-detail-section"
+        >
           <summary>제작진 확인</summary>
           <EventCreditManager postId={postId} />
         </details>
-        <details className="participation-card workspace-disclosure workspace-detail-section">
+        <details
+          id="event-results"
+          className="participation-card workspace-disclosure workspace-detail-section"
+        >
           <summary>참가 전적 기록</summary>
           <PlayerRecordManager postId={postId} />
         </details>

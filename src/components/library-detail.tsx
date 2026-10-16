@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { Clock3, Download, Users } from "lucide-react";
 import { ParticipationShell } from "./participation-shell";
 import { LibraryPlaybook } from "./library-playbook";
+import { RelatedTopics } from "./topic-connections";
 import { LibraryDiscoveryConditions } from "./library-discovery-metadata";
 import { CATEGORIES } from "@/domain/categories";
 import type {
@@ -159,6 +160,7 @@ export function LibraryDetail({
         </div>
         <h1>{entry.title}</h1>
         <p>{entry.summary}</p>
+        {entry.status === "published" && <RelatedTopics tags={entry.tags} />}
         {entry.status === "draft" && (
           <p className="library-save-message">
             작성자만 볼 수 있는 초안이에요. 편집 화면에서 이용 조건을 확인하고 첫 버전을

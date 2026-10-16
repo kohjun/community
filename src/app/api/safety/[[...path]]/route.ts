@@ -51,6 +51,10 @@ async function handle(request: Request, context: { params: Promise<{ path?: stri
         if (id === "support") return service.tickets(actor, true, page);
         if (id === "audit") return service.audit(actor, page);
       }
+      if (method === "GET" && parts.length === 3 && operation) {
+        if (id === "reports") return service.reportDetail(actor, operation);
+        if (id === "support") return service.ticketDetail(actor, operation);
+      }
       if (method === "POST" && parts.length === 3 && operation) {
         if (id === "reports") return service.resolve(actor, operation, await readJson(request));
         if (id === "support") return service.reply(actor, operation, await readJson(request));

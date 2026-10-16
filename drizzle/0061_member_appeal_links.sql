@@ -1,0 +1,4 @@
+ALTER TABLE "sliper"."support_tickets" ADD COLUMN "original_action_id" uuid;--> statement-breakpoint
+ALTER TABLE "sliper"."support_tickets" ADD CONSTRAINT "support_tickets_original_action_id_moderation_audit_id_fk" FOREIGN KEY ("original_action_id") REFERENCES "sliper"."moderation_audit"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "support_original_action_idx" ON "sliper"."support_tickets" USING btree ("original_action_id");--> statement-breakpoint
+ALTER TABLE "sliper"."support_tickets" ADD CONSTRAINT "support_original_action_user_unique" UNIQUE("user_id","original_action_id");

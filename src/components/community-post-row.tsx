@@ -116,15 +116,6 @@ export function CommunityPostRow({
         </div>
         {post.image && <img className="post-thumbnail" src={post.image} alt="" loading="lazy" />}
       </a>
-      {post.tags.length > 0 && (
-        <div className="row-tags post-row-tags">
-          {post.tags.map((tag) => (
-            <button key={tag} type="button" className="post-tag" onClick={() => onTag(tag)}>
-              #{tag}
-            </button>
-          ))}
-        </div>
-      )}
       <div className="row-actions post-row-actions">
         {post.kind === "모집" && (
           <RecruitmentApplyButton
@@ -132,6 +123,15 @@ export function CommunityPostRow({
             url={post.applicationUrl}
             cancelledAt={post.eventCancelledAt}
           />
+        )}
+        {post.tags.length > 0 && (
+          <div className="row-tags post-row-tags" role="group" aria-label="게시글 태그">
+            {post.tags.map((tag) => (
+              <button key={tag} type="button" className="post-tag" onClick={() => onTag(tag)}>
+                #{tag}
+              </button>
+            ))}
+          </div>
         )}
         <div className="post-row-reactions">
           <button

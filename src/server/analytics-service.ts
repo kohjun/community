@@ -7,6 +7,7 @@ import { memberSafety, staffRoles } from "../db/safety-schema";
 import { DAY_MS, koreanDay, koreanDayStart } from "../domain/community-time";
 import { membershipActive } from "../domain/safety";
 import { AppError, requireActor } from "./errors";
+import { verifiedReviewParticipation } from "./verified-review-policy";
 export type MetricsCounts = Record<
   | "registrations"
   | "excluded"
@@ -148,7 +149,7 @@ export function analyticsService(db: Database) {
         (select count(*)::int from attendance where not qr) as manager_attended,
         (select count(*)::int from mature_completed) as record_denominator,
         (select count(*)::int from mature_completed c join sliper.event_records r on r.post_id=c.id where r.status='published' and r.published_at between c.completed_at and c.completed_at+interval '7 days') as published,
-        (select count(*)::int from sliper.verified_event_reviews r join events e on e.id=r.event_post_id join members m on m.id=r.user_id join sliper.posts p on p.id=r.review_post_id where p.status='published' and r.created_at>=${start}::timestamptz and r.created_at<${end}::timestamptz) as verified_reviews,
+        (select count(*)::int from sliper.verified_event_reviews r join events e on e.id=r.event_post_id join members m on m.id=r.user_id join sliper.posts p on p.id=r.review_post_id where p.status='published' and ${verifiedReviewParticipation({ applicationId: sql`r.application_id`, postId: sql`r.event_post_id`, userId: sql`r.user_id`, hostId: sql`e.author_id` })} and r.created_at>=${start}::timestamptz and r.created_at<${end}::timestamptz) as verified_reviews,
         (select count(distinct c.id)::int from completed c join sliper.template_provenance t on t.post_id=c.id join sliper.library_entries l on l.id=t.entry_id join members m on m.id=l.owner_id where not l.sample and l.owner_id<>c.author_id) as reused_events
     `);
     const rows = Array.isArray(result)

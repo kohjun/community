@@ -960,6 +960,7 @@ export const RichPostEditor = forwardRef<RichPostEditorHandle, Props>(function R
           {postDocumentVideoIds(currentDocument).length}/3
         </small>
         <small>사진 10MB 이하 · WebP 압축 · 움직이는 사진은 첫 장면 저장</small>
+        <small>글·행사 기록에 첨부하지 않은 사진과 영상은 30일 후 정리돼요.</small>
       </div>
     </div>
   );

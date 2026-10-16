@@ -1,7 +1,10 @@
+"use client";
 import Link from "next/link";
+import { useAdSense } from "./adsense-provider";
+import { AdSenseUnit } from "./adsense-unit";
 import { ArrowUpRight, Clapperboard, Sparkles, Zap } from "lucide-react";
 
-export function SidebarAd({ placement = "left" }: { placement?: "left" | "right" }) {
+function HouseSidebarAd({ placement = "left" }: { placement?: "left" | "right" }) {
   const right = placement === "right";
   return (
     <aside
@@ -70,6 +73,21 @@ export function SidebarAd({ placement = "left" }: { placement?: "left" | "right"
           </span>
         </Link>
       </div>
+    </aside>
+  );
+}
+
+export function SidebarAd({ placement = "left" }: { placement?: "left" | "right" }) {
+  const { config } = useAdSense();
+  if (!config.enabled) return <HouseSidebarAd placement={placement} />;
+  if (!config.slots[placement]) return null;
+  return (
+    <aside
+      className={"sidebar-ad-rail sidebar-ad-rail--" + placement + " sidebar-ad-rail--adsense"}
+      aria-label={placement === "right" ? "오른쪽 광고" : "왼쪽 광고"}
+      data-ad-slot={"site-" + placement}
+    >
+      <AdSenseUnit placement={placement} />
     </aside>
   );
 }

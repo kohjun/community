@@ -20,7 +20,7 @@
 
 ## DB와 저장소
 
-영상 결과는 sliper.video_assets(RLS)에 UUID·소유자·글·저장방식·용량·크기·길이·순서를 저장한다. 마이그레이션0037은 소유권·메타데이터 불변성과 외부 직접 접근 차단을 적용한다. 0039는 video_processing_jobs와 video_processing_outputs를 추가해 처리 상태·임대·원본 만료·시도별 결과 정리를 영구 기록한다. 현재 총62개 Sliper 테이블이다. 본문에는 uploadedVideo/assetId만 기록하며 파일 경로·원본 파일명은 저장하지 않는다.
+영상 결과는 sliper.video_assets(RLS)에 UUID·소유자·글·저장방식·용량·크기·길이·순서를 저장한다. 마이그레이션0037은 소유권·메타데이터 불변성과 외부 직접 접근 차단을 적용한다. 0039는 video_processing_jobs와 video_processing_outputs를 추가해 처리 상태·임대·원본 만료·시도별 결과 정리를 영구 기록한다. 0039 도입 당시에는 총62개 Sliper 테이블이었다. 2026-10-15 현재는 0064까지의 전체 마이그레이션과 79개 Sliper 테이블을 기준으로 한다. 본문에는 uploadedVideo/assetId만 기록하며 파일 경로·원본 파일명은 저장하지 않는다.
 
 - 로컬 원본: .local/video-sources/UUID.bin; 결과: .local/videos/UUID.mp4.
 - Supabase 비공개 버킷 원본: video-sources/UUID.bin; 결과: videos/UUID.mp4.
@@ -29,7 +29,7 @@
 - 원본에는 HTTP 읽기 경로·공개/서명 URL을 제공하지 않는다.
 - 미첨부 결과는 본인만 열 수 있다. 게시된 글의 결과는 공개되며 삭제·숨김 글은 차단한다.
 - Range 요청은206, 유효하지 않은 범위는416으로 응답한다.
-- 글에서 영상 제거 시 미첨부로 돌아간다. 기존 ready 결과의 장기 보존/파기 정책은 별도로 정한다.
+- 글에서 영상 제거 시 미첨부로 돌아가며 마지막 첨부 해제 후30일 보관한다. F2의 정리 원장과 명시적 CLI 실행을 사용하고 자동 스케줄은 아직 없다. 행사 기록/출처 파일 등 제외 조건은 [F2 안내](COMMUNITY_APPEALS_RETENTION_AND_RESTORE.md)를 따른다.
 
 ## 실행 환경과 처리 한도
 
@@ -57,7 +57,7 @@ npm run test:rich-post-api
 npm run build
 ```
 
-이번 변경에서 npm run check의 형식·타입·회귀/DB593개·Drizzle 검사가 통과했다. 실제 FFmpeg와 비동기 Worker를 사용하는 영상 HTTP1개가 원본 제거·비공개 접근·Range 재생을 확인했다. npm audit는 취약점0개이며 운영 빌드가 통과했다. 로컬 Redis 컨테이너를 실행했고 healthy·PING/PONG 및 실제 Pub/Sub 프로세스 간 통합 검사 1개가 통과했다. 공지 작성 HTTP→DB 커밋→Redis→SSE 갱신과 참가 취소 후 접근 회수도 3초 이내로 확인했다. 실제 휴대폰 Canvas·영상 재생, 원격 Supabase·운영 부하는 별도 검증이 필요하다.
+사진 준비·영상 Worker·Redis 도입 당시 npm run check의 형식·타입·회귀/DB593개·Drizzle 검사가 통과했다. 아래 수치와 audit는 당시 검증 기록이며 최신 실행 결과는 [전체 현황](PROJECT_STATUS_AND_ROADMAP.md)을 따른다. 실제 FFmpeg와 비동기 Worker를 사용하는 영상 HTTP1개가 원본 제거·비공개 접근·Range 재생을 확인했다. npm audit는 취약점0개이며 운영 빌드가 통과했다. 로컬 Redis 컨테이너를 실행했고 healthy·PING/PONG 및 실제 Pub/Sub 프로세스 간 통합 검사 1개가 통과했다. 공지 작성 HTTP→DB 커밋→Redis→SSE 갱신과 참가 취소 후 접근 회수도 3초 이내로 확인했다. 실제 휴대폰 Canvas·영상 재생, 원격 Supabase·운영 부하는 별도 검증이 필요하다.
 
 ### 이전 검증 기록 (2026-10-05)
 

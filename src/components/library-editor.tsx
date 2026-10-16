@@ -18,7 +18,43 @@ import { EventPlanEditor } from "./event-plan-editor";
 import { LibraryPlaybook } from "./library-playbook";
 import { emptyEventPlan, type EventPlan } from "@/domain/event-plan";
 import { COEX_PLAYBOOK_EXAMPLE } from "@/domain/event-plan-example";
-export function LibraryEditor({ kind, initial }: { kind: LibraryKind; initial?: LibraryDetail }) {
+import { normalizeTopicTag, topicAliases, topicForSlug, type TopicSlug } from "@/domain/topics";
+import { TopicTagPicker } from "./topic-connections";
+export function LibraryEditor({
+  kind,
+  initial,
+  initialTopic,
+}: {
+  kind: LibraryKind;
+  initial?: LibraryDetail;
+  initialTopic?: TopicSlug;
+}) {
+  const presetTopic = !initial && initialTopic ? topicForSlug(initialTopic) : null;
+  const [tagText, setTagText] = useState(() =>
+    (
+      initial?.draftContent?.tags ??
+      initial?.tags ??
+      (presetTopic ? [topicAliases(presetTopic)[0]!] : [])
+    ).join(", "),
+  );
+  const selectedTags = tagText
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+  function addTopicTag(tag: string) {
+    setTagText((previous) => {
+      const tags = previous
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+      if (
+        tags.length >= 5 ||
+        tags.some((value) => normalizeTopicTag(value) === normalizeTopicTag(tag))
+      )
+        return previous;
+      return [...tags, tag].join(", ");
+    });
+  }
   const [example, setExample] = useState<LibraryInput | null>(null);
   const [exampleConfirm, setExampleConfirm] = useState(false);
   const [formRevision, setFormRevision] = useState(0);
@@ -48,6 +84,7 @@ export function LibraryEditor({ kind, initial }: { kind: LibraryKind; initial?: 
   function loadExample() {
     const content = structuredClone(COEX_PLAYBOOK_EXAMPLE);
     setExample(content);
+    setTagText(content.tags.join(", "));
     setEventPlan(content.eventPlan ?? null);
     setSelectedKind("template");
     setPaid(false);
@@ -94,10 +131,7 @@ export function LibraryEditor({ kind, initial }: { kind: LibraryKind; initial?: 
       minPlayers: Number(f.get("minPlayers")),
       maxPlayers: Number(f.get("maxPlayers")),
       durationMinutes: Number(f.get("durationMinutes")),
-      tags: String(f.get("tags") ?? "")
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean),
+      tags: selectedTags,
       rounds: lines("rounds").map((v) => {
         const parts = v.split("|");
         return { name: parts[0]?.trim() ?? "", seconds: Number(parts[1]) };
@@ -343,7 +377,12 @@ export function LibraryEditor({ kind, initial }: { kind: LibraryKind; initial?: 
                 주제
                 <select
                   name="categorySlug"
-                  defaultValue={draft?.categorySlug ?? initial?.category ?? "mind-games"}
+                  defaultValue={
+                    draft?.categorySlug ??
+                    initial?.category ??
+                    presetTopic?.category ??
+                    "mind-games"
+                  }
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c.slug} value={c.slug}>
@@ -403,12 +442,26 @@ export function LibraryEditor({ kind, initial }: { kind: LibraryKind; initial?: 
                 태그 (쉼표로 구분, 최대 5개)
                 <input
                   name="tags"
-                  maxLength={124}
-                  defaultValue={(draft?.tags ?? initial?.tags)?.join(", ")}
+                  maxLength={128}
+                  value={tagText}
+                  onChange={(event) => setTagText(event.target.value)}
                   placeholder="추리, 팀플레이, 실내"
                 />
               </label>
             </div>
+          </section>
+          <section className="marketplace-section">
+            <h2>같은 취향의 이야기와 모임에 연결하기</h2>
+            <p>
+              카테고리만으로 연결되지 않아요. 추천 태그를 직접 추가하면 해당 주제에서 이 자료를 함께
+              찾을 수 있어요.
+            </p>
+            <TopicTagPicker
+              tags={selectedTags}
+              onAddTag={addTopicTag}
+              disabled={busy}
+              maxTags={5}
+            />
           </section>
           <section className="marketplace-section">
             <h2>찾기 쉬운 공개 운영 조건</h2>

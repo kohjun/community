@@ -18,6 +18,8 @@ export default defineConfig({
     "./src/db/crew-schema.ts",
     "./src/db/video-schema.ts",
     "./src/db/video-processing-schema.ts",
+    "./src/db/media-retention-schema.ts",
+    "./src/db/event-contact-schema.ts",
   ],
   out: "./drizzle",
   schemaFilter: ["sliper"],

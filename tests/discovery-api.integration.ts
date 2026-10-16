@@ -193,6 +193,62 @@ test("topic and archive HTTP discovery share strict queries, current source ACL 
       assert.equal(html.includes(privateMarker), false, page);
       assert.ok(html.includes('href="/topics"'), page + " shared topic navigation");
     }
+
+    // Test real SSR entry points rather than only the URL helpers: paid summaries expose
+    // public topic relationships, while draft and spoiler detail pages never advertise them.
+    for (const path of ["/archive/" + free.id, "/posts/" + story.id]) {
+      const response = await fetch(origin + path, { signal: AbortSignal.timeout(60000) });
+      assert.equal(response.status, 200, path);
+      const html = await response.text();
+      assert.ok(html.includes('aria-label="관련 주제"'), path);
+      assert.ok(html.includes('href="/topics/mystery"'), path);
+    }
+    for (const path of ["/archive/" + paid.id, "/posts/" + spoiler.id]) {
+      const response = await fetch(origin + path, { signal: AbortSignal.timeout(60000) });
+      assert.equal(response.status, 200, path);
+      assert.equal((await response.text()).includes('aria-label="관련 주제"'), false, path);
+    }
+    const newTemplateResponse = await fetch(
+      origin + "/archive/new?kind=template&topic=mission-race",
+      { signal: AbortSignal.timeout(60000) },
+    );
+    assert.equal(newTemplateResponse.status, 200);
+    const newTemplateHtml = await newTemplateResponse.text();
+    assert.ok(newTemplateHtml.includes('value="미션레이스"'));
+    assert.ok(newTemplateHtml.includes('value="race" selected=""'));
+    assert.ok(newTemplateHtml.includes("연결될 주제: 미션 레이스"));
+    const guestCreateResponse = await fetch(
+      origin + "/archive/new?kind=template&topic=mission-race",
+      {
+        headers: { Cookie: "sliper_test_session=invalid" },
+        redirect: "manual",
+        signal: AbortSignal.timeout(60000),
+      },
+    );
+    assert.equal(guestCreateResponse.status, 307);
+    assert.equal(
+      new URL(guestCreateResponse.headers.get("location")!, origin).searchParams.get("returnTo"),
+      "/archive/new?kind=template&topic=mission-race",
+    );
+    const guestStoryResponse = await fetch(
+      origin +
+        "/stories?category=race&kind=" +
+        encodeURIComponent("모집") +
+        "&composeTopic=mission-race",
+      {
+        headers: { Cookie: "sliper_test_session=invalid" },
+        redirect: "manual",
+        signal: AbortSignal.timeout(60000),
+      },
+    );
+    assert.equal(guestStoryResponse.status, 307);
+    const storyReturn = new URL(
+      new URL(guestStoryResponse.headers.get("location")!, origin).searchParams.get("returnTo")!,
+      origin,
+    );
+    assert.equal(storyReturn.pathname, "/stories");
+    assert.equal(storyReturn.searchParams.get("composeTopic"), "mission-race");
+    assert.equal(storyReturn.searchParams.get("kind"), "모집");
     const invalidPage = await fetch(origin + "/archive?players=0");
     assert.equal(invalidPage.status, 200);
     assert.ok((await invalidPage.text()).includes("검색 조건을 확인할 수 없어"));

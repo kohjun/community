@@ -61,7 +61,7 @@ export function VerifiedEventReviews({ postId }: { postId: string }) {
     }
   }
   return (
-    <section className="participation-card ops-card ops-reviews">
+    <section id="event-reviews" className="participation-card ops-card ops-reviews">
       <h2>
         <BadgeCheck size={19} />
         참가 인증 후기

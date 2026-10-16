@@ -1,24 +1,38 @@
-/* Keep recruitment and reaction controls together beneath each post. */
+/* Tags scroll within their own area; application and reaction controls stay reachable. */
 .expanded-post-row .post-row-tags {
-  margin: 12px 0 0;
+  flex: 1 1 0;
+  flex-wrap: nowrap;
+  min-width: 0;
+  margin: 0;
   gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
 }
 
 .expanded-post-row .post-row-tags .post-tag {
-  max-width: 100%;
+  flex: none;
+  max-width: none;
+  min-height: 36px;
   padding: 4px 7px;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  font-size: 11px;
   text-align: left;
 }
 
 .expanded-post-row .post-row-actions {
+  flex-wrap: nowrap;
+  min-width: 0;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   min-height: 36px;
   margin-top: 12px;
 }
 
 .expanded-post-row .post-row-actions .apply-button {
+  flex: none;
+  white-space: nowrap;
   height: 36px;
   min-height: 36px;
   margin-top: 0;
@@ -36,6 +50,7 @@
 
 .expanded-post-row .post-row-reactions {
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: flex-end;
   gap: 4px;

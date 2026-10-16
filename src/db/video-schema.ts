@@ -42,6 +42,7 @@ export const videoAssets = sliper
       durationSeconds: doublePrecision("duration_seconds").notNull(),
       status: uploadStatusEnum("status").notNull().default("pending"),
       sortOrder: smallint("sort_order").notNull().default(0),
+      unattachedSince: timestamp("unattached_since", { withTimezone: true }).defaultNow(),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     },
     (t) => [
@@ -49,6 +50,11 @@ export const videoAssets = sliper
       unique("video_assets_record_order_unique").on(t.recordPostId, t.sortOrder),
       check("video_single_parent", sql`num_nonnulls(${t.postId}, ${t.recordPostId}) <= 1`),
       index("video_assets_uploader_idx").on(t.uploaderId),
+      index("video_unattached_retention_idx")
+        .on(t.unattachedSince, t.id)
+        .where(
+          sql`${t.postId} is null and ${t.recordPostId} is null and ${t.recordOriginPostId} is null`,
+        ),
       check("video_assets_object_key", sql`${t.objectKey} = ${t.id}::text || '.mp4'`),
       check("video_assets_storage_backend", sql`${t.storageBackend} in ('local','supabase')`),
       check("video_assets_content_type", sql`${t.contentType} = 'video/mp4'`),

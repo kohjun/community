@@ -17,6 +17,7 @@ import { ParticipationShell } from "./participation-shell";
 import { Markdown } from "./markdown";
 import { RoomAccess } from "@/lib/room-access";
 import { RequestError } from "@/lib/api-client";
+import { EventPrivateContact } from "./event-private-contact";
 import { MemberAvatar } from "./member-avatar";
 type Manager = { publicId: string; nickname: string };
 type Attendees = { items: ApplicationView[]; nextCursor: string | null };
@@ -494,12 +495,15 @@ export function AnnouncementRoom({ initial }: { initial: RoomView }) {
                   </form>
                 ) : (
                   <footer className="announcement-readonly">
-                    <LockKeyhole size={16} />이 방은 읽기 전용입니다. 문의는 모집글의 댓글이나
-                    담당자 연락처를 이용해주세요.
+                    <LockKeyhole size={16} />이 방은 읽기 전용입니다. 문의는 담당자에게 문의하기를
+                    이용해주세요.
                   </footer>
                 )}
               </section>
               <aside>
+                <section className="participation-card">
+                  <EventPrivateContact postId={postId} />
+                </section>
                 {room.canWrite && (
                   <Link className="participation-primary" href={`/management/events/${postId}`}>
                     참가 현황 · 승인 대시보드

@@ -1,0 +1,49 @@
+/* Live Google units are independent from the animated house-banner designs. */
+.adsense-unit {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 0;
+  margin: 22px 0;
+  background: #fff;
+  text-align: left;
+}
+.adsense-unit-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 10px;
+  line-height: 18px;
+  color: #7b8795;
+}
+.adsense-unit--left,
+.adsense-unit--right {
+  width: 160px;
+  padding: 0;
+  margin: 0;
+}
+.site-ad-layout > .sidebar-ad-rail--adsense {
+  bottom: auto;
+}
+.sidebar-ad-rail--adsense .adsense-unit {
+  position: static;
+  animation: none;
+  transform: none;
+}
+.adsense-unit .adsbygoogle {
+  text-decoration: none;
+}
+@media (min-width: 1568px) {
+  .site-ad-layout--adsense:not(:has(.page-layout--categories)) {
+    min-height: max(100dvh, 850px);
+  }
+}
+@media (min-width: 1760px) {
+  .site-ad-layout--adsense {
+    min-height: max(100dvh, 850px);
+  }
+}
+@media (max-width: 720px) {
+  .adsense-unit--inline {
+    margin: 20px 0;
+    padding: 10px 0;
+  }
+}

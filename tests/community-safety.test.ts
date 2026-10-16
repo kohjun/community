@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { after, before, beforeEach, test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
@@ -64,7 +64,7 @@ test("real authentication configuration is disabled for a local or insecure depl
     SLIPER_AUTH_MODE: "supabase",
     LOCAL_DATABASE: "0",
     NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
-    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "public-key",
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic_test_key",
     APP_ORIGIN: "https://sliper.example",
   };
   assert.ok(authConfiguration(env));
@@ -73,6 +73,78 @@ test("real authentication configuration is disabled for a local or insecure depl
   assert.equal(authConfiguration({ ...env, SLIPER_AUTH_MODE: "development" }), null);
   assert.equal(authConfiguration({ ...env, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "" }), null);
 });
+function syntheticApiToken(payload: unknown, header: unknown = { alg: "HS256", typ: "JWT" }) {
+  return [
+    Buffer.from(JSON.stringify(header)).toString("base64url"),
+    Buffer.from(JSON.stringify(payload)).toString("base64url"),
+    randomBytes(32).toString("base64url"),
+  ].join(".");
+}
+const realAuthEnvironment = () => ({
+  SLIPER_AUTH_MODE: "supabase",
+  LOCAL_DATABASE: "0",
+  NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+  APP_ORIGIN: "https://sliper.example",
+});
+
+test("authentication accepts supported publishable and legacy anon formats without verifying signatures", () => {
+  for (const key of [
+    "sb_publishable_synthetic_test_key",
+    "sb_publishable_a-B_1",
+    syntheticApiToken({ role: "anon", iss: "supabase" }),
+    syntheticApiToken({ role: "anon" }, { alg: "HS256" }),
+  ]) {
+    const result = authConfiguration({
+      ...realAuthEnvironment(),
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: key,
+    });
+    assert.equal(result?.key, key);
+  }
+});
+
+test("authentication rejects arbitrary values, whitespace, secret keys and malformed legacy claims", () => {
+  const anon = syntheticApiToken({ role: "anon" });
+  const privateFixture = "sb_secret_" + randomBytes(24).toString("base64url");
+  for (const key of [
+    "public-key",
+    "https://project.supabase.co/key",
+    "sb_publishable_",
+    "sb_publishable_synthetic!",
+    " sb_publishable_synthetic",
+    "sb_publishable_synthetic\n",
+    "sb_publishable_\u0000synthetic",
+    privateFixture,
+    " " + privateFixture,
+    "\n" + privateFixture,
+    anon + ".extra",
+    anon + "=",
+    anon.split(".").slice(0, 2).join("."),
+    syntheticApiToken({ role: "service_role" }),
+    syntheticApiToken({ role: "admin" }),
+    syntheticApiToken({}),
+    syntheticApiToken(["anon"]),
+    syntheticApiToken({ role: "anon" }, []),
+    syntheticApiToken({ role: "anon" }, { alg: "none", typ: "JWT" }),
+    syntheticApiToken({ role: "anon" }, { alg: "HS256", typ: "invalid" }),
+  ])
+    assert.equal(
+      authConfiguration({ ...realAuthEnvironment(), NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: key }),
+      null,
+    );
+});
+
+test("authentication legacy fallback respects an explicitly empty publishable key and leaves input untouched", () => {
+  const env = Object.freeze({
+    ...realAuthEnvironment(),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: syntheticApiToken({ role: "anon" }),
+  });
+  const before = { ...env };
+  assert.equal(authConfiguration(env)?.key, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  assert.equal(authConfiguration({ ...env, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "" }), null);
+  assert.equal(authConfiguration({ ...env, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: " " }), null);
+  assert.deepEqual(env, before);
+});
+
 test("membership checks expire temporary restrictions but never reopen a closed account", () => {
   const now = new Date();
   assert.equal(membershipActive(undefined, now), true);
@@ -128,7 +200,11 @@ test("moderation is authorized, records a reason, hides all feed projections, an
   const [original] = await db.select().from(base.posts).where(eq(base.posts.id, target.id));
   assert.equal(original?.status, "published");
   assert.ok(original?.bodyMarkdown);
-  assert.equal((await service.reports(reader)).items[0]?.resolution, "개인정보 노출 확인");
+  assert.equal(
+    (await service.reports(reader)).items[0]?.resolution,
+    "신고 내용을 검토하고 필요한 조치를 적용했어요.",
+  );
+  assert.equal((await service.reports(admin, true)).items[0]?.resolution, "개인정보 노출 확인");
   await service.resolve(mod, report.id, {
     action: "restore",
     reason: "개인정보가 아닌 것으로 확인",

@@ -6,6 +6,7 @@ import {
   TOPICS,
   TOPIC_MAX_PAGE,
   TOPIC_PAGE_SIZE,
+  TOPIC_TAG_WHITESPACE,
   topicAliases,
   topicForSlug,
   topicQuerySchema,
@@ -27,7 +28,7 @@ function explicitTags(tags: unknown, topic: CuratedTopic): SQL {
     topicAliases(topic).map((alias) => sql`${alias}`),
     sql`, `,
   );
-  return sql`exists(select 1 from unnest(${tags}) topic_tag where lower(regexp_replace(regexp_replace(btrim(topic_tag), '^#', ''), '[[:space:]]+', '', 'g')) in (${aliases}))`;
+  return sql`exists(select 1 from unnest(${tags}) topic_tag where lower(regexp_replace(translate(topic_tag, ${TOPIC_TAG_WHITESPACE}, ''), '^#', '')) in (${aliases}))`;
 }
 function section<T>(items: T[], total: number, requested: number): TopicSection<T> {
   const pageCount = Math.min(TOPIC_MAX_PAGE, Math.ceil(total / TOPIC_PAGE_SIZE));

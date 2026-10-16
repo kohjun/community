@@ -1,4 +1,5 @@
 "use client";
+import { useAdSenseContentGuard } from "./adsense-provider";
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import {
@@ -99,6 +100,8 @@ export function LightningCommunity({
     [applicationUrl, setApplicationUrl] = useState(""),
     [priceKRW, setPriceKRW] = useState("0"),
     [created, setCreated] = useState<CreatedMeetup | null>(null);
+  const advertisingBlocked = open || feed.posts.length === 0;
+  useAdSenseContentGuard(advertisingBlocked);
   const readPosts = useReadPosts();
   const loadVersion = useRef(0);
   const dialogHeading = useRef<HTMLHeadingElement>(null);
@@ -258,7 +261,7 @@ export function LightningCommunity({
   const browseTags = [...new Set([...suggestions, ...(tag ? [tag] : [])])];
   const selectedActivity = draftActivity ? lightningCategory(draftActivity) : null;
   return (
-    <ParticipationShell>
+    <ParticipationShell advertising={!advertisingBlocked}>
       <section className="lightning-hero">
         <div>
           <span className="lightning-kicker">

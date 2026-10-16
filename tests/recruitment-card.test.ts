@@ -124,3 +124,30 @@ test("availability states reflect supplied values and cancellation takes priorit
   assert.ok(cancelled.includes("모집 취소"));
   assert.ok(!cancelled.includes("모집 중"));
 });
+
+test("card tag and reaction controls preserve one application link and readonly guards without duplicate statistics", () => {
+  const html = render(
+    {
+      applicationUrl: "https://apply.example/one-event",
+      tags: ["아주 긴 모집 태그 이름", "보드게임"],
+      isLiked: true,
+      isBookmarked: true,
+    },
+    { canWrite: false },
+  );
+  assert.equal((html.match(/href="https:\/\/apply.example\/one-event"/g) ?? []).length, 1);
+  assert.equal((html.match(/aria-label="조회 30회"/g) ?? []).length, 1);
+  assert.equal((html.match(/aria-label="댓글 2개"/g) ?? []).length, 1);
+  assert.match(html, /#아주 긴 모집 태그 이름/);
+  const reactions = [...html.matchAll(/<button\b[^>]*>/g)]
+    .map((match) => match[0])
+    .filter((button) => /aria-label="[^"]*(좋아요|북마크)"/.test(button));
+  assert.equal(reactions.length, 2);
+  assert.ok(
+    reactions.every(
+      (button) => button.includes('disabled=""') && button.includes('aria-pressed="true"'),
+    ),
+  );
+  for (const anchor of html.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/g))
+    assert.doesNotMatch(anchor[1] ?? "", /<button\b|<a\b/);
+});

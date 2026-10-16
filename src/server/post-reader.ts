@@ -16,6 +16,7 @@ import { timeLabel } from "./presentation";
 import { contentVisible, authorVisible } from "./safety-visibility";
 import { visibleEventVenueId, visibleEventVenueVersion } from "./event-venue-service";
 import { periodLikeCount } from "./popularity";
+import { verifiedReviewParticipation } from "./verified-review-policy";
 export const likeCount = sql<number>`(select count(*)::int from sliper.post_likes l where l.post_id = ${posts.id})`;
 const viewCount = sql<number>`(select count(*)::int from sliper.post_daily_views v where v.post_id = ${posts.id})`;
 const commentCount = sql<number>`(select count(*)::int from sliper.comments c where c.post_id = ${posts.id} and c.status = 'published')`;
@@ -157,9 +158,17 @@ export function createPostReader(db: Database) {
           })
           .from(verifiedEventReviews)
           .where(
-            inArray(
-              verifiedEventReviews.reviewPostId,
-              rows.map((r) => r.post.id),
+            and(
+              inArray(
+                verifiedEventReviews.reviewPostId,
+                rows.map((r) => r.post.id),
+              ),
+              verifiedReviewParticipation({
+                applicationId: sql`"sliper"."verified_event_reviews"."application_id"`,
+                postId: sql`"sliper"."verified_event_reviews"."event_post_id"`,
+                userId: sql`"sliper"."verified_event_reviews"."user_id"`,
+                hostId: sql`"sliper"."verified_event_reviews"."host_id"`,
+              }),
             ),
           )
       : [];

@@ -15,6 +15,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { CATEGORIES } from "@/domain/categories";
+import type { AftercarePage } from "@/domain/event-aftercare";
 import { AVATARS, AVATAR_SYMBOLS, activityLevel } from "@/domain/boards";
 import { profileInputSchema } from "@/domain/validation";
 import {
@@ -34,13 +35,20 @@ import { TestAccountControls } from "./test-account-controls";
 import { PushSettings } from "./push-settings";
 import { MemberAvatar } from "./member-avatar";
 import { useReadPosts } from "@/lib/use-read-posts";
+import { EventAftercare } from "./event-aftercare";
 const profileRequest = (
   method: string,
   body: unknown = undefined,
   path = "",
   signal?: AbortSignal,
 ) => communityRequest<MyProfile>(`/me${path}`, method, body, signal);
-export function MyPage({ initial }: { initial: MyProfile }) {
+export function MyPage({
+  initial,
+  initialAftercare,
+}: {
+  initial: MyProfile;
+  initialAftercare: AftercarePage;
+}) {
   const readPosts = useReadPosts();
   const [profile, setProfile] = useState(initial),
     [tab, setTab] = useState("posts"),
@@ -272,6 +280,7 @@ export function MyPage({ initial }: { initial: MyProfile }) {
             </div>
           </section>
           <div className="my-main">
+            <EventAftercare initial={initialAftercare} scope="all" />
             <section className="activity-card">
               <div className="activity-heading">
                 <div>
@@ -323,6 +332,8 @@ export function MyPage({ initial }: { initial: MyProfile }) {
                 일별 한도: 글 {ACTIVITY_REWARDS.post.dailyCap}P, 댓글{" "}
                 {ACTIVITY_REWARDS.comment.dailyCap}P, 투표 {ACTIVITY_REWARDS.vote.dailyCap}P.
                 재투표·같은 날 방문은 중복 적립되지 않아요.
+                <br />
+                활동점수는 커뮤니티 활동 보상이며 참가 확인·제작 경력·매너 평가와 별도예요.
               </p>
             </section>
             {editing && (

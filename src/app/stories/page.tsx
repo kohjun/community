@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { communityLocation } from "@/domain/community-location";
+import { topicForSlug } from "@/domain/topics";
 import type { Metadata } from "next";
 import { SliperCommunity } from "@/components/sliper-community";
 import { getDatabase } from "@/db/client";
@@ -24,8 +25,13 @@ export default async function Page({
     ),
     true,
   );
+  const composeTopic =
+    typeof params.composeTopic === "string" ? topicForSlug(params.composeTopic) : null;
   const actor = await currentActor();
-  if (!actor && (initialQuery.view === "mine" || initialQuery.view === "bookmarks")) {
+  if (
+    !actor &&
+    (composeTopic || initialQuery.view === "mine" || initialQuery.view === "bookmarks")
+  ) {
     const query = new URLSearchParams(
       Object.entries(params).filter(([, value]) => typeof value === "string") as [string, string][],
     ).toString();
@@ -38,8 +44,9 @@ export default async function Page({
   ]);
   return (
     <SliperCommunity
-      key={JSON.stringify(initialQuery)}
+      key={JSON.stringify([initialQuery, composeTopic?.slug])}
       initialQuery={initialQuery}
+      {...(composeTopic ? { initialComposeTopic: composeTopic.slug } : {})}
       initialView="stories"
       initialState={{
         ...feed,

@@ -1,4 +1,5 @@
 "use client";
+import { useAdSenseContentGuard } from "./adsense-provider";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
@@ -53,6 +54,9 @@ export function LibraryList({
     [appliedQuery, setAppliedQuery] = useState(query),
     activeRequest = useRef<AbortController | null>(null);
 
+  const advertisingBlocked =
+    query.mine || query.used || appliedQuery.mine || appliedQuery.used || data.items.length === 0;
+  useAdSenseContentGuard(advertisingBlocked);
   const load = useCallback(
     async (
       value: LibraryFilterState,
@@ -125,7 +129,7 @@ export function LibraryList({
   ].filter(Boolean);
 
   return (
-    <ParticipationShell>
+    <ParticipationShell advertising={!advertisingBlocked}>
       <section className="marketplace-hero">
         <div>
           <span className="marketplace-kicker">SLIPER PLAY ARCHIVE</span>
@@ -272,7 +276,15 @@ export function LibraryList({
         </div>
         {!data.canWrite && (
           <p className={styles.hint}>
-            회원 공개 운영 사례로 찾으려면 <Link href="/login?returnTo=%2Farchive">로그인</Link>
+            회원 공개 운영 사례로 찾으려면{" "}
+            <Link
+              href={
+                "/login?returnTo=" +
+                encodeURIComponent("/archive?" + libraryFilterParams({ ...query, used: true }))
+              }
+            >
+              로그인
+            </Link>
             해주세요.
           </p>
         )}

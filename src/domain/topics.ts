@@ -37,10 +37,33 @@ export const TOPICS = [
 }[];
 export type CuratedTopic = (typeof TOPICS)[number];
 export type TopicSlug = CuratedTopic["slug"];
+export const TOPIC_SECTIONS = ["stories", "recruitment", "library"] as const;
+export type TopicSectionId = (typeof TOPIC_SECTIONS)[number];
+export function topicSectionFromHash(hash: string): TopicSectionId {
+  const value = hash.replace(/^#/, "");
+  return TOPIC_SECTIONS.find((section) => section === value) ?? "stories";
+}
+/** Carry the explicitly selected topic into a new post or library draft. */
+export function topicCreationUrl(slug: TopicSlug, section: TopicSectionId): string {
+  const topic = topicForSlug(slug)!;
+  if (section === "library") return "/archive/new?topic=" + topic.slug;
+  return (
+    "/stories?" +
+    new URLSearchParams({
+      category: topic.category,
+      kind: section === "recruitment" ? "모집" : "이야기",
+      composeTopic: topic.slug,
+    })
+  );
+}
 export const TOPIC_PAGE_SIZE = 12;
 export const TOPIC_MAX_PAGE = 100;
+// ECMAScript whitespace, shared with SQL translate() so past tags and browser previews agree.
+export const TOPIC_TAG_WHITESPACE =
+  "\u0009\u000a\u000b\u000c\u000d\u0020\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff";
+const topicTagWhitespace = new RegExp("[" + TOPIC_TAG_WHITESPACE + "]", "g");
 export function normalizeTopicTag(tag: string) {
-  return tag.trim().replace(/^#/, "").replace(/\s+/g, "").toLowerCase();
+  return tag.replace(topicTagWhitespace, "").replace(/^#/, "").toLowerCase();
 }
 export function topicForSlug(slug: string): CuratedTopic | null {
   return TOPICS.find((topic) => topic.slug === slug) ?? null;
@@ -105,11 +128,15 @@ export interface TopicDetail {
   recruitment: TopicSection<TopicPostSummary>;
   library: TopicSection<TopicLibrarySummary>;
 }
-export function topicUrl(slug: TopicSlug, query: Partial<TopicQuery> = {}) {
+export function topicUrl(
+  slug: TopicSlug,
+  query: Partial<TopicQuery> = {},
+  section?: TopicSectionId,
+) {
   const params = new URLSearchParams();
   if (query.focus === "interests") params.set("focus", "interests");
   for (const key of ["storiesPage", "recruitmentPage", "libraryPage"] as const)
     if (query[key] && query[key]! > 1) params.set(key, String(query[key]));
   const suffix = params.toString();
-  return "/topics/" + slug + (suffix ? "?" + suffix : "");
+  return "/topics/" + slug + (suffix ? "?" + suffix : "") + (section ? "#" + section : "");
 }

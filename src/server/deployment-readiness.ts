@@ -1,7 +1,12 @@
-import { isIP } from "node:net";
+import {
+  isAdSenseClientId,
+  isAdSenseSlotId,
+  readAdvertisingConfiguration,
+} from "../domain/advertising";
 import { authConfiguration } from "./auth-config";
 import { imageStorageConfiguration } from "./image-storage-config";
 import { parsePushConfiguration } from "./push-configuration";
+import { parseRedisConfiguration, isPrivateRedisHost } from "./redis-configuration";
 
 type Environment = Record<string, string | undefined>;
 export interface DeploymentCheck {
@@ -44,60 +49,51 @@ function database(value: string | undefined) {
     return null;
   }
 }
-function redis(value: string | undefined) {
-  try {
-    const url = new URL(value?.trim() ?? "");
-    if (!["redis:", "rediss:"].includes(url.protocol)) return null;
-    decodeURIComponent(url.username);
-    decodeURIComponent(url.password);
-    const host = url.hostname.toLowerCase().replace(/\.$/, "");
-    const address = host.startsWith("[") && host.endsWith("]") ? host.slice(1, -1) : host;
-    if (!host || (url.port && Number(url.port) === 0)) return null;
-    if (!isIP(address)) {
-      if (
-        host.length > 253 ||
-        /^\d+(?:\.\d+){3}$/.test(host) ||
-        !host.split(".").every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label))
-      )
-        return null;
-    }
-    // Match node-redis's URL database index rather than accepting an unusable path.
-    if (
-      url.pathname &&
-      url.pathname !== "/" &&
-      (!/^\/\d+$/.test(url.pathname) || !Number.isSafeInteger(Number(url.pathname.slice(1))))
-    )
-      return null;
-    return url;
-  } catch {
-    return null;
-  }
-}
-function privateRedisHost(hostname: string): boolean {
-  const host = hostname
-    .toLowerCase()
-    .replace(/\.$/, "")
-    .replace(/^\[|\]$/g, "");
+
+function advertisingReadiness(env: Environment): DeploymentCheck {
+  const flag = env.SLIPER_ADSENSE_ENABLED;
+  const clientId = env.SLIPER_ADSENSE_CLIENT_ID ?? "";
+  const inline = env.SLIPER_ADSENSE_SLOT_INLINE ?? "";
+  const left = env.SLIPER_ADSENSE_SLOT_LEFT ?? "";
+  const right = env.SLIPER_ADSENSE_SLOT_RIGHT ?? "";
+  const invalid = (): DeploymentCheck => ({
+    id: "advertising",
+    status: "fail",
+    message:
+      "AdSense 설정이 불완전합니다. 활성화 값은 true 또는 false이며, 게시자 ID·광고 단위 ID·공개 HTTPS 도메인을 확인하세요. 운영 광고는 로컬 DB 모드에서 켤 수 없습니다.",
+  });
+  if (flag !== undefined && flag !== "" && flag !== "true" && flag !== "false") return invalid();
+  const hasIdentifiers = [clientId, inline, left, right].some((value) => value !== "");
+  if (!hasIdentifiers && flag !== "true")
+    return {
+      id: "advertising",
+      status: "warn",
+      message:
+        "AdSense가 미설정이며 실제 광고 요청은 비활성화되어 있습니다. 게시자·광고 단위 ID 발급 후 연결하세요.",
+    };
   if (
-    host === "localhost" ||
-    host.endsWith(".localhost") ||
-    host.endsWith(".local") ||
-    host.endsWith(".internal") ||
-    (isIP(host) === 0 && !host.includes("."))
+    !isAdSenseClientId(clientId) ||
+    [inline, left, right].some((value) => value !== "" && !isAdSenseSlotId(value))
   )
-    return true;
-  if (isIP(host) === 4)
-    return /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host);
-  if (isIP(host) === 6) {
-    if (host === "::1" || /^(f[cd]|fe[89ab])/.test(host)) return true;
-    const mapped = /^::ffff:([a-f0-9]{1,4}):([a-f0-9]{1,4})$/.exec(host);
-    if (mapped) {
-      const high = parseInt(mapped[1]!, 16),
-        low = parseInt(mapped[2]!, 16);
-      return privateRedisHost(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
-    }
-  }
-  return false;
+    return invalid();
+  // Inspect the prospective production configuration without changing the running environment.
+  const configuration = readAdvertisingConfiguration({ ...env, NODE_ENV: "production" });
+  if (!configuration.clientId || !configuration.siteOrigin) return invalid();
+  if (flag === "true")
+    return configuration.enabled
+      ? {
+          id: "advertising",
+          status: "pass",
+          message:
+            "AdSense 설정 형식이 유효합니다. 실제 광고 요청·사이트 승인·게재 상태는 확인하지 않았습니다.",
+        }
+      : invalid();
+  return {
+    id: "advertising",
+    status: "warn",
+    message:
+      "AdSense 사이트 확인용 설정 형식이 유효하며 실제 광고는 비활성화되어 있습니다. 사이트 승인 후 광고 단위 ID와 활성화 설정을 적용하세요.",
+  };
 }
 
 /** Static, redacted configuration inspection. Never connects, reads credentials files, or provisions resources. */
@@ -176,7 +172,7 @@ export function deploymentReadiness(env: Environment): DeploymentCheck[] {
     "조회수 방문자 서명 키가 설정되어 있습니다.",
     "VISITOR_HASH_SECRET에 모든 서버가 공유하는 최소 32자 난수를 설정하세요.",
   );
-  const roomRedis = redis(env.REDIS_URL);
+  const roomRedis = parseRedisConfiguration(env.REDIS_URL);
   if (!present(env.REDIS_URL)) {
     rows.push({
       id: "room-realtime",
@@ -197,7 +193,7 @@ export function deploymentReadiness(env: Environment): DeploymentCheck[] {
         "공지방 Redis 주소 형식과 TLS 설정이 유효합니다. 실제 연결과 여러 서버 간 수신을 별도 검증하세요.",
     });
   } else {
-    const privateHost = privateRedisHost(roomRedis.hostname);
+    const privateHost = isPrivateRedisHost(roomRedis.hostname);
     rows.push({
       id: "room-realtime",
       status: privateHost || env.NODE_ENV === "development" ? "warn" : "fail",
@@ -207,14 +203,19 @@ export function deploymentReadiness(env: Environment): DeploymentCheck[] {
     });
   }
 
-  const exposed = Object.entries(env).some(
-    ([key, value]) =>
-      present(value) &&
-      key.startsWith("NEXT_PUBLIC_") &&
-      (/SECRET|PASSWORD|SERVICE_ROLE|DATABASE_URL|REDIS|VAPID_PRIVATE|PAYMENT_API_KEY/.test(key) ||
-        value!.startsWith("sb_secret_") ||
-        /^rediss?:\/\//i.test(value!.trim())),
-  );
+  const exposed = Object.entries(env).some(([key, value]) => {
+    if (!present(value) || !key.startsWith("NEXT_PUBLIC_")) return false;
+    const normalized = value!.trim();
+    return (
+      /SECRET|PASSWORD|SERVICE_ROLE|DATABASE_URL|REDIS|PRIVATE_KEY|VAPID_PRIVATE|PAYMENT_API_KEY/i.test(
+        key,
+      ) ||
+      normalized.startsWith("sb_secret_") ||
+      /^(?:rediss?|postgres(?:ql)?):\/\//i.test(normalized) ||
+      /-----BEGIN (?:[A-Z0-9]+ )?PRIVATE KEY-----/.test(normalized) ||
+      /^[a-z][a-z\d+.-]*:\/\/[^/\s]*:[^/\s]*@/i.test(normalized)
+    );
+  });
   check(
     "public-secrets",
     !exposed,
@@ -309,6 +310,7 @@ export function deploymentReadiness(env: Environment): DeploymentCheck[] {
     "별도 Worker 모드입니다. push:worker를 상시 실행하고 대기열을 확인하세요.",
     "PUSH_WORKER_MODE=external로 설정하고 지속 실행하는 별도 알림 Worker를 준비하세요.",
   );
+  rows.push(advertisingReadiness(env));
   rows.push({
     id: "operational-verification",
     status: "warn",

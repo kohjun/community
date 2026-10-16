@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getAdvertisingConfiguration } from "@/server/advertising-config";
 import localFont from "next/font/local";
 import "./globals.css";
 import "./community-expansion.css";
@@ -16,18 +17,25 @@ import "./application-questions.css";
 import "./profile-photos.css";
 import "./room-members.css";
 import "./ad-placement.css";
+import "./adsense.css";
 import "./category-sidebar.css";
 import "./read-posts.css";
 import "./community-safety.css";
+import "./operations.css";
+import "./release-readiness.css";
+import "./appeals.css";
 import "./event-operations.css";
 import "./event-lifecycle.css";
+import "./event-private-contact.css";
 import "./engagement.css";
 import "./post-body.css";
 import "./post-editor.css";
+import "./topic-connections.css";
 import "./post-sharing.css";
 import "./unified-search.css";
 import "./crew.css";
 import "./event-records.css";
+import "./event-aftercare.css";
 import "./naver-event-map.css";
 import { PushOnboardingProvider } from "@/components/push-onboarding";
 import { SiteAdvertising } from "@/components/site-advertising";
@@ -43,7 +51,7 @@ const pretendard = localFont({
   variable: "--font-pretendard",
 });
 
-export const metadata: Metadata = {
+const siteMetadata: Metadata = {
   title: "Sliper — 일상에 예능 한 스푼",
   description:
     "여행부터 추리 게임, 예능 파티까지. 취향 맞는 사람들과 만드는 우리만의 예능 커뮤니티 Sliper.",
@@ -53,9 +61,19 @@ export const metadata: Metadata = {
   icons: { apple: "/images/sliper-icon-192.png" },
 };
 
+export function generateMetadata(): Metadata {
+  const config = getAdvertisingConfiguration();
+  return {
+    ...siteMetadata,
+    ...(config.clientId && config.siteOrigin
+      ? { other: { "google-adsense-account": config.clientId } }
+      : {}),
+  };
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" className={pretendard.variable}>
+    <html lang="ko" className={pretendard.variable} data-scroll-behavior="smooth">
       <body>
         <PushOnboardingProvider>
           <NotificationProvider>

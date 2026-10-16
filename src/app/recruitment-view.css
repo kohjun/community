@@ -298,22 +298,29 @@
 
 .recruitment-card-tags {
   display: flex;
-  flex-wrap: wrap;
+  flex: 1 1 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
   gap: 5px;
   min-width: 0;
 }
 
 .recruitment-card-tags > button {
-  max-width: 100%;
+  flex: none;
+  max-width: none;
+  min-height: 36px;
   padding: 3px 7px;
   border: 0;
   border-radius: 6px;
   background: #f1f7fd;
   color: #6d88a6;
   font-family: inherit;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .recruitment-card-tags > button:hover {
@@ -327,6 +334,7 @@
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
+  flex-wrap: nowrap;
   padding-top: 10px;
   border-top: 1px solid #edf2f8;
 }
@@ -351,14 +359,16 @@
 }
 
 .recruitment-card-reactions {
+  flex: none;
   gap: 3px;
+  margin-left: auto;
 }
 
 .recruitment-card-reactions > button {
   justify-content: center;
   gap: 5px;
-  min-width: 34px;
-  min-height: 34px;
+  min-width: 36px;
+  min-height: 36px;
   padding: 0 6px;
   border: 0;
   border-radius: 7px;
@@ -387,16 +397,18 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  width: 100%;
-  min-height: 40px;
+  flex: none;
+  width: auto;
+  min-height: 36px;
   margin: 0;
-  padding: 8px 14px;
+  padding: 7px 9px;
+  white-space: nowrap;
   border: 1px solid #0874dc;
   border-radius: 10px;
   background: #0a84fe;
   color: #fff;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.5;
   text-decoration: none;

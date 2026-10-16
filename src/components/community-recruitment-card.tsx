@@ -160,26 +160,31 @@ export function CommunityRecruitmentCard({
         </div>
       </a>
       <div className="recruitment-card-footer">
-        {post.tags.length > 0 && (
-          <div className="recruitment-card-tags" aria-label="게시글 태그">
-            {post.tags.map((tag) => (
-              <button key={tag} type="button" onClick={() => onTag(tag)}>
-                #{tag}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="recruitment-card-stats">
+          <span aria-label={`조회 ${post.views}회`}>
+            <Eye size={14} aria-hidden="true" />
+            {post.views}
+          </span>
+          <span aria-label={`댓글 ${post.comments}개`}>
+            <MessageCircle size={14} aria-hidden="true" />
+            {post.comments}
+          </span>
+        </div>
         <div className="recruitment-card-actions">
-          <div className="recruitment-card-stats">
-            <span aria-label={`조회 ${post.views}회`}>
-              <Eye size={14} aria-hidden="true" />
-              {post.views}
-            </span>
-            <span aria-label={`댓글 ${post.comments}개`}>
-              <MessageCircle size={14} aria-hidden="true" />
-              {post.comments}
-            </span>
-          </div>
+          <RecruitmentApplyButton
+            postId={post.id}
+            url={post.applicationUrl}
+            cancelledAt={post.eventCancelledAt}
+          />
+          {post.tags.length > 0 && (
+            <div className="recruitment-card-tags" role="group" aria-label="게시글 태그">
+              {post.tags.map((tag) => (
+                <button key={tag} type="button" onClick={() => onTag(tag)}>
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="recruitment-card-reactions">
             <button
               type="button"
@@ -208,11 +213,6 @@ export function CommunityRecruitmentCard({
             </button>
           </div>
         </div>
-        <RecruitmentApplyButton
-          postId={post.id}
-          url={post.applicationUrl}
-          cancelledAt={post.eventCancelledAt}
-        />
       </div>
     </article>
   );

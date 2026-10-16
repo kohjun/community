@@ -17,6 +17,7 @@ import { portfolioPreferences, eventCredits } from "../db/records-schema";
 import { analyticsActivityDays } from "../db/analytics-schema";
 import { playerPreferences } from "../db/player-schema";
 import { pushSubscriptions } from "../db/push-schema";
+import { eventPrivateContacts } from "../db/event-contact-schema";
 import {
   contentRestrictions,
   memberBlocks,
@@ -40,16 +41,25 @@ import {
 import { AppError, requireActor } from "./errors";
 import { assertRecordMediaAccess } from "./record-policy";
 import { enforceRequestLimit } from "./request-limits";
+import { originalActionSummary } from "./appeal-service";
 const uuid = z.string().uuid();
 type Connection = Database | Parameters<Parameters<Database["transaction"]>[0]>[0];
 export function safetyService(db: Database) {
   async function role(actor: string | null) {
     if (!actor) return null;
     const [row] = await db
-      .select({ role: staffRoles.role })
+      .select({
+        role: staffRoles.role,
+        status: memberSafety.status,
+        suspendedUntil: memberSafety.suspendedUntil,
+      })
       .from(staffRoles)
+      .leftJoin(memberSafety, eq(memberSafety.userId, staffRoles.userId))
       .where(eq(staffRoles.userId, actor));
-    return row?.role ?? null;
+    return row &&
+      membershipActive({ status: row.status ?? "active", suspendedUntil: row.suspendedUntil })
+      ? row.role
+      : null;
   }
   async function requireStaff(actor: string | null, admin = false) {
     const userId = requireActor(actor),
@@ -135,7 +145,14 @@ export function safetyService(db: Database) {
     reason: row.reason,
     detail: row.detail,
     status: row.status,
-    resolution: row.resolution,
+    // Staff notes may contain evidence or reporter details; members receive only the result.
+    resolution: staff
+      ? row.resolution
+      : row.status === "actioned"
+        ? "신고 내용을 검토하고 필요한 조치를 적용했어요."
+        : row.status === "dismissed"
+          ? "신고 내용의 검토가 완료되었어요."
+          : "",
     createdAt: row.createdAt.toISOString(),
     resolvedAt: row.resolvedAt?.toISOString() ?? null,
     ...(staff ? { snapshot: row.snapshot } : {}),
@@ -173,6 +190,53 @@ export function safetyService(db: Database) {
       items: rows.slice(0, 20).map((row) => reportView(row, staff)),
       hasMore: rows.length > 20,
       page,
+    };
+  }
+  async function reportDetail(actor: string | null, id: string): Promise<ReportView> {
+    await requireStaff(actor);
+    const [row] = await db
+      .select()
+      .from(safetyReports)
+      .where(eq(safetyReports.id, uuid.parse(id)));
+    if (!row) throw new AppError("NOT_FOUND", "신고를 찾을 수 없어요.");
+    return reportView(row, true);
+  }
+  async function ticketDetail(actor: string | null, id: string): Promise<SupportView> {
+    const staffId = await requireStaff(actor),
+      [row] = await db
+        .select()
+        .from(supportTickets)
+        .where(eq(supportTickets.id, uuid.parse(id)));
+    if (!row) throw new AppError("NOT_FOUND", "문의 내역을 찾을 수 없어요.");
+    const [original] = row.originalActionId
+      ? await db.select().from(moderationAudit).where(eq(moderationAudit.id, row.originalActionId))
+      : [];
+    const replies = await db
+      .select({
+        id: supportReplies.id,
+        body: supportReplies.body,
+        authorId: supportReplies.authorId,
+        createdAt: supportReplies.createdAt,
+      })
+      .from(supportReplies)
+      .where(eq(supportReplies.ticketId, row.id))
+      .orderBy(supportReplies.createdAt, supportReplies.id);
+    return {
+      id: row.id,
+      category: row.category,
+      subject: row.subject,
+      body: row.body,
+      status: row.status,
+      createdAt: row.createdAt.toISOString(),
+      originalAction: original ? originalActionSummary(original) : null,
+      canReply: !original || (original.actorId !== staffId && row.userId !== staffId),
+      revision: row.revision,
+      replies: replies.map((reply) => ({
+        id: reply.id,
+        body: reply.body,
+        createdAt: reply.createdAt.toISOString(),
+        role: reply.authorId === row.userId ? "member" : "staff",
+      })),
     };
   }
   async function resolve(actor: string | null, id: string, input: unknown) {
@@ -259,6 +323,7 @@ export function safetyService(db: Database) {
       }
       await tx.insert(moderationAudit).values({
         actorId: staffId,
+        affectedUserId: ["warn", "suspend", "hide"].includes(value.action) ? found.ownerId : null,
         action: value.action,
         targetType: row.targetType,
         targetId: row.targetId,
@@ -330,9 +395,18 @@ export function safetyService(db: Database) {
   async function account(actor: string | null) {
     const userId = requireActor(actor);
     const [state] = await db.select().from(memberSafety).where(eq(memberSafety.userId, userId));
+    const status = membershipActive(state) ? "active" : state!.status;
     return {
-      status: membershipActive(state) ? "active" : state!.status,
-      reason: state?.reason ?? "",
+      status,
+      // Never project the internal moderation reason into a member account response.
+      reason:
+        status === "closed"
+          ? "탈퇴 처리된 계정이에요."
+          : status === "suspended"
+            ? "커뮤니티 이용 기준에 따라 계정 이용이 제한되었어요. 이의신청 화면에서 재검토를 요청할 수 있어요."
+            : state?.reason
+              ? "계정 이용 상태에 관한 조치가 있었어요. 이의신청 화면에서 조치 내역을 확인할 수 있어요."
+              : "",
       suspendedUntil: state?.suspendedUntil?.toISOString() ?? null,
       role: await role(userId),
       blocks: await blocks(userId),
@@ -388,17 +462,9 @@ export function safetyService(db: Database) {
         )
         .limit(1);
       const [hosting] = await tx
-        .select({ id: posts.id })
-        .from(posts)
-        .innerJoin(eventSettings, eq(posts.id, eventSettings.postId))
-        .where(
-          and(
-            eq(posts.authorId, userId),
-            eq(eventSettings.open, true),
-            sql`(${eventSettings.startsAt} is null or ${eventSettings.startsAt}>now())`,
-          ),
-        )
-        .limit(1);
+        .select({ pending: sql<boolean>`sliper.member_has_host_responsibility(${userId}::uuid)` })
+        .from(profiles)
+        .where(eq(profiles.id, userId));
       const [pendingRefund] = await tx
         .select({ id: profiles.id })
         .from(profiles)
@@ -409,11 +475,8 @@ export function safetyService(db: Database) {
           ),
         )
         .limit(1);
-      if (participation || hosting || pendingRefund)
-        throw new AppError(
-          "CONFLICT",
-          "진행 중인 신청·환불 또는 모집 중인 행사를 먼저 정리해주세요.",
-        );
+      if (participation || hosting?.pending || pendingRefund)
+        throw new AppError("CONFLICT", "진행 중인 신청·행사 또는 미처리 환불을 먼저 정리해주세요.");
       await tx
         .insert(memberSafety)
         .values({ userId, status: "closed", reason: "회원 탈퇴" })
@@ -464,6 +527,20 @@ export function safetyService(db: Database) {
         .update(eventRecords)
         .set({ status: "withdrawn", updatedAt: new Date() })
         .where(eq(eventRecords.ownerId, userId));
+      await tx
+        .update(eventPrivateContacts)
+        .set({
+          enabled: false,
+          channel: null,
+          value: null,
+          note: null,
+          updatedBy: null,
+          revision: sql`${eventPrivateContacts.revision}+1`,
+          updatedAt: sql`statement_timestamp()`,
+        })
+        .where(
+          sql`${eventPrivateContacts.postId} in (select id from sliper.posts where author_id=${userId}::uuid)`,
+        );
       // Application/financial snapshots are immutable and retained for transaction handling.
     });
     return { withdrawn: true, photoObjectKey, photoStorageBackend };
@@ -474,14 +551,25 @@ export function safetyService(db: Database) {
     page = 1,
   ): Promise<{ items: SupportView[]; hasMore: boolean; page: number }> {
     const userId = staff ? await requireStaff(actor) : requireActor(actor);
+    if (!staff) {
+      const [state] = await db
+        .select({ status: memberSafety.status })
+        .from(memberSafety)
+        .where(eq(memberSafety.userId, userId));
+      if (state?.status === "closed") throw new AppError("FORBIDDEN", "탈퇴한 계정입니다.");
+    }
     const rows = await db
-      .select()
-      .from(supportTickets)
-      .where(staff ? undefined : eq(supportTickets.userId, userId))
-      .orderBy(desc(supportTickets.createdAt), desc(supportTickets.id))
-      .limit(21)
-      .offset((page - 1) * 20);
-    const shown = rows.slice(0, 20),
+        .select()
+        .from(supportTickets)
+        .where(staff ? undefined : eq(supportTickets.userId, userId))
+        .orderBy(desc(supportTickets.createdAt), desc(supportTickets.id))
+        .limit(21)
+        .offset((page - 1) * 20),
+      shown = rows.slice(0, 20),
+      ids = shown.flatMap((row) => (row.originalActionId ? [row.originalActionId] : [])),
+      originals = ids.length
+        ? await db.select().from(moderationAudit).where(inArray(moderationAudit.id, ids))
+        : [],
       replies = shown.length
         ? await db
             .select()
@@ -492,24 +580,31 @@ export function safetyService(db: Database) {
                 shown.map((row) => row.id),
               ),
             )
-            .orderBy(supportReplies.createdAt)
+            .orderBy(supportReplies.createdAt, supportReplies.id)
         : [];
     return {
-      items: shown.map((row) => ({
-        id: row.id,
-        category: row.category,
-        subject: row.subject,
-        body: row.body,
-        status: row.status,
-        createdAt: row.createdAt.toISOString(),
-        replies: replies
-          .filter((reply) => reply.ticketId === row.id)
-          .map((reply) => ({
-            id: reply.id,
-            body: reply.body,
-            createdAt: reply.createdAt.toISOString(),
-          })),
-      })),
+      items: shown.map((row) => {
+        const original = originals.find((item) => item.id === row.originalActionId);
+        return {
+          id: row.id,
+          category: row.category,
+          subject: row.subject,
+          body: row.body,
+          status: row.status,
+          createdAt: row.createdAt.toISOString(),
+          originalAction: original ? originalActionSummary(original) : null,
+          canReply: staff && (!original || (original.actorId !== userId && row.userId !== userId)),
+          revision: row.revision,
+          replies: replies
+            .filter((reply) => reply.ticketId === row.id)
+            .map((reply) => ({
+              id: reply.id,
+              body: reply.body,
+              createdAt: reply.createdAt.toISOString(),
+              role: reply.authorId === row.userId ? ("member" as const) : ("staff" as const),
+            })),
+        };
+      }),
       hasMore: rows.length > 20,
       page,
     };
@@ -533,6 +628,7 @@ export function safetyService(db: Database) {
         .strictObject({
           body: z.string().trim().min(5).max(3000),
           close: z.boolean().default(false),
+          expectedRevision: z.number().int().min(1).max(2147483646).optional(),
         })
         .parse(input);
     await db.transaction(async (tx) => {
@@ -542,6 +638,22 @@ export function safetyService(db: Database) {
         .where(eq(supportTickets.id, ticketId))
         .for("update");
       if (!row) throw new AppError("NOT_FOUND", "문의 내역이 없습니다.");
+      if (row.originalActionId) {
+        const [original] = await tx
+          .select({ actorId: moderationAudit.actorId })
+          .from(moderationAudit)
+          .where(eq(moderationAudit.id, row.originalActionId));
+        if (original?.actorId === staffId || row.userId === staffId)
+          throw new AppError(
+            "FORBIDDEN",
+            "원조치 담당자 또는 신청 당사자는 이의신청에 답변할 수 없어요.",
+          );
+        if (value.expectedRevision === undefined)
+          throw new AppError("VALIDATION", "이의신청의 최신 버전을 확인해주세요.");
+      }
+      if (value.expectedRevision !== undefined && value.expectedRevision !== row.revision)
+        throw new AppError("CONFLICT", "새 의견이나 답변이 있어요. 최신 내용을 확인해주세요.");
+
       await tx.insert(supportReplies).values({ ticketId, authorId: staffId, body: value.body });
       await tx
         .update(supportTickets)
@@ -609,6 +721,8 @@ export function safetyService(db: Database) {
     requireStaff,
     report,
     reports,
+    reportDetail,
+    ticketDetail,
     resolve,
     block,
     blocks,

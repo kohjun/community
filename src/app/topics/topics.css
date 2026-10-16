@@ -361,3 +361,27 @@
     display: none;
   }
 }
+
+.topics-panel {
+  scroll-margin-top: 90px;
+}
+.topics-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+}
+.topics-section-actions > span {
+  color: #98a2b3;
+}
+.topics-section-actions > a {
+  color: #0879ea;
+  font-weight: 650;
+}
+@media (max-width: 560px) {
+  .topics-section-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 5px 10px;
+  }
+}

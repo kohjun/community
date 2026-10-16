@@ -44,6 +44,25 @@ export default function Page() {
             본문·연락처·좌표·기기 식별자는 이 기록에 포함하지 않습니다. 관리자는 기존
             가입·신청·출석·후기와 함께 합계만 확인합니다.
           </p>
+          <h2>외부 광고 서비스</h2>
+          <p>
+            Google AdSense 광고를 활성화한 공개 화면에서는 Google과 광고 파트너가 광고 제공·측정을
+            위해 쿠키, 웹 비콘, IP 주소와 기기 식별자 등을 이용할 수 있습니다. 외부 광고 서비스의
+            정보 이용과 개인 맞춤 광고 설정은 아래 안내에서 확인할 수 있습니다.
+          </p>
+          <p>
+            <a
+              href="https://policies.google.com/technologies/partner-sites"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google의 파트너 사이트 정보 이용 안내
+            </a>
+            {" · "}
+            <a href="https://myadcenter.google.com/" target="_blank" rel="noopener noreferrer">
+              Google 광고 설정
+            </a>
+          </p>
           <h2>탈퇴와 삭제</h2>
           <p>
             탈퇴하면 프로필 연락처·소개·관심사·프로필 사진 연결과 푸시 구독 정보를 지우고 계정

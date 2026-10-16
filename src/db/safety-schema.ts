@@ -13,6 +13,12 @@ import {
 } from "drizzle-orm/pg-core";
 import { profiles, sliper } from "./schema";
 const stamp = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
+const operationFields = () => ({
+  assignedTo: uuid("assigned_to").references(() => profiles.id, { onDelete: "set null" }),
+  reviewStartedAt: timestamp("review_started_at", { withTimezone: true }),
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  revision: integer("revision").notNull().default(1),
+});
 export const memberSafety = sliper
   .table(
     "member_safety",
@@ -61,6 +67,7 @@ export const safetyReports = sliper
       resolvedBy: uuid("resolved_by").references(() => profiles.id, { onDelete: "set null" }),
       resolvedAt: timestamp("resolved_at", { withTimezone: true }),
       createdAt: stamp(),
+      ...operationFields(),
     },
     (t) => [
       unique("report_member_target").on(t.reporterId, t.targetType, t.targetId),
@@ -69,6 +76,7 @@ export const safetyReports = sliper
         "report_target_type",
         sql`${t.targetType} in ('post','comment','venue','crew','player','record','library')`,
       ),
+      check("report_operation_revision", sql`${t.revision}>0`),
       check("report_status", sql`${t.status} in ('open','actioned','dismissed')`),
     ],
   )
@@ -119,13 +127,19 @@ export const moderationAudit = sliper
     {
       id: uuid("id").primaryKey().defaultRandom(),
       actorId: uuid("actor_id").references(() => profiles.id, { onDelete: "set null" }),
+      affectedUserId: uuid("affected_user_id").references(() => profiles.id, {
+        onDelete: "restrict",
+      }),
       action: varchar("action", { length: 24 }).notNull(),
       targetType: varchar("target_type", { length: 16 }).notNull(),
       targetId: uuid("target_id").notNull(),
       reason: varchar("reason", { length: 1000 }).notNull(),
       createdAt: stamp(),
     },
-    (t) => [index("moderation_audit_target_idx").on(t.targetType, t.targetId, t.createdAt)],
+    (t) => [
+      index("moderation_audit_target_idx").on(t.targetType, t.targetId, t.createdAt),
+      index("moderation_audit_affected_idx").on(t.affectedUserId, t.createdAt),
+    ],
   )
   .enableRLS();
 export const requestLimits = sliper
@@ -153,15 +167,22 @@ export const supportTickets = sliper
       userId: uuid("user_id")
         .notNull()
         .references(() => profiles.id, { onDelete: "cascade" }),
+      originalActionId: uuid("original_action_id").references(() => moderationAudit.id, {
+        onDelete: "restrict",
+      }),
       category: varchar("category", { length: 16 }).notNull(),
       subject: varchar("subject", { length: 100 }).notNull(),
       body: varchar("body", { length: 3000 }).notNull(),
       status: varchar("status", { length: 16 }).notNull().default("open"),
       createdAt: stamp(),
+      ...operationFields(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     },
     (t) => [
+      unique("support_original_action_user_unique").on(t.userId, t.originalActionId),
+      index("support_original_action_idx").on(t.originalActionId),
       index("support_queue_idx").on(t.status, t.createdAt),
+      check("support_operation_revision", sql`${t.revision}>0`),
       check("support_status", sql`${t.status} in ('open','answered','closed')`),
     ],
   )

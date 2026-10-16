@@ -14,7 +14,11 @@ import * as videoSchema from "./video-schema";
 import * as videoProcessingSchema from "./video-processing-schema";
 import * as recordsSchema from "./records-schema";
 import * as analyticsSchema from "./analytics-schema";
+import * as mediaRetentionSchema from "./media-retention-schema";
+import * as eventContactSchema from "./event-contact-schema";
 const schema = {
+  ...eventContactSchema,
+  ...mediaRetentionSchema,
   ...analyticsSchema,
   ...recordsSchema,
   ...baseSchema,

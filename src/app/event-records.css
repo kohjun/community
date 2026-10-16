@@ -717,3 +717,24 @@
 .record-venue-snapshot > div > p {
   overflow-wrap: anywhere;
 }
+
+.template-rehosting-info {
+  margin: 18px 0;
+  border-color: #c9e3ff;
+  background: #f8fbff;
+}
+.template-rehosting-info h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.template-rehosting-info p {
+  font-size: 13px;
+}
+.template-rehosting-info a {
+  color: #0879ea;
+  font-weight: 650;
+}
+.template-rehosting-confirm {
+  margin: 12px 0;
+  font-size: 13px;
+}

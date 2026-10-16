@@ -1,3 +1,4 @@
+import type { AppealOriginalAction } from "./appeals";
 import { z } from "zod";
 export const POLICY_VERSION = "2026-10-04";
 export const REPORT_REASONS = {
@@ -62,11 +63,14 @@ export interface BlockView {
   createdAt: string;
 }
 export interface SupportView {
+  originalAction: AppealOriginalAction | null;
+  canReply: boolean;
+  revision: number;
   id: string;
   category: string;
   subject: string;
   body: string;
   status: string;
   createdAt: string;
-  replies: { id: string; body: string; createdAt: string }[];
+  replies: { id: string; body: string; createdAt: string; role: "member" | "staff" }[];
 }

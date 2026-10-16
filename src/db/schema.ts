@@ -334,6 +334,7 @@ export const mediaAssets = sliper
       byteSize: integer("byte_size").notNull(),
       status: uploadStatusEnum("status").notNull().default("pending"),
       sortOrder: smallint("sort_order").notNull().default(0),
+      unattachedSince: timestamp("unattached_since", { withTimezone: true }).defaultNow(),
       createdAt: createdAt(),
     },
     (t) => [
@@ -341,6 +342,11 @@ export const mediaAssets = sliper
       unique("media_assets_record_order_unique").on(t.recordPostId, t.sortOrder),
       check("media_single_parent", sql`num_nonnulls(${t.postId}, ${t.recordPostId}) <= 1`),
       index("media_assets_uploader_idx").on(t.uploaderId),
+      index("media_unattached_retention_idx")
+        .on(t.unattachedSince, t.id)
+        .where(
+          sql`${t.postId} is null and ${t.recordPostId} is null and ${t.recordOriginPostId} is null`,
+        ),
       check("media_assets_size_range", sql`${t.byteSize} between 1 and 10485760`),
       check("media_assets_storage_backend", sql`${t.storageBackend} in ('local','supabase')`),
       check("media_assets_order_range", sql`${t.sortOrder} between 0 and 9`),

@@ -1,6 +1,8 @@
 "use client";
+import { useAdSenseContentGuard } from "./adsense-provider";
 import type { FeedQuery } from "@/domain/community";
 import { communityLocation } from "@/domain/community-location";
+import { topicForSlug, type TopicSlug } from "@/domain/topics";
 import type { PopularPeriod } from "@/domain/community-time";
 import { notifyPushOnboardingMoment } from "@/lib/push-onboarding-events";
 
@@ -142,10 +144,12 @@ export function SliperCommunity({
   initialState,
   initialView = "home",
   initialQuery = {},
+  initialComposeTopic,
 }: {
   initialState: CommunitySnapshot;
   initialView?: "home" | "stories";
   initialQuery?: FeedQuery;
+  initialComposeTopic?: TopicSlug;
 }) {
   const [view, setView] = useState<View>(
     initialQuery.view && initialQuery.view !== "home" ? initialQuery.view : initialView,
@@ -162,7 +166,9 @@ export function SliperCommunity({
   }, []);
   const [sort, setSort] = useState<"latest" | "popular" | "nearest">(initialQuery.sort ?? "latest");
   const [period, setPeriod] = useState<PopularPeriod>(initialQuery.period ?? "today");
-  const [rankingAt, setRankingAt] = useState(initialQuery.rankingAt ?? initialState.rankingAt);
+  const [rankingAt, setRankingAt] = useState<string | undefined>(
+    initialQuery.rankingAt ?? initialState.rankingAt,
+  );
   const [discovery, setDiscovery] = useState<EventDiscoveryFilters>(DEFAULT_DISCOVERY_FILTERS);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [pendingNearest, setPendingNearest] = useState(false);
@@ -175,43 +181,60 @@ export function SliperCommunity({
   const [tag, setTag] = useState(initialQuery.tag ?? "");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
-  const [writing, setWriting] = useState(false);
+  const [composeTopic, setComposeTopic] = useState(initialComposeTopic ?? null);
+  const [writing, setWriting] = useState(!!initialComposeTopic && initialState.canWrite);
+  useEffect(() => {
+    if (!initialComposeTopic) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("composeTopic");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  }, [initialComposeTopic]);
+  function changeWriting(open: boolean) {
+    setWriting(open);
+    if (!open) setComposeTopic(null);
+  }
   const [toast, setToast] = useState("");
-  const store = useCommunity(initialState, {
-    category: category === "all" ? undefined : category,
-    kind: kind === "전체" ? undefined : kind,
-    search: query || undefined,
-    discussionType,
-    focus,
-    topic: topic || undefined,
-    tag: tag || undefined,
-    view: view === "stories" ? "home" : view,
-    sort,
-    period,
-    rankingAt: sort === "popular" && period !== "all" ? rankingAt : undefined,
-    eventOnly: discovery.eventOnly || undefined,
-    meetupType: discovery.meetupType === "all" ? undefined : discovery.meetupType,
-    latitude: discovery.coordinates?.latitude,
-    longitude: discovery.coordinates?.longitude,
-    radiusKm: discovery.radiusKm ?? undefined,
-    fromDate: discovery.fromDate || undefined,
-    toDate: discovery.toDate || undefined,
-    minPriceKRW: discovery.minPriceKRW ?? undefined,
-    maxPriceKRW: discovery.maxPriceKRW ?? undefined,
-    availableOnly: discovery.availableOnly || undefined,
-  });
+  const store = useCommunity(
+    initialState,
+    {
+      category: category === "all" ? undefined : category,
+      kind: kind === "전체" ? undefined : kind,
+      search: query || undefined,
+      discussionType,
+      focus,
+      topic: topic || undefined,
+      tag: tag || undefined,
+      view: view === "stories" ? "home" : view,
+      sort,
+      period,
+      rankingAt: sort === "popular" && period !== "all" ? rankingAt : undefined,
+      eventOnly: discovery.eventOnly || undefined,
+      meetupType: discovery.meetupType === "all" ? undefined : discovery.meetupType,
+      latitude: discovery.coordinates?.latitude,
+      longitude: discovery.coordinates?.longitude,
+      radiusKm: discovery.radiusKm ?? undefined,
+      fromDate: discovery.fromDate || undefined,
+      toDate: discovery.toDate || undefined,
+      minPriceKRW: discovery.minPriceKRW ?? undefined,
+      maxPriceKRW: discovery.maxPriceKRW ?? undefined,
+      availableOnly: discovery.availableOnly || undefined,
+    },
+    { onRankingAnchor: setRankingAt },
+  );
   const feedRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const restore = () => {
       const state = communityLocation(
         new URLSearchParams(window.location.search),
         window.location.pathname === "/stories",
+        // The server validates anchors; device clocks must not discard a valid history window.
+        Number.POSITIVE_INFINITY,
       );
       setCategory(state.category ?? "all");
       setKind(state.kind === "후기" ? "이야기" : (state.kind ?? "전체"));
       setSort(state.sort ?? "latest");
       setPeriod(state.period ?? "today");
-      setRankingAt(state.rankingAt ?? initialState.rankingAt);
+      setRankingAt(state.rankingAt);
       setView(
         state.view && state.view !== "home"
           ? state.view
@@ -261,6 +284,15 @@ export function SliperCommunity({
   }, [toast]);
 
   const filtered = store.feedPosts;
+  const advertisingBlocked =
+    view === "mine" ||
+    view === "bookmarks" ||
+    writing ||
+    !!activeId ||
+    !!sheet ||
+    discoveryOpen ||
+    filtered.length === 0;
+  useAdSenseContentGuard(advertisingBlocked);
   const recruitmentCards = kind === "모집" && recruitmentLayout === "card";
   const PostPreview = recruitmentCards ? CommunityRecruitmentCard : CommunityPostRow;
   function changeRecruitmentLayout(layout: RecruitmentLayout) {
@@ -313,7 +345,7 @@ export function SliperCommunity({
     setSort(value === "popular" ? "popular" : "latest");
     if (value === "popular") {
       setPeriod("today");
-      setRankingAt(new Date().toISOString());
+      setRankingAt(undefined);
     }
     setQuery("");
   }
@@ -459,7 +491,7 @@ export function SliperCommunity({
                     : "취향 맞는 사람들과 만드는 우리만의 예능"}
             </p>
           </div>
-          <AdSlot onCategory={chooseCategory} />
+          <AdSlot onCategory={chooseCategory} disabled={advertisingBlocked} />
           {isHome && (
             <nav
               className="home-discover home-discover-expanded home-starts"
@@ -631,7 +663,7 @@ export function SliperCommunity({
                       return;
                     }
                     setSort(next);
-                    if (next === "popular") setRankingAt(new Date().toISOString());
+                    if (next === "popular") setRankingAt(undefined);
                     if (view === "popular") setView("home");
                     if (next === "nearest") {
                       setView((current) => (current === "stories" ? "stories" : "home"));
@@ -666,7 +698,7 @@ export function SliperCommunity({
                     onClick={() => {
                       setFocus("all");
                       setSort("popular");
-                      setRankingAt(new Date().toISOString());
+                      setRankingAt(undefined);
                     }}
                   >
                     기간 인기
@@ -749,13 +781,19 @@ export function SliperCommunity({
                     aria-pressed={period === value}
                     onClick={() => {
                       setPeriod(value);
-                      setRankingAt(new Date().toISOString());
+                      setRankingAt(undefined);
                     }}
                   >
                     {label}
                   </button>
                 ))}
-                <button type="button" onClick={() => setRankingAt(new Date().toISOString())}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (period === "all" || rankingAt === undefined) store.retryFeed();
+                    else setRankingAt(undefined);
+                  }}
+                >
                   지금 기준으로 새로 보기
                 </button>
                 <p>
@@ -1072,14 +1110,19 @@ export function SliperCommunity({
         <WriteDialog
           key="new"
           open={writing}
-          onOpenChange={setWriting}
-          initialCategory={category === "all" ? "party" : category}
+          onOpenChange={changeWriting}
+          initialCategory={
+            (composeTopic && topicForSlug(composeTopic)?.category) ||
+            (category === "all" ? "party" : category)
+          }
+          initialKind={kind === "모집" || kind === "투표" ? kind : "이야기"}
+          {...(composeTopic ? { initialTopic: composeTopic } : {})}
           post={null}
           upload={store.upload}
           onPublish={async (input) => {
             const saved = await store.addPost(input);
             if (!saved) return false;
-            setWriting(false);
+            changeWriting(false);
             navigate("mine");
             setToast("새 이야기를 등록했어요.");
             return true;

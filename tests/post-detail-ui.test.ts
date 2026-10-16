@@ -141,3 +141,75 @@ test("recruitment and polling controls remain available on the shared standalone
   assert.match(poll, /어떤 방식이 좋아요/);
   assert.match(poll, /두뇌 게임/);
 });
+
+test("related topics use explicit public tags and never appear for spoilers or untagged posts", () => {
+  const publicDetail = detailMarkup({ tags: [" # 미션 레이스 ", "런닝맨"] });
+  assert.match(publicDetail, /aria-label="관련 주제"/);
+  assert.equal((publicDetail.match(/href="\/topics\/mission-race"/g) ?? []).length, 1);
+  assert.doesNotMatch(detailMarkup({ tags: [] }), /aria-label="관련 주제"/);
+  assert.doesNotMatch(
+    detailMarkup({
+      spoiler: true,
+      spoilerTitle: "결말 주의",
+      spoilerSummary: "공개 요약",
+      tags: ["파티"],
+    }),
+    /aria-label="관련 주제"/,
+  );
+});
+
+test("moving post reactions keeps external applications and tag controls separate from post navigation", () => {
+  const markup = renderToStaticMarkup(
+    createElement(CommunityPostRow, {
+      post: {
+        ...post,
+        kind: "모집",
+        applicationUrl: "https://apply.example/one-event",
+        tags: ["긴 태그 이름도 유지", "파티"],
+        isBookmarked: true,
+      },
+      busy: true,
+      canWrite: true,
+      onOpen() {},
+      onLike() {},
+      onSave() {},
+      onTag() {},
+    }),
+  );
+  assert.equal((markup.match(/href="https:\/\/apply.example\/one-event"/g) ?? []).length, 1);
+  assert.match(markup, /target="_blank" rel="noopener noreferrer"/);
+  assert.match(markup, /#긴 태그 이름도 유지/);
+  const reactions = [...markup.matchAll(/<button\b[^>]*>/g)]
+    .map((match) => match[0])
+    .filter((button) => /aria-label="[^"]*(좋아요|북마크)"/.test(button));
+  assert.equal(reactions.length, 2);
+  assert.ok(
+    reactions.every(
+      (button) => button.includes('disabled=""') && button.includes('aria-pressed="true"'),
+    ),
+  );
+  for (const anchor of markup.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/g))
+    assert.doesNotMatch(anchor[1] ?? "", /<button\b|<a\b/);
+});
+
+test("a concealed spoiler keeps its tags and content hidden while sharing and guarded reactions remain available", () => {
+  const markup = detailMarkup(
+    {
+      spoiler: true,
+      spoilerTitle: "결말 주의",
+      title: "SPOILER_SECRET_TITLE",
+      body: "SPOILER_SECRET_BODY",
+      tags: ["SPOILER_SECRET_TAG"],
+      isMine: false,
+    },
+    false,
+  );
+  assert.match(markup, /본문과 댓글 펼쳐보기/);
+  assert.doesNotMatch(markup, /SPOILER_SECRET_TAG|SPOILER_SECRET_BODY|SPOILER_SECRET_TITLE/);
+  assert.match(markup, /aria-label="글 공유하기"/);
+  const reactions = [...markup.matchAll(/<button\b[^>]*>[\s\S]*?<\/button>/g)]
+    .map((match) => match[0])
+    .filter((button) => /좋아요 3|북마크/.test(button));
+  assert.equal(reactions.length, 2);
+  assert.ok(reactions.every((button) => button.includes('disabled=""')));
+});

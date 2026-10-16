@@ -8,15 +8,28 @@ import { useState, type FormEvent } from "react";
 import { ParticipationShell } from "./participation-shell";
 import { templateHostSchema, type LibraryDetail } from "@/domain/library";
 import { appRequest } from "@/lib/api-client";
-export function TemplateHost({ template }: { template: LibraryDetail }) {
+import type { TemplateHostOrigin } from "@/domain/template-rehosting";
+export function TemplateHost({
+  template,
+  origin,
+}: {
+  template: LibraryDetail;
+  origin?: TemplateHostOrigin;
+}) {
   const router = useRouter(),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [external, setExternal] = useState(false);
   const [venue, setVenue] = useState<VenuePoint | null>(null);
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState(origin?.location ?? "");
+  const [conditionsConfirmed, setConditionsConfirmed] = useState(false);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (busy) return;
+    if (origin && !conditionsConfirmed) {
+      setError("다음 행사의 장소·일정·참가비·정원을 다시 확인해주세요.");
+      return;
+    }
     const f = new FormData(e.currentTarget);
     const value = {
       title: f.get("title"),
@@ -64,6 +77,25 @@ export function TemplateHost({ template }: { template: LibraryDetail }) {
           자료로 돌아가기
         </Link>
       </div>
+      {origin && (
+        <aside className="record-panel template-rehosting-info" aria-label="재개최 출처">
+          <h2>지난 행사를 바탕으로 다음 모임 준비</h2>
+          <p>
+            <Link href={"/records/" + origin.postId}>{origin.title}</Link>의 운영 경험을 이어갑니다.
+          </p>
+          <p className="record-note">
+            이번 모임은 현재 발행된 v{template.publishedVersion} 자료를 사용해요.
+            {origin.previousTemplateVersion
+              ? " 지난 행사는 v" + origin.previousTemplateVersion + "을 사용했어요."
+              : ""}
+            이전 행사의 진행 사본은 그대로 유지됩니다.
+          </p>
+          <p className="record-note">
+            제목과 공개 가능한 장소만 참고했어요. 일정은 새로 입력하고 참가비·정원을 확인해주세요.
+            참가자 명단·공지방·사진·영상은 복사하지 않아요.
+          </p>
+        </aside>
+      )}
       <form className="marketplace-form" onSubmit={submit}>
         <section className="marketplace-section">
           <h2>모임 기본 정보</h2>
@@ -74,7 +106,10 @@ export function TemplateHost({ template }: { template: LibraryDetail }) {
               required
               minLength={2}
               maxLength={120}
-              defaultValue={`${template.title} 함께해요`.slice(0, 120)}
+              defaultValue={(origin
+                ? `${origin.title} 다시 함께해요`
+                : `${template.title} 함께해요`
+              ).slice(0, 120)}
             />
           </label>
           <label className="marketplace-field">
@@ -215,7 +250,22 @@ export function TemplateHost({ template }: { template: LibraryDetail }) {
             {error}
           </p>
         )}
-        <button className="participation-primary" disabled={busy}>
+        {origin && (
+          <label className="participation-checkbox template-rehosting-confirm">
+            <input
+              type="checkbox"
+              checked={conditionsConfirmed}
+              required
+              disabled={busy}
+              onChange={(event) => setConditionsConfirmed(event.target.checked)}
+            />
+            개설 조건을 다시 확인했어요.
+          </label>
+        )}
+        <button
+          className="participation-primary"
+          disabled={busy || (!!origin && !conditionsConfirmed)}
+        >
           {busy ? "모임 만드는 중…" : "호스트가 되어 모임 열기"}
         </button>
       </form>

@@ -336,6 +336,12 @@ export const libraryWebhookReceipts = sliper
     ],
   )
   .enableRLS();
+const operationFields = () => ({
+  assignedTo: uuid("assigned_to").references(() => profiles.id, { onDelete: "set null" }),
+  reviewStartedAt: timestamp("review_started_at", { withTimezone: true }),
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  revision: integer("revision").notNull().default(1),
+});
 export const libraryPurchaseDisputes = sliper
   .table(
     "library_purchase_disputes",
@@ -354,6 +360,7 @@ export const libraryPurchaseDisputes = sliper
       resolvedBy: uuid("resolved_by").references(() => profiles.id, { onDelete: "set null" }),
       resolvedAt: timestamp("resolved_at", { withTimezone: true }),
       createdAt: createdAt(),
+      ...operationFields(),
       updatedAt: updatedAt(),
     },
     (t) => [
@@ -361,6 +368,7 @@ export const libraryPurchaseDisputes = sliper
         .on(t.purchaseId)
         .where(sql`${t.status}='open'`),
       index("library_dispute_queue_idx").on(t.status, t.createdAt.desc(), t.id),
+      check("dispute_operation_revision", sql`${t.revision}>0`),
       check("library_dispute_kind", sql`${t.kind} in ('delivery','terms','payment','other')`),
       check(
         "library_dispute_state",

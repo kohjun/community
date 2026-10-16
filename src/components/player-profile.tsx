@@ -116,8 +116,8 @@ export function PlayerProfile({
         <progress max={99.9} value={data.summary.mannerTemperature} aria-label="매너 온도" />
         <p className="player-note">
           36.5℃에서 시작합니다. 참가 +0.1℃, 긍정 평가 +0.2℃, 불편 평가 −0.5℃, 미참석 −2℃. 같은
-          행사에 실제 참가가 확인된 플레이어의 평가만 집계하며 온도 범위는 0~99.9℃입니다. 신뢰를
-          판단할 참고 자료로 활용해주세요.
+          행사에 실제 참가가 확인된 플레이어의 평가만 집계하며 온도 범위는 0~99.9℃입니다. 참가·평가
+          기록의 참고값이며 신원 확인이나 행사 안전을 보장하지 않아요.
         </p>
       </section>
       {data.careerVisible && (

@@ -235,3 +235,169 @@ test("Redis URLs and secrets in browser environment variables fail without echoi
       assert.equal(output.includes(value), false);
   }
 });
+
+const advertisingReady = () => ({
+  ...ready(),
+  APP_ORIGIN: "https://sliper-community.co.kr",
+  SLIPER_ADSENSE_ENABLED: "true",
+  SLIPER_ADSENSE_CLIENT_ID: "ca-pub-1000000000000011",
+  SLIPER_ADSENSE_SLOT_INLINE: "71",
+  SLIPER_ADSENSE_SLOT_LEFT: "72",
+  SLIPER_ADSENSE_SLOT_RIGHT: "73",
+});
+
+test("AdSense remains explicitly unconfigured when absent or disabled without account IDs", () => {
+  for (const SLIPER_ADSENSE_ENABLED of [undefined, "", "false"]) {
+    const check = row({ ...ready(), SLIPER_ADSENSE_ENABLED }, "advertising");
+    assert.equal(check.status, "warn");
+    assert.match(check.message, /미설정/);
+    assert.match(check.message, /비활성화/);
+  }
+});
+
+test("AdSense verification-only settings await activation and never mutate runtime environment", () => {
+  for (const NODE_ENV of [undefined, "development", "production"]) {
+    const env = Object.freeze({
+      ...advertisingReady(),
+      NODE_ENV,
+      SLIPER_ADSENSE_ENABLED: "false",
+      SLIPER_ADSENSE_SLOT_INLINE: undefined,
+      SLIPER_ADSENSE_SLOT_LEFT: undefined,
+      SLIPER_ADSENSE_SLOT_RIGHT: undefined,
+    });
+    const before = { ...env };
+    const check = row(env, "advertising");
+    assert.equal(check.status, "warn");
+    assert.match(check.message, /사이트 확인용 설정 형식이 유효/);
+    assert.match(check.message, /비활성화/);
+    assert.deepEqual(env, before);
+  }
+  assert.equal(
+    row({ ...advertisingReady(), SLIPER_ADSENSE_ENABLED: undefined }, "advertising").status,
+    "warn",
+  );
+});
+
+test("complete AdSense activation confirms static format without claiming approval or requests", () => {
+  for (const optionalRails of [
+    {},
+    { SLIPER_ADSENSE_SLOT_LEFT: "", SLIPER_ADSENSE_SLOT_RIGHT: undefined },
+  ]) {
+    const check = row({ ...advertisingReady(), ...optionalRails }, "advertising");
+    assert.equal(check.status, "pass");
+    assert.match(check.message, /설정 형식이 유효/);
+    assert.match(check.message, /실제 광고 요청·사이트 승인·게재 상태는 확인하지 않았습니다/);
+  }
+});
+
+test("partial, malformed and mistyped AdSense settings fail even while activation is disabled", () => {
+  const cases: Record<string, string | undefined>[] = [
+    { ...ready(), SLIPER_ADSENSE_ENABLED: "true" },
+    { ...advertisingReady(), SLIPER_ADSENSE_SLOT_INLINE: undefined },
+    { ...advertisingReady(), SLIPER_ADSENSE_ENABLED: "false", SLIPER_ADSENSE_CLIENT_ID: "" },
+    {
+      ...advertisingReady(),
+      SLIPER_ADSENSE_ENABLED: "false",
+      SLIPER_ADSENSE_CLIENT_ID: "ca-pub-0000000000000000",
+    },
+    { ...advertisingReady(), SLIPER_ADSENSE_ENABLED: "false", SLIPER_ADSENSE_SLOT_INLINE: "-1" },
+    { ...advertisingReady(), SLIPER_ADSENSE_ENABLED: "false", SLIPER_ADSENSE_SLOT_LEFT: "72\n" },
+    { ...advertisingReady(), SLIPER_ADSENSE_ENABLED: "false", SLIPER_ADSENSE_SLOT_RIGHT: " 73" },
+    { ...advertisingReady(), SLIPER_ADSENSE_CLIENT_ID: " " },
+    ...["TRUE", "1", " true", "unknown", " "].map((SLIPER_ADSENSE_ENABLED) => ({
+      ...ready(),
+      SLIPER_ADSENSE_ENABLED,
+    })),
+  ];
+  for (const env of cases) assert.equal(row(env, "advertising").status, "fail");
+});
+
+test("AdSense preflight uses the same public domain and local-database exclusions as runtime", () => {
+  for (const APP_ORIGIN of [
+    "https://sliper.example",
+    "https://example.com",
+    "https://localhost",
+    "http://sliper-community.co.kr",
+    "https://sliper-community.co.kr:3000",
+    "https://sliper-community.co.kr/stories",
+  ])
+    assert.equal(row({ ...advertisingReady(), APP_ORIGIN }, "advertising").status, "fail");
+  for (const SLIPER_ADSENSE_ENABLED of ["true", "false"])
+    assert.equal(
+      row({ ...advertisingReady(), SLIPER_ADSENSE_ENABLED, LOCAL_DATABASE: "1" }, "advertising")
+        .status,
+      "fail",
+    );
+});
+
+test("all preflight rows redact advertising settings and secrets in arbitrary public variables", () => {
+  const fixture = randomBytes(24).toString("hex");
+  const privateValues = [
+    `  sb_secret_${fixture}  `,
+    `postgresql://private-user:${fixture}@private-db.internal/application`,
+    `redis://private-user:${fixture}@private-cache.internal:6379`,
+    `https://private-user:${fixture}@private-api.internal`,
+    ["-----BEGIN", " PRIVATE KEY-----\n", fixture, "\n-----END", " PRIVATE KEY-----"].join(""),
+  ];
+  for (const value of privateValues) {
+    const env = { ...advertisingReady(), NEXT_PUBLIC_CUSTOM_SETTING: value };
+    assert.equal(row(env, "public-secrets").status, "fail");
+    assert.equal(JSON.stringify(deploymentReadiness(env)).includes(fixture), false);
+  }
+  const malformed = {
+    ...advertisingReady(),
+    SLIPER_ADSENSE_CLIENT_ID: `invalid-${fixture}`,
+    SLIPER_ADSENSE_SLOT_INLINE: `invalid-${fixture}`,
+    APP_ORIGIN: `https://private-user:${fixture}@sliper-community.co.kr`,
+  };
+  const output = JSON.stringify(deploymentReadiness(malformed));
+  assert.equal(output.includes(fixture), false);
+  assert.equal(output.includes("private-user"), false);
+  assert.equal(output.includes(advertisingReady().SLIPER_ADSENSE_CLIENT_ID), false);
+});
+
+test("authentication preflight only accepts supported public-key formats and redacts rejected values", () => {
+  const token = (role: string) =>
+    [
+      Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url"),
+      Buffer.from(JSON.stringify({ role, iss: "supabase" })).toString("base64url"),
+      randomBytes(32).toString("base64url"),
+    ].join(".");
+  const anon = token("anon");
+  assert.equal(
+    row({ ...ready(), NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: anon }, "authentication").status,
+    "pass",
+  );
+  assert.equal(
+    row(
+      {
+        ...ready(),
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: undefined,
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: anon,
+      },
+      "authentication",
+    ).status,
+    "pass",
+  );
+  const privateFixture = "sb_secret_" + randomBytes(24).toString("base64url");
+  for (const key of [
+    "public-key",
+    privateFixture,
+    " " + privateFixture,
+    "\n" + privateFixture,
+    token("service_role"),
+    token("admin"),
+  ]) {
+    const env = { ...ready(), NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: key };
+    assert.equal(row(env, "authentication").status, "fail");
+    assert.equal(JSON.stringify(deploymentReadiness(env)).includes(key), false);
+  }
+  const configured = Object.freeze({
+    ...ready(),
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: anon,
+  });
+  const before = { ...configured };
+  assert.equal(row(configured, "authentication").status, "fail");
+  assert.deepEqual(configured, before);
+});

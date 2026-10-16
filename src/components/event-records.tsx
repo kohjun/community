@@ -18,6 +18,7 @@ import {
 import { CATEGORIES, type CategorySlug } from "@/domain/categories";
 import type { RecordDetail, RecordPage, RecordSummary } from "@/domain/records";
 import type { LibraryDetail } from "@/domain/library";
+import { templateRehostingUrl } from "@/domain/template-rehosting";
 import { appRequest, RequestError } from "@/lib/api-client";
 import { SafetyActions } from "./safety-actions";
 import { ParticipationShell } from "./participation-shell";
@@ -584,23 +585,36 @@ export function RecordDetailPage({
                 공개하지 않아요.
               </p>
             </section>
-            {data.canEdit && (
+            {(data.canEdit || data.snapshot.template?.id) && (
               <section className="record-panel library-record-reuse">
                 <div>
                   <h2>이번 경험을 다음 행사로 이어보세요</h2>
                   <p className="record-note">
-                    기획 의도와 진행·개선 내용을 비공개 템플릿 초안으로 정리해요. 참가자 정보와
-                    사진·영상은 복사하지 않으며, 공개 여부는 편집 후 직접 결정합니다.
+                    {data.canEdit
+                      ? "기획 의도와 진행·개선 내용을 비공개 템플릿 초안으로 정리해요. 참가자 정보와 사진·영상은 복사하지 않으며, 공개 여부는 편집 후 직접 결정합니다."
+                      : "사용 자료의 현재 발행본과 이용 조건을 확인하고 새로운 모임을 준비해보세요. 원래 행사의 참가자와 공지방은 복사하지 않아요."}
                   </p>
                 </div>
-                <button
-                  className="participation-secondary"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void createTemplateDraft()}
-                >
-                  {templateBusy ? "초안 만드는 중…" : "회고로 템플릿 초안 만들기"}
-                </button>
+                <div className="record-actions">
+                  {data.canEdit && (
+                    <button
+                      className="participation-secondary"
+                      type="button"
+                      disabled={busy || templateBusy}
+                      onClick={() => void createTemplateDraft()}
+                    >
+                      {templateBusy ? "초안 만드는 중…" : "회고로 템플릿 초안 만들기"}
+                    </button>
+                  )}
+                  {data.snapshot.template?.id && (
+                    <Link
+                      className="participation-primary"
+                      href={templateRehostingUrl(data.snapshot.template.id, postId)}
+                    >
+                      사용한 자료로 다음 행사 준비
+                    </Link>
+                  )}
+                </div>
               </section>
             )}
             <section className="record-panel">

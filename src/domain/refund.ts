@@ -27,6 +27,26 @@ export function refundQuote(amountKRW: number, startsAt: Date, requestedAt = new
     retainedKRW: amountKRW - Math.floor((amountKRW * rate) / 100),
   };
 }
+function koreanDisplayDate(value?: string | Date | null) {
+  if (!value || (typeof value === "string" && !/(?:Z|[+-]\d{2}:\d{2})$/i.test(value))) return null;
+  const instant = value instanceof Date ? value.getTime() : new Date(value).getTime();
+  const shifted = new Date(instant + 9 * 3600000);
+  return Number.isFinite(shifted.getTime()) ? shifted : null;
+}
+const pad = (value: number) => String(value).padStart(2, "0");
+const koreanDateLabel = (value: Date) =>
+  `${String(value.getUTCFullYear()).padStart(4, "0")}. ${pad(value.getUTCMonth() + 1)}. ${pad(value.getUTCDate())}.`;
+/** Fixed KST and numeric 24-hour output avoids Node/Chrome locale-data hydration differences. */
+export function formatKoreanDate(value?: string | Date | null) {
+  const date = koreanDisplayDate(value);
+  return date ? koreanDateLabel(date) : "";
+}
+export function formatKoreanDateTime(value?: string | Date | null) {
+  const date = koreanDisplayDate(value);
+  return date
+    ? `${koreanDateLabel(date)} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`
+    : "";
+}
 export function koreanDateTimeInput(value?: string | null) {
   if (!value) return "";
   return new Date(new Date(value).getTime() + 9 * 3600000).toISOString().slice(0, 16);

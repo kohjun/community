@@ -14,8 +14,10 @@ import {
 } from "lucide-react";
 import type { EventOverview } from "@/domain/participation";
 import { STATUS_LABELS, applicationSchema } from "@/domain/participation";
+import { formatKoreanDateTime } from "@/domain/refund";
 import { participationRequest as request } from "@/lib/participation-client";
 import { RequestError } from "@/lib/api-client";
+import { EventPrivateContact } from "./event-private-contact";
 import { AdmissionTicket } from "./admission-ticket";
 import { RecordBacklink } from "./record-discovery";
 import { VerifiedEventReviews } from "./verified-event-reviews";
@@ -328,6 +330,7 @@ export function EventApplication({
                     공지방 입장
                     <Megaphone size={18} />
                   </Link>
+                  <EventPrivateContact postId={event.postId} />
                   {!cancelled && (
                     <AdmissionTicket postId={event.postId} applicationId={application.id} />
                   )}
@@ -342,7 +345,7 @@ export function EventApplication({
                 <>
                   <p>결제 완료 알림을 받은 뒤 참가가 확정됩니다.</p>
                   <small>
-                    결제 기한: {new Date(application.expiresAt ?? 0).toLocaleString("ko-KR")}
+                    결제 기한: {formatKoreanDateTime(application.expiresAt) || "확인 중"}
                   </small>
                   <button
                     className="participation-primary"

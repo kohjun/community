@@ -1,4 +1,5 @@
 "use client";
+import { useAdSenseContentGuard } from "./adsense-provider";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, BookOpen, CalendarDays, Heart, MapPin, MessageCircle } from "lucide-react";
@@ -7,6 +8,8 @@ import {
   TOPICS,
   topicAliases,
   topicUrl,
+  topicCreationUrl,
+  topicSectionFromHash,
   type TopicDetail,
   type TopicSection,
   type TopicPostSummary,
@@ -38,7 +41,7 @@ function Pagination({
   const start = Math.max(1, Math.min(page.page - 2, page.pageCount - 4));
   const pages = Array.from({ length: Math.min(5, page.pageCount) }, (_, index) => start + index);
   const href = (value: number) =>
-    topicUrl(data.topic.slug, { ...data.query, [section.key]: value }) + "#" + section.id;
+    topicUrl(data.topic.slug, { ...data.query, [section.key]: value }, section.id);
   return (
     <nav className="topics-pagination" aria-label={section.label + " 페이지"}>
       {page.page > 1 && <Link href={href(page.page - 1)}>이전</Link>}
@@ -117,13 +120,18 @@ export function TopicDetailView({
   const [active, setActive] = useState<SectionId>("stories");
   useEffect(() => {
     const restore = () => {
-      const hash = window.location.hash.slice(1);
-      if (sections.some((section) => section.id === hash)) setActive(hash as SectionId);
+      setActive(topicSectionFromHash(window.location.hash));
     };
     restore();
     window.addEventListener("hashchange", restore);
     return () => window.removeEventListener("hashchange", restore);
-  }, [data.query.storiesPage, data.query.recruitmentPage, data.query.libraryPage]);
+  }, [
+    data.topic.slug,
+    data.query.focus,
+    data.query.storiesPage,
+    data.query.recruitmentPage,
+    data.query.libraryPage,
+  ]);
   function select(value: SectionId) {
     setActive(value);
     window.history.replaceState(
@@ -132,9 +140,11 @@ export function TopicDetailView({
       window.location.pathname + window.location.search + "#" + value,
     );
   }
+  const advertisingBlocked = data[active].total === 0 || data.query.focus === "interests";
+  useAdSenseContentGuard(advertisingBlocked);
   const current = sections.find((section) => section.id === active)!;
   return (
-    <ParticipationShell>
+    <ParticipationShell advertising={!advertisingBlocked}>
       <Link className="topics-back" href="/topics">
         <ArrowLeft size={15} />
         주제 탐색
@@ -150,7 +160,7 @@ export function TopicDetailView({
         {TOPICS.map((topic) => (
           <Link
             key={topic.slug}
-            href={topicUrl(topic.slug, { focus: data.query.focus })}
+            href={topicUrl(topic.slug, { focus: data.query.focus }, active)}
             aria-current={topic.slug === data.topic.slug ? "page" : undefined}
           >
             {topic.title}
@@ -160,13 +170,13 @@ export function TopicDetailView({
       <div className="topics-focus">
         <nav aria-label="관심 피드">
           <Link
-            href={topicUrl(data.topic.slug)}
+            href={topicUrl(data.topic.slug, {}, active)}
             aria-current={data.query.focus === "all" ? "page" : undefined}
           >
             전체 보기
           </Link>
           <Link
-            href={topicUrl(data.topic.slug, { focus: "interests" })}
+            href={topicUrl(data.topic.slug, { focus: "interests" }, active)}
             aria-current={data.query.focus === "interests" ? "page" : undefined}
           >
             <Heart size={14} />내 관심 글
@@ -186,7 +196,7 @@ export function TopicDetailView({
           <Link
             href={
               "/login?returnTo=" +
-              encodeURIComponent(topicUrl(data.topic.slug, { focus: "interests" }))
+              encodeURIComponent(topicUrl(data.topic.slug, { focus: "interests" }, active))
             }
           >
             로그인
@@ -212,7 +222,7 @@ export function TopicDetailView({
             key={id}
             role="tab"
             aria-selected={active === id}
-            aria-controls={"topic-panel-" + id}
+            aria-controls={id}
             id={"topic-tab-" + id}
             tabIndex={active === id ? 0 : -1}
             onKeyDown={(event) => {
@@ -246,14 +256,24 @@ export function TopicDetailView({
           role="tabpanel"
           tabIndex={0}
           key={section.id}
-          id={"topic-panel-" + section.id}
+          id={section.id}
           aria-labelledby={"topic-tab-" + section.id}
           hidden={active !== section.id}
           className="topics-panel"
         >
           <div className="topics-section-title">
             <h2>{section.label}</h2>
-            <span>최신순 · {data[section.id].total.toLocaleString("ko-KR")}개</span>
+            <div className="topics-section-actions">
+              <span>최신순 · {data[section.id].total.toLocaleString("ko-KR")}개</span>
+              <Link href={topicCreationUrl(data.topic.slug, section.id)}>
+                {section.id === "library"
+                  ? "자료 올리기"
+                  : section.id === "recruitment"
+                    ? "모임 열기"
+                    : "이야기 쓰기"}{" "}
+                →
+              </Link>
+            </div>
           </div>
           {section.id === "library" ? (
             <div className="topics-library-list">
@@ -290,14 +310,13 @@ export function TopicDetailView({
                 없어요
               </strong>
               <p>같은 취향을 가진 사람에게 첫 콘텐츠를 소개해보세요.</p>
-              <Link
-                href={
-                  section.id === "library"
-                    ? "/archive/new"
-                    : "/stories?category=" + data.topic.category
-                }
-              >
-                {section.id === "library" ? "자료 올리기" : "이야기와 모집글 올리기"} →
+              <Link href={topicCreationUrl(data.topic.slug, section.id)}>
+                {section.id === "library"
+                  ? "자료 올리기"
+                  : section.id === "recruitment"
+                    ? "모임 열기"
+                    : "이야기 쓰기"}{" "}
+                →
               </Link>
             </div>
           )}

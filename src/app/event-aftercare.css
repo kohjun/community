@@ -1,0 +1,295 @@
+.event-aftercare-panel {
+  min-width: 0;
+  padding: 18px;
+  margin: 0 0 20px;
+  border: 1px solid #e3eaf2;
+  border-radius: 12px;
+  background: #fff;
+  color: #27354a;
+  text-align: left;
+}
+.event-aftercare-heading,
+.event-aftercare-toolbar,
+.event-aftercare-item,
+.event-aftercare-item-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.event-aftercare-heading h2 {
+  margin: 0 0 5px;
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: -0.02em;
+}
+.event-aftercare-heading p,
+.event-aftercare-description,
+.event-aftercare-empty p,
+.event-aftercare-note {
+  color: #69788b;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.event-aftercare-heading p {
+  margin: 0;
+}
+.event-aftercare-panel button,
+.event-aftercare-action {
+  font: inherit;
+  cursor: pointer;
+}
+.event-aftercare-panel .event-aftercare-refresh,
+.event-aftercare-error button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 10px;
+  color: #4c6b8d;
+  border: 1px solid #dfe8f1;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.event-aftercare-toolbar {
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 16px 0 12px;
+  border-bottom: 1px solid #e9eef4;
+}
+.event-aftercare-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.event-aftercare-views button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 11px;
+  color: #65758a;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: #f5f7fa;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.event-aftercare-views button[aria-pressed="true"] {
+  color: #0874dc;
+  border-color: #d0e6fc;
+  background: #edf6ff;
+  font-weight: 650;
+}
+.event-aftercare-views button span {
+  font-variant-numeric: tabular-nums;
+}
+.event-aftercare-count {
+  color: #78869a;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.event-aftercare-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.event-aftercare-item {
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #edf1f6;
+}
+.event-aftercare-item-main {
+  flex: 1;
+  min-width: 0;
+}
+.event-aftercare-item-heading {
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 7px 10px;
+}
+.event-aftercare-item h3 {
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.event-aftercare-label {
+  flex: none;
+  padding: 3px 7px;
+  color: #6a7a8d;
+  border-radius: 5px;
+  background: #f2f5f8;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.event-aftercare-label.is-pending {
+  color: #0874dc;
+  background: #edf6ff;
+}
+.event-aftercare-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 7px 0 4px;
+  color: #7a889a;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.event-aftercare-role {
+  color: #4e6c8d;
+  font-weight: 650;
+}
+.event-aftercare-description {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.event-aftercare-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.event-aftercare-item > .event-aftercare-actions {
+  flex: 0 1 250px;
+  justify-content: flex-start;
+}
+.event-aftercare-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 10px;
+  color: #527191;
+  border: 1px solid #e0e8f1;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+  text-decoration: none;
+}
+.event-aftercare-action.is-primary {
+  color: #0874dc;
+  border-color: #cee4fb;
+  background: #f2f8ff;
+}
+.event-aftercare-empty {
+  padding: 21px 0;
+}
+.event-aftercare-empty h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.event-aftercare-empty p {
+  margin: 0 0 12px;
+}
+.event-aftercare-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f2f7fd;
+  color: #456789;
+  font-size: 12px;
+}
+.event-aftercare-error p {
+  margin: 0;
+  line-height: 1.6;
+}
+.event-aftercare-loading {
+  margin: 10px 0 0;
+  color: #607b99;
+  font-size: 12px;
+}
+.event-aftercare-pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding-top: 14px;
+}
+.event-aftercare-pagination button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 5px 7px;
+  color: #60758d;
+  border: 1px solid #e2e9f1;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+}
+.event-aftercare-pagination button[aria-current="page"] {
+  color: #0874dc;
+  border-color: #cfe5fc;
+  background: #edf6ff;
+  font-weight: 700;
+}
+.event-aftercare-pagination > span {
+  margin-left: 6px;
+  color: #78869a;
+  font-size: 11px;
+}
+.event-aftercare-note {
+  margin: 14px 0 0;
+  font-size: 11px;
+}
+.event-aftercare-panel button:disabled {
+  cursor: default;
+}
+.event-aftercare-panel button:disabled:not([aria-current="page"]) {
+  opacity: 0.5;
+}
+.event-aftercare-panel button:focus-visible,
+.event-aftercare-action:focus-visible {
+  outline: 2px solid #0a84fe;
+  outline-offset: 3px;
+}
+.event-aftercare-action:hover,
+.event-aftercare-refresh:hover:not(:disabled) {
+  border-color: #bedaf6;
+  background: #f5f9ff;
+}
+@media (max-width: 720px) {
+  .event-aftercare-panel {
+    padding: 15px;
+    margin-bottom: 16px;
+  }
+  .event-aftercare-heading {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .event-aftercare-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .event-aftercare-item > .event-aftercare-actions {
+    flex-basis: auto;
+    justify-content: flex-start;
+  }
+  .event-aftercare-action,
+  .event-aftercare-views button,
+  .event-aftercare-refresh {
+    min-height: 40px;
+  }
+  .event-aftercare-error {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}

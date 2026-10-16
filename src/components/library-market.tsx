@@ -565,7 +565,7 @@ function DisputeCard({
     );
   }
   return (
-    <article className="library-market-dispute">
+    <article className="library-market-dispute" id={"dispute-" + dispute.id}>
       <header>
         <strong>{disputeNames[dispute.kind]}</strong>
         <span>

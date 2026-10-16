@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { currentActor } from "@/server/identity";
 import { communityService } from "@/server/community-service";
+import { eventAftercareService } from "@/server/event-aftercare-service";
 import { getDatabase } from "@/db/client";
 import { ParticipationShell } from "@/components/participation-shell";
 import { MyPage } from "@/components/my-page";
@@ -26,6 +27,10 @@ export default async function Page() {
         </main>
       </ParticipationShell>
     );
-  const profile = await communityService(getDatabase()).me(actor);
-  return <MyPage initial={profile} />;
+  const database = getDatabase();
+  const [profile, initialAftercare] = await Promise.all([
+    communityService(database).me(actor),
+    eventAftercareService(database).list(actor, { scope: "all", view: "pending" }),
+  ]);
+  return <MyPage initial={profile} initialAftercare={initialAftercare} />;
 }

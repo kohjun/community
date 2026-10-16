@@ -1,7 +1,12 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { RefreshCw } from "lucide-react";
-import { REFUND_STEPS, type RefundView, type RefundRequestView } from "@/domain/refund";
+import {
+  REFUND_STEPS,
+  formatKoreanDateTime,
+  type RefundView,
+  type RefundRequestView,
+} from "@/domain/refund";
 import type { RefundCause } from "@/domain/event-lifecycle";
 import { participationRequest as request } from "@/lib/participation-client";
 import { RequestError } from "@/lib/api-client";
@@ -46,7 +51,7 @@ export function RefundPolicy({
       )}
       <small>
         {startsAt
-          ? `행사 시작: ${new Date(startsAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} · 원 단위 미만은 버립니다.`
+          ? `행사 시작: ${formatKoreanDateTime(startsAt)} · 원 단위 미만은 버립니다.`
           : "시작일이 지정되지 않은 기존 행사는 담당자에게 환불 기준을 문의해주세요."}
       </small>
       <p className="participation-muted">
@@ -240,9 +245,8 @@ export function RefundPanel({
               </strong>
               <span className="refund-cause">{causeLabel(item.cause)}</span>
               <p>
-                요청일{" "}
-                {new Date(item.requestedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} ·
-                기준 {item.rate}% · {item.refundableKRW.toLocaleString("ko-KR")}원
+                요청일 {formatKoreanDateTime(item.requestedAt)} · 기준 {item.rate}% ·{" "}
+                {item.refundableKRW.toLocaleString("ko-KR")}원
               </p>
               {item.actualRefundKRW !== null && (
                 <p>실제 환불 확인: {item.actualRefundKRW.toLocaleString("ko-KR")}원</p>

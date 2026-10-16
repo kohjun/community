@@ -130,7 +130,7 @@ export function EventCompletionPanel({
   }
   const ended = !!endsAt && new Date(endsAt).getTime() <= Date.now();
   return (
-    <section className="record-panel">
+    <section className="record-panel" id="event-completion">
       <div className="record-completion-panel">
         <div>
           <h2>

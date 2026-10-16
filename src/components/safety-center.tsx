@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useRef, useState, type FormEvent } from "react";
-import { appRequest } from "@/lib/api-client";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { appRequest, RequestError } from "@/lib/api-client";
 import {
   REPORT_REASONS,
   SUPPORT_CATEGORIES,
@@ -10,6 +10,7 @@ import {
   type BlockView,
 } from "@/domain/safety";
 import { ParticipationShell } from "./participation-shell";
+import { AppealActionSummary } from "./appeals-center";
 type Page<T> = { items: T[]; hasMore: boolean; page: number };
 type AuditView = {
   id: string;
@@ -28,13 +29,55 @@ const status = (value: string) =>
     answered: "답변 완료",
     closed: "처리 완료",
   })[value] ?? value;
+export function SupportReplyPanel({
+  item,
+  busy,
+  onReply,
+}: {
+  item: SupportView;
+  busy: boolean;
+  onReply: (event: FormEvent<HTMLFormElement>, item: SupportView) => Promise<void>;
+}) {
+  if (item.canReply !== true)
+    return item.originalAction ? (
+      <p className="appeals-review-restriction">
+        해당 조치의 담당자 또는 신청 당사자는 이 검토를 처리할 수 없어요. 다른 운영자가 답변합니다.
+      </p>
+    ) : null;
+  return (
+    <form onSubmit={(event) => void onReply(event, item)}>
+      <fieldset disabled={busy}>
+        <label>
+          답변
+          <textarea name="body" minLength={5} maxLength={3000} required rows={3} />
+        </label>
+        <label>
+          처리 상태
+          <select name="close">
+            <option value="no">답변 완료</option>
+            <option value="yes">처리 완료</option>
+          </select>
+        </label>
+        <button type="submit" className="safety-primary">
+          답변 저장
+        </button>
+      </fieldset>
+    </form>
+  );
+}
 export function SafetyCenter({
   kind,
   initial,
   account,
+  initialTab,
+  initialFocusId = null,
+  initialError = "",
 }: {
   kind: "account" | "support" | "admin";
-  initial: Page<ReportView> | Page<SupportView>;
+  initial: Page<ReportView | SupportView | AuditView>;
+  initialTab?: "reports" | "support" | "audit";
+  initialFocusId?: string | null;
+  initialError?: string;
   account?: {
     status: string;
     reason: string;
@@ -43,38 +86,93 @@ export function SafetyCenter({
     blocks: BlockView[];
   };
 }) {
-  const [tab, setTab] = useState<string>(kind === "admin" ? "reports" : kind),
+  const [tab, setTab] = useState<string>(kind === "admin" ? (initialTab ?? "reports") : kind),
     [data, setData] = useState<Page<ReportView | SupportView | AuditView>>(initial),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
+    [error, setError] = useState(initialError),
     [notice, setNotice] = useState(""),
     [blocks, setBlocks] = useState(account?.blocks ?? []),
     [withdraw, setWithdraw] = useState(false),
     gate = useRef(false);
+  const [focusId, setFocusId] = useState(initialFocusId);
+  const activeRequest = useRef<AbortController | null>(null);
   const base = kind === "admin" ? "/api/safety/admin/" : "/api/safety/";
+  useEffect(() => {
+    activeRequest.current?.abort();
+    activeRequest.current = null;
+    gate.current = false;
+    setBusy(false);
+    setData(initial);
+    setTab(kind === "admin" ? (initialTab ?? "reports") : kind);
+    setFocusId(initialFocusId);
+    setError(initialError);
+    return () => activeRequest.current?.abort();
+  }, [initial, initialTab, initialFocusId, initialError, kind]);
+  async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
+    const controller = activeRequest.current;
+    const result = await appRequest<T>(url, method, body, controller?.signal);
+    if (controller?.signal.aborted || controller !== activeRequest.current)
+      throw new DOMException("Request superseded", "AbortError");
+    return result;
+  }
+  async function currentPage(resource: "reports" | "support") {
+    if (kind === "admin" && focusId) {
+      const item = await request<ReportView | SupportView>(base + resource + "/" + focusId);
+      return { items: [item], page: 1, hasMore: false };
+    }
+    return request<Page<ReportView | SupportView>>(base + resource + "?page=" + data.page);
+  }
   async function run(work: () => Promise<void>) {
     if (gate.current) return;
     gate.current = true;
+    activeRequest.current?.abort();
+    const controller = new AbortController();
+    activeRequest.current = controller;
     setBusy(true);
     setError("");
     setNotice("");
     try {
       await work();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "처리하지 못했어요.");
+      if (!controller.signal.aborted && activeRequest.current === controller) {
+        setError(cause instanceof Error ? cause.message : "처리하지 못했어요.");
+        if (
+          focusId ||
+          (cause instanceof RequestError &&
+            ["FORBIDDEN", "UNAUTHENTICATED"].includes(cause.code ?? ""))
+        )
+          setData({ items: [], hasMore: false, page: data.page });
+        if (kind === "admin" && cause instanceof RequestError && cause.code === "CONFLICT") {
+          try {
+            setData(await currentPage(tab === "support" ? "support" : "reports"));
+            setNotice("변경된 최신 내용을 불러왔어요. 확인한 후 다시 진행해주세요.");
+          } catch {
+            if (!controller.signal.aborted && activeRequest.current === controller)
+              setData({ items: [], hasMore: false, page: data.page });
+          }
+        }
+      }
     } finally {
-      gate.current = false;
-      setBusy(false);
+      if (!controller.signal.aborted && activeRequest.current === controller) {
+        gate.current = false;
+        setBusy(false);
+      }
     }
   }
   async function load(nextTab: string, page = 1) {
     await run(async () => {
       const resource = nextTab === "account" ? "reports" : nextTab;
-      const next = await appRequest<Page<ReportView | SupportView | AuditView>>(
+      const next = await request<Page<ReportView | SupportView | AuditView>>(
         base + resource + "?page=" + page,
       );
       setData(next);
       setTab(nextTab);
+      setFocusId(null);
+      if (kind === "admin") {
+        const params = new URLSearchParams({ tab: nextTab });
+        if (page > 1) params.set("page", String(page));
+        window.history.replaceState(null, "", "/admin?" + params);
+      }
     });
   }
   async function submitTicket(event: FormEvent<HTMLFormElement>) {
@@ -82,12 +180,12 @@ export function SafetyCenter({
     const form = event.currentTarget,
       fields = new FormData(form);
     await run(async () => {
-      await appRequest("/api/safety/support", "POST", {
+      await request("/api/safety/support", "POST", {
         category: fields.get("category"),
         subject: fields.get("subject"),
         body: fields.get("body"),
       });
-      setData(await appRequest("/api/safety/support"));
+      setData(await request("/api/safety/support"));
       form.reset();
       setNotice("문의를 접수했어요. 아래에서 답변과 처리 상태를 확인해주세요.");
     });
@@ -96,25 +194,26 @@ export function SafetyCenter({
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
     await run(async () => {
-      await appRequest(base + "reports/" + id, "POST", {
+      await request(base + "reports/" + id, "POST", {
         action: fields.get("action"),
         reason: fields.get("reason"),
         days: Number(fields.get("days")),
       });
-      setData(await appRequest(base + "reports?page=" + data.page));
+      setData(await currentPage("reports"));
       setNotice("처리 사유와 운영 이력을 저장했어요.");
     });
   }
-  async function reply(event: FormEvent<HTMLFormElement>, id: string) {
+  async function reply(event: FormEvent<HTMLFormElement>, ticket: SupportView) {
     event.preventDefault();
     const form = event.currentTarget,
       fields = new FormData(form);
     await run(async () => {
-      await appRequest(base + "support/" + id, "POST", {
+      await request(base + "support/" + ticket.id, "POST", {
         body: fields.get("body"),
         close: fields.get("close") === "yes",
+        ...(ticket.originalAction ? { expectedRevision: ticket.revision } : {}),
       });
-      setData(await appRequest(base + "support?page=" + data.page));
+      setData(await currentPage("support"));
       form.reset();
       setNotice("답변을 저장했어요.");
     });
@@ -127,6 +226,17 @@ export function SafetyCenter({
         </Link>
       )}
       <div className="safety-page">
+        {kind === "admin" && (
+          <nav className="operations-links" aria-label="운영 도구">
+            <Link href="/admin/operations">통합 처리함</Link>
+            {account?.role === "admin" && (
+              <>
+                <Link href="/admin/health">운영 점검</Link>
+                <Link href="/admin/readiness">실서비스 연결 점검</Link>
+              </>
+            )}
+          </nav>
+        )}
         <div className="safety-heading">
           <div>
             <p className="safety-eyebrow">
@@ -190,13 +300,21 @@ export function SafetyCenter({
                     ? "탈퇴한 계정"
                     : "이용 제한 중"}
               </p>
-              {account.reason && <p>{account.reason}</p>}
+              {account.reason && account.status !== "closed" && (
+                <p>
+                  적용된 조치의 공개 요약과 검토 요청 내역은 ‘내 조치 확인·이의신청’에서
+                  확인해주세요.
+                </p>
+              )}
               {account.suspendedUntil && account.status === "suspended" && (
                 <p>이용 제한 종료: {date(account.suspendedUntil)}</p>
               )}
               <div className="safety-links">
                 <Link href="/mypage">프로필·알림 설정</Link>
-                <Link href="/support">문의·이의신청</Link>
+                <Link href="/support">문의·도움</Link>
+                {account.status !== "closed" && (
+                  <Link href="/settings/appeals">내 조치 확인·이의신청</Link>
+                )}
                 {account.role && <Link href="/admin">운영자 화면</Link>}
               </div>
             </section>
@@ -214,7 +332,7 @@ export function SafetyCenter({
                       disabled={busy}
                       onClick={() =>
                         run(async () => {
-                          await appRequest("/api/safety/blocks/" + block.id, "DELETE");
+                          await request("/api/safety/blocks/" + block.id, "DELETE");
                           setBlocks((current) => current.filter((item) => item.id !== block.id));
                           setNotice("차단을 해제했어요.");
                         })
@@ -227,6 +345,12 @@ export function SafetyCenter({
               )}
             </section>
           </>
+        )}
+        {kind === "support" && (
+          <nav className="appeals-links" aria-label="문의와 이의신청">
+            <Link href="/settings/account">계정·안전 설정</Link>
+            <Link href="/settings/appeals">내 조치 확인·이의신청</Link>
+          </nav>
         )}
         {kind === "support" && (
           <section className="safety-card">
@@ -269,6 +393,29 @@ export function SafetyCenter({
           </section>
         )}
         <section className="safety-card">
+          {kind === "admin" && focusId && (
+            <div className="operations-focused">
+              <p>
+                선택한 {tab === "support" ? "문의" : "신고"}의 원본과 처리 내용을 확인하고 있어요.
+              </p>
+              <button type="button" disabled={busy} onClick={() => void load(tab)}>
+                전체 목록 보기
+              </button>
+              {error && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(async () => {
+                      setData(await currentPage(tab === "support" ? "support" : "reports"));
+                    })
+                  }
+                >
+                  선택한 항목 다시 확인
+                </button>
+              )}
+            </div>
+          )}
           <h2>
             {tab === "audit"
               ? "운영 조치 이력"
@@ -280,25 +427,27 @@ export function SafetyCenter({
           </h2>
           {!data.items.length && (
             <div className="safety-empty">
-              <h3>아직 내역이 없어요</h3>
+              <h3>{focusId && error ? "선택한 항목을 불러오지 못했어요" : "아직 내역이 없어요"}</h3>
               <p>
-                {tab === "support"
-                  ? "접수한 문의와 운영자의 답변이 여기에 표시돼요."
-                  : tab === "audit"
-                    ? "운영자가 처리한 조치가 순서대로 기록돼요."
-                    : "신고가 접수되면 진행 상황과 처리 사유를 확인할 수 있어요."}
+                {focusId && error
+                  ? "위의 다시 확인 버튼으로 원본을 조회하거나 전체 목록에서 항목을 찾아주세요."
+                  : tab === "support"
+                    ? "접수한 문의와 운영자의 답변이 여기에 표시돼요."
+                    : tab === "audit"
+                      ? "운영자가 처리한 조치가 순서대로 기록돼요."
+                      : "신고가 접수되면 진행 상황과 처리 사유를 확인할 수 있어요."}
               </p>
             </div>
           )}
           {data.items.map((item) =>
             "action" in item ? (
-              <article className="safety-entry" key={item.id}>
+              <article className="safety-entry" id={"safety-entry-" + item.id} key={item.id}>
                 <p className="safety-badge">{item.action}</p>
                 <p>{item.reason}</p>
                 <small>{date(item.createdAt)}</small>
               </article>
             ) : "subject" in item ? (
-              <article className="safety-entry" key={item.id}>
+              <article className="safety-entry" id={"safety-entry-" + item.id} key={item.id}>
                 <div className="safety-entry-heading">
                   <h3>{item.subject}</h3>
                   <span className="safety-badge">{status(item.status)}</span>
@@ -307,37 +456,41 @@ export function SafetyCenter({
                   {SUPPORT_CATEGORIES[item.category as keyof typeof SUPPORT_CATEGORIES]} ·{" "}
                   {date(item.createdAt)}
                 </small>
+                {item.originalAction && (
+                  <section className="appeals-source-reference">
+                    <h4>이의신청 대상 조치</h4>
+                    <AppealActionSummary
+                      action={item.originalAction}
+                      {...(kind !== "admin"
+                        ? {
+                            href:
+                              "/settings/appeals?actionId=" +
+                              item.originalAction.id +
+                              "#action-" +
+                              item.originalAction.id,
+                          }
+                        : {})}
+                    />
+                    {kind !== "admin" && (
+                      <p>
+                        조치 유형을 안내하는 요약이며 신고 원문과 상세 운영 메모는 공개하지 않아요.
+                      </p>
+                    )}
+                    <p>처리 요청 상태 · {status(item.status)}</p>
+                  </section>
+                )}
                 <p className="safety-preserve">{item.body}</p>
-                {item.replies.map((message: { id: string; body: string; createdAt: string }) => (
+                {item.replies.map((message) => (
                   <div className="safety-answer" key={message.id}>
-                    <b>슬리퍼 운영팀</b>
+                    <b>{message.role === "member" ? "신청자 추가 의견" : "슬리퍼 운영팀"}</b>
                     <p className="safety-preserve">{message.body}</p>
                     <small>{date(message.createdAt)}</small>
                   </div>
                 ))}
-                {kind === "admin" && (
-                  <form onSubmit={(event) => reply(event, item.id)}>
-                    <fieldset disabled={busy}>
-                      <label>
-                        답변
-                        <textarea name="body" minLength={5} maxLength={3000} required rows={3} />
-                      </label>
-                      <label>
-                        처리 상태
-                        <select name="close">
-                          <option value="no">답변 완료</option>
-                          <option value="yes">처리 완료</option>
-                        </select>
-                      </label>
-                      <button type="submit" className="safety-primary">
-                        답변 저장
-                      </button>
-                    </fieldset>
-                  </form>
-                )}
+                {kind === "admin" && <SupportReplyPanel item={item} busy={busy} onReply={reply} />}
               </article>
             ) : (
-              <article className="safety-entry" key={item.id}>
+              <article className="safety-entry" id={"safety-entry-" + item.id} key={item.id}>
                 <div className="safety-entry-heading">
                   <h3>{REPORT_REASONS[item.reason as keyof typeof REPORT_REASONS]}</h3>
                   <span className="safety-badge">{status(item.status)}</span>
@@ -450,7 +603,7 @@ export function SafetyCenter({
                 event.preventDefault();
                 const fields = new FormData(event.currentTarget);
                 void run(async () => {
-                  await appRequest(base + "reinstate/" + String(fields.get("publicId")), "POST", {
+                  await request(base + "reinstate/" + String(fields.get("publicId")), "POST", {
                     reason: fields.get("reason"),
                   });
                   setNotice("이용 제한을 해제하고 이력을 저장했어요.");
@@ -491,10 +644,10 @@ export function SafetyCenter({
                   event.preventDefault();
                   const fields = new FormData(event.currentTarget);
                   void run(async () => {
-                    await appRequest("/api/safety/account", "DELETE", {
+                    await request("/api/safety/account", "DELETE", {
                       confirm: fields.get("confirm"),
                     });
-                    await appRequest("/api/auth/logout", "POST", {});
+                    await request("/api/auth/logout", "POST", {});
                     window.location.assign("/login?withdrawn=1");
                   });
                 }}

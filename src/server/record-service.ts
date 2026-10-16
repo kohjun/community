@@ -28,6 +28,7 @@ import { contentVisible } from "./safety-visibility";
 import { registeredVenueSnapshotVisible, visibleRegisteredVenue } from "./place-policy";
 import { preciseTimestamp } from "./pagination";
 import { enforceRequestLimit } from "./request-limits";
+import { verifiedReviewParticipation } from "./verified-review-policy";
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type QueryDb = Database | Tx;
 function attendanceCount(postId: SQL, qr: boolean | null = null) {
@@ -49,7 +50,7 @@ export function recordMetricProjection(actor: string) {
     where vr.event_post_id=${id} and vp.status='published' and not vp.sample
     and not exists(select 1 from sliper.content_restrictions cr where cr.target_type='post' and cr.target_id=vp.id and cr.hidden)
     and ${creditMemberVisible(actor, sql`vp.author_id`)}
-    and exists(select 1 from sliper.event_results result where result.application_id=vr.application_id and result.post_id=vr.event_post_id and result.user_id=vr.user_id and result.presence='attended')`;
+    and ${verifiedReviewParticipation({ applicationId: sql`vr.application_id`, postId: sql`vr.event_post_id`, userId: sql`vr.user_id`, hostId: sql`"sliper"."event_records"."owner_id"` }, { requireRecordedAttendance: true })}`;
   return {
     attended: attendanceCount(id),
     qrAttended: attendanceCount(id, true),
@@ -289,7 +290,15 @@ export function recordService(db: Database) {
             eq(posts.sample, false),
             contentVisible("post", posts.id),
             creditMemberVisible(user, posts.authorId),
-            sql`exists(select 1 from sliper.event_results result where result.application_id=${verifiedEventReviews.applicationId} and result.presence='attended')`,
+            verifiedReviewParticipation(
+              {
+                applicationId: sql`"sliper"."verified_event_reviews"."application_id"`,
+                postId: sql`"sliper"."verified_event_reviews"."event_post_id"`,
+                userId: sql`"sliper"."verified_event_reviews"."user_id"`,
+                hostId: sql`${row.record.ownerId}::uuid`,
+              },
+              { requireRecordedAttendance: true },
+            ),
           ),
         )
         .orderBy(desc(posts.createdAt), desc(posts.id))

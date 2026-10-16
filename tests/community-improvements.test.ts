@@ -351,3 +351,37 @@ test("mobile ads wait 30 eligible seconds and exclude task routes/hidden-time ga
   for (let i = 1; i < 10; i++) assert.equal(clock.tick(80000 + i * 1000, true), false);
   assert.equal(clock.tick(90000, true), true);
 });
+
+test("the server issues a fresh period anchor and later pages retain its window as server time advances", async () => {
+  const firstPost = await post();
+  const secondPost = await post();
+  await like(firstPost.id, reader, "2026-10-11T04:00:00Z");
+  await like(secondPost.id, reader, "2026-10-11T04:01:00Z");
+  const first = await community.feed(reader, { sort: "popular", period: "today", limit: 1 });
+  assert.equal(first.rankingAt, now.toISOString());
+  assert.equal(first.posts.length, 1);
+  assert.ok(first.nextCursor);
+  const laterTime = new Date(now.getTime() + 120000);
+  const later = communityService(connection, () => laterTime);
+  const laterVoter = await member("늦게 좋아요를 누른 회원");
+  await like(firstPost.id, laterVoter, "2026-10-11T05:01:00Z");
+  const next = await later.feed(reader, {
+    sort: "popular",
+    period: "today",
+    limit: 1,
+    rankingAt: first.rankingAt,
+    cursor: first.nextCursor,
+  });
+  assert.equal(next.rankingAt, first.rankingAt);
+  assert.equal(next.posts.length, 1);
+  assert.notEqual(next.posts[0]!.id, first.posts[0]!.id);
+  assert.equal(next.posts[0]!.popularityScore, 1);
+  await assert.rejects(
+    later.feed(reader, {
+      sort: "popular",
+      period: "today",
+      rankingAt: new Date(laterTime.getTime() + 60000).toISOString(),
+    }),
+    code("VALIDATION"),
+  );
+});

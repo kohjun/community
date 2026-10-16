@@ -20,6 +20,7 @@ import { requireRecordMember, recordVisible } from "./record-policy";
 import { creditMemberVisible } from "./event-credit-service";
 import { registeredVenueSnapshotVisible } from "./place-policy";
 import { contentVisible } from "./safety-visibility";
+import { verifiedReviewParticipation } from "./verified-review-policy";
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Connection = Database | Tx;
 type Query = ReturnType<typeof portfolioQuerySchema.parse>;
@@ -222,7 +223,7 @@ async function aggregate(
     .where(visibility);
   const reviewEvidence = sql`${visibility} and ${host(target)} and rv.host_id=${target.id}::uuid and review.status='published' and not review.sample
     and not exists(select 1 from sliper.content_restrictions cr where cr.target_type='post' and cr.target_id=review.id and cr.hidden)
-    and exists(select 1 from sliper.event_results er join sliper.event_applications ea on ea.id=er.application_id where er.application_id=rv.application_id and er.presence='attended')
+    and ${verifiedReviewParticipation({ applicationId: sql`rv.application_id`, postId: sql`rv.event_post_id`, userId: sql`rv.user_id`, hostId: sql`${target.id}::uuid` }, { requireRecordedAttendance: true })}
     and ${creditMemberVisible(actor, sql`rv.user_id`)}`;
   const [ratings] = await connection
     .select({

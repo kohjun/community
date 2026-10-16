@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
-import { SidebarAd } from "./sidebar-ad";
-import { MobileAdSheet } from "./mobile-ad-sheet";
+import { Suspense } from "react";
+import { getAdvertisingConfiguration } from "@/server/advertising-config";
+import { AdSenseProvider } from "./adsense-provider";
+import { SiteAdSurfaces } from "./site-ad-surfaces";
 
-/** One persistent advertising surface shared by every page. */
+/** Public advertising settings are passed explicitly; server credentials stay on the server. */
 export function SiteAdvertising({ children }: { children: ReactNode }) {
   return (
-    <div className="site-ad-layout">
-      {children}
-      <SidebarAd />
-      <SidebarAd placement="right" />
-      <MobileAdSheet />
-    </div>
+    <Suspense fallback={<div className="site-ad-layout">{children}</div>}>
+      <AdSenseProvider config={getAdvertisingConfiguration()}>
+        <SiteAdSurfaces>{children}</SiteAdSurfaces>
+      </AdSenseProvider>
+    </Suspense>
   );
 }

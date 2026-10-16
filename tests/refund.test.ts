@@ -8,7 +8,13 @@ import { eq } from "drizzle-orm";
 import * as schema from "../src/db/schema";
 import type { Database } from "../src/db/connection";
 import { CATEGORIES } from "../src/domain/categories";
-import { refundQuote, koreanDateTimeInput, koreanDateTimeISO } from "../src/domain/refund";
+import {
+  refundQuote,
+  koreanDateTimeInput,
+  koreanDateTimeISO,
+  formatKoreanDate,
+  formatKoreanDateTime,
+} from "../src/domain/refund";
 import { communityService } from "../src/server/community-service";
 import { participationService } from "../src/server/participation-service";
 import { refundService } from "../src/server/refund-service";
@@ -106,6 +112,35 @@ test("Korean schedule inputs remain stable regardless of browser timezone", () =
   assert.equal(koreanDateTimeInput("2026-10-10T01:30:00.000Z"), "2026-10-10T10:30");
   assert.equal(koreanDateTimeISO("2026-10-10T10:30"), "2026-10-10T01:30:00.000Z");
 });
+test("Korean display dates use the same numeric 24-hour text across device timezones and explicit offsets", () => {
+  const original = process.env.TZ;
+  try {
+    for (const timezone of ["UTC", "Asia/Seoul", "America/Los_Angeles", "Pacific/Honolulu"]) {
+      process.env.TZ = timezone;
+      assert.equal(formatKoreanDateTime("2026-10-22T03:22:19.000Z"), "2026. 10. 22. 12:22:19");
+      assert.equal(formatKoreanDateTime("2026-10-21T20:22:19-07:00"), "2026. 10. 22. 12:22:19");
+      assert.equal(formatKoreanDate(new Date("2026-10-21T15:00:00.000Z")), "2026. 10. 22.");
+    }
+  } finally {
+    if (original === undefined) delete process.env.TZ;
+    else process.env.TZ = original;
+  }
+});
+
+test("Korean display date boundaries preserve midnight, year and leap-day changes", () => {
+  for (const [instant, expected] of [
+    ["2026-12-31T14:59:59Z", "2026. 12. 31. 23:59:59"],
+    ["2026-12-31T15:00:00Z", "2027. 01. 01. 00:00:00"],
+    ["2028-02-28T15:00:00Z", "2028. 02. 29. 00:00:00"],
+    ["2028-02-29T15:00:00Z", "2028. 03. 01. 00:00:00"],
+  ])
+    assert.equal(formatKoreanDateTime(instant), expected);
+  for (const missing of [undefined, null, "", "invalid", "2026-10-22T12:22:19", new Date(NaN)]) {
+    assert.equal(formatKoreanDateTime(missing), "");
+    assert.equal(formatKoreanDate(missing), "");
+  }
+});
+
 test("scheduled paid applications require policy consent and retain immutable schedule snapshots", async () => {
   await assert.rejects(
     service.apply(attendee, postId, { ...details, refundConsent: false }, "bridge"),

@@ -10,6 +10,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Markdown } from "./markdown";
 import { PostBody } from "./post-body";
+import { RelatedTopics } from "./topic-connections";
 import { PollCard } from "./poll-card";
 import { SafetyActions } from "./safety-actions";
 import { PostShareButton } from "./post-share-button";
@@ -260,44 +261,49 @@ export function PostDetailContent({
               onVote={(index) => store.vote(active.id, index)}
             />
           )}
-          {active.tags.length > 0 && (
-            <div className="detail-tags">
-              {active.tags.map((value) => (
-                <span key={value}>#{value}</span>
-              ))}
-            </div>
-          )}
+          {!active.spoiler && <RelatedTopics tags={active.tags} />}
         </>
       )}
-      <SafetyActions
-        targetType="post"
-        targetId={active.id}
-        isMine={active.isMine}
-        canAct={store.canWrite}
-        onBlocked={() => {
-          onUnavailable();
-        }}
-      />
-      <div className="detail-reactions">
+      <div className="detail-support-actions">
         <PostShareButton postId={active.id} title={safePostTitle(active)} />
-        <Button
-          variant="outline"
-          disabled={store.busy || !store.canWrite}
-          aria-pressed={active.isLiked}
-          onClick={() => store.toggleLike(active.id)}
-        >
-          <Heart size={17} fill={active.isLiked ? "currentColor" : "none"} />
-          좋아요 {active.likes}
-        </Button>
-        <Button
-          variant="outline"
-          disabled={store.busy || !store.canWrite}
-          aria-pressed={active.isBookmarked}
-          onClick={() => savePost(active.id)}
-        >
-          <Bookmark size={17} fill={active.isBookmarked ? "currentColor" : "none"} />
-          {active.isBookmarked ? "저장됨" : "북마크"}
-        </Button>
+        <SafetyActions
+          targetType="post"
+          targetId={active.id}
+          isMine={active.isMine}
+          canAct={store.canWrite}
+          onBlocked={() => {
+            onUnavailable();
+          }}
+        />
+      </div>
+      <div className="detail-footer">
+        {!concealed && active.tags.length > 0 && (
+          <div className="detail-tags" role="group" aria-label="게시글 태그" tabIndex={0}>
+            {active.tags.map((value) => (
+              <span key={value}>#{value}</span>
+            ))}
+          </div>
+        )}
+        <div className="detail-reactions">
+          <Button
+            variant="outline"
+            disabled={store.busy || !store.canWrite}
+            aria-pressed={active.isLiked}
+            onClick={() => store.toggleLike(active.id)}
+          >
+            <Heart size={17} fill={active.isLiked ? "currentColor" : "none"} />
+            좋아요 {active.likes}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={store.busy || !store.canWrite}
+            aria-pressed={active.isBookmarked}
+            onClick={() => savePost(active.id)}
+          >
+            <Bookmark size={17} fill={active.isBookmarked ? "currentColor" : "none"} />
+            {active.isBookmarked ? "저장됨" : "북마크"}
+          </Button>
+        </div>
       </div>
       {!concealed && (
         <div className="comments-section">

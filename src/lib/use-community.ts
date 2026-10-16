@@ -30,6 +30,7 @@ import { actionData, communityRequest as request } from "./api-client";
 import { openPostContent, recordPostVisit } from "./post-navigation";
 import { communityLocationUrl } from "@/domain/community-location";
 import { markPostRead, normalizeReadPostId } from "./read-posts";
+import { adoptServerRankingAnchor } from "./ranking-anchor";
 
 const queryString = (query: FeedQuery) =>
   new URLSearchParams(
@@ -44,8 +45,18 @@ export function useCommunity(
   {
     initialDetail,
     detailOnly = false,
-  }: { initialDetail?: CommunityDetail; detailOnly?: boolean } = {},
+    onRankingAnchor,
+  }: {
+    initialDetail?: CommunityDetail;
+    detailOnly?: boolean;
+    onRankingAnchor?: (rankingAt: string) => void;
+  } = {},
 ) {
+  const rankingAnchorListener = useRef(onRankingAnchor);
+  rankingAnchorListener.current = onRankingAnchor;
+  const currentQuery = useRef(query);
+  currentQuery.current = query;
+  const adoptedRankingKey = useRef<string | null>(null);
   const [snapshot, setSnapshot] = useState(initial);
   const [detail, setDetail] = useState<CommunityDetail | null>(initialDetail ?? null);
   const [error, setError] = useState("");
@@ -155,8 +166,21 @@ export function useCommunity(
     if (version !== feedVersion.current || keyAtRequest !== currentKey.current) return;
     ++highlightsVersion.current;
     setFeedError("");
-    loadedKey.current = keyAtRequest;
-    loadedFilterKey.current = filterAtRequest;
+    const anchoredQuery = rankingAnchorListener.current
+      ? adoptServerRankingAnchor(currentQuery.current, next.rankingAt)
+      : null;
+    if (anchoredQuery?.rankingAt) {
+      const anchoredFilterKey = queryString({ ...anchoredQuery, limit: 20 });
+      const page = Number(new URLSearchParams(keyAtRequest).get("page") ?? 1);
+      loadedKey.current = anchoredFilterKey + "&page=" + page;
+      loadedFilterKey.current = anchoredFilterKey;
+      adoptedRankingKey.current = loadedKey.current;
+      setPageSelection({ filterKey: anchoredFilterKey, page });
+      rankingAnchorListener.current?.(anchoredQuery.rankingAt);
+    } else {
+      loadedKey.current = keyAtRequest;
+      loadedFilterKey.current = filterAtRequest;
+    }
     const changes = new Map(
       [...postChanges.current].filter(([, change]) => change.version > postsAtRequest),
     );
@@ -176,6 +200,13 @@ export function useCommunity(
 
   useEffect(() => {
     if (detailOnly) return;
+    const adopted = adoptedRankingKey.current;
+    adoptedRankingKey.current = null;
+    if (adopted === key) {
+      // The first response already contains this page at the server-issued anchor.
+      setLoading(false);
+      return;
+    }
     const controller = new AbortController();
     setLoading(true);
     setFeedError("");

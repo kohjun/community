@@ -37,6 +37,7 @@ import { assertContentVisible, authorVisible, contentVisible } from "./safety-vi
 import { enforceRequestLimit } from "./request-limits";
 import { awardActivity } from "./activity";
 import { assertEventRunning, isEventCancelled } from "./event-lifecycle-service";
+import { canWriteVerifiedReview, verifiedReviewParticipation } from "./verified-review-policy";
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 const hash = (code: string) => createHash("sha256").update(code).digest("hex");
 export function eventOperationsService(db: Database, clock = () => new Date()) {
@@ -294,7 +295,7 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
   async function reviews(actor: string | null, postId: string, page = 1): Promise<EventReviewView> {
     z.uuid().parse(postId);
     const [event] = await db
-      .select({ title: posts.title, endsAt: eventSettings.endsAt })
+      .select({ title: posts.title, endsAt: eventSettings.endsAt, authorId: posts.authorId })
       .from(posts)
       .innerJoin(eventSettings, eq(eventSettings.postId, posts.id))
       .where(
@@ -311,8 +312,17 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
       ? await db
           .select({
             checkedAt: eventAdmissions.checkedAt,
-            status: eventApplications.status,
             reviewPostId: verifiedEventReviews.reviewPostId,
+            canReview: canWriteVerifiedReview({
+              applicationId: sql`"sliper"."event_applications"."id"`,
+              postId: sql`"sliper"."event_applications"."post_id"`,
+              userId: sql`"sliper"."event_applications"."user_id"`,
+              hostId: sql`${event.authorId}::uuid`,
+              applicationStatus: sql`"sliper"."event_applications"."status"`,
+              endsAt: sql`${event.endsAt?.toISOString() ?? null}::timestamptz`,
+              reviewPostId: sql`"sliper"."verified_event_reviews"."review_post_id"`,
+              now: sql`${clock().toISOString()}::timestamptz`,
+            }),
           })
           .from(eventAdmissions)
           .innerJoin(eventApplications, eq(eventApplications.id, eventAdmissions.applicationId))
@@ -337,6 +347,12 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
       .where(
         and(
           eq(verifiedEventReviews.eventPostId, postId),
+          verifiedReviewParticipation({
+            applicationId: sql`"sliper"."verified_event_reviews"."application_id"`,
+            postId: sql`"sliper"."verified_event_reviews"."event_post_id"`,
+            userId: sql`"sliper"."verified_event_reviews"."user_id"`,
+            hostId: sql`${event.authorId}::uuid`,
+          }),
           eq(posts.status, "published"),
           contentVisible("post", posts.id),
           authorVisible(posts.authorId, actor),
@@ -348,13 +364,7 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
     return {
       postId,
       title: event.title,
-      canReview:
-        !cancelled &&
-        !!own &&
-        own.status === "confirmed" &&
-        !!event.endsAt &&
-        event.endsAt <= clock() &&
-        !own.reviewPostId,
+      canReview: !cancelled && !!own?.canReview,
       checkedAt: own?.checkedAt.toISOString() ?? null,
       ownReviewPostId: own?.reviewPostId ?? null,
       reviews: rows.slice(0, 20).map((r) => ({
@@ -397,11 +407,24 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
           and(
             eq(eventAdmissions.postId, postId),
             eq(eventAdmissions.userId, user),
-            eq(eventApplications.status, "confirmed"),
+            canWriteVerifiedReview({
+              applicationId: sql`"sliper"."event_applications"."id"`,
+              postId: sql`"sliper"."event_applications"."post_id"`,
+              userId: sql`"sliper"."event_applications"."user_id"`,
+              hostId: sql`${post.authorId}::uuid`,
+              applicationStatus: sql`"sliper"."event_applications"."status"`,
+              endsAt: sql`${settings.endsAt.toISOString()}::timestamptz`,
+              // The duplicate check below preserves the existing conflict response.
+              reviewPostId: sql`null::uuid`,
+              now: sql`${clock().toISOString()}::timestamptz`,
+            }),
           ),
         );
       if (!admission)
-        throw new AppError("FORBIDDEN", "QR 입장이 확인된 참가자만 인증 후기를 작성할 수 있어요.");
+        throw new AppError(
+          "FORBIDDEN",
+          "현재 참가가 확인된 QR 입장 참가자만 인증 후기를 작성할 수 있어요.",
+        );
       const [prior] = await tx
         .select()
         .from(verifiedEventReviews)

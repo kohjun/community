@@ -3,6 +3,7 @@ import { getDatabase } from "@/db/client";
 import { apiResponse, assertSameOrigin, readJson } from "@/server/http";
 import { currentActor } from "@/server/identity";
 import { AppError, requireActor } from "@/server/errors";
+import { eventPrivateContactService } from "@/server/event-contact-service";
 import { eventLifecycleService } from "@/server/event-lifecycle-service";
 import { eventOperationsService } from "@/server/event-operations-service";
 import { paymentReconciliationService } from "@/server/payment-reconciliation-service";
@@ -57,6 +58,12 @@ async function handle(request: Request, context: { params: Promise<{ path?: stri
     if (resource === "events" && id && path.length === 2 && method === "GET")
       return service.overview(actor, id);
     if (resource === "events" && id && path.length === 3) {
+      if (action === "private-contact") {
+        const contact = eventPrivateContactService(getDatabase());
+        if (method === "GET") return contact.overview(actor, id);
+        if (method === "PUT") return contact.save(actor, id, await readJson(request));
+        if (method === "DELETE") return contact.remove(actor, id, await readJson(request));
+      }
       const lifecycle = eventLifecycleService(getDatabase());
       if (action === "lifecycle" && method === "GET")
         return lifecycle.overview(

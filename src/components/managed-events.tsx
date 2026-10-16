@@ -3,10 +3,18 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, Settings2 } from "lucide-react";
 import type { ManagedEvent } from "@/domain/participation";
+import type { AftercarePage } from "@/domain/event-aftercare";
 import { participationRequest } from "@/lib/participation-client";
 import { ParticipationShell } from "./participation-shell";
+import { EventAftercare } from "./event-aftercare";
 type Page = { items: ManagedEvent[]; nextCursor: string | null };
-export function ManagedEvents({ initial }: { initial: Page }) {
+export function ManagedEvents({
+  initial,
+  initialAftercare,
+}: {
+  initial: Page;
+  initialAftercare: AftercarePage;
+}) {
   const [data, setData] = useState(initial),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -32,6 +40,7 @@ export function ManagedEvents({ initial }: { initial: Page }) {
           <h1>내 행사 관리</h1>
           <p>등록하거나 담당자로 참여하는 행사의 참가 현황을 한눈에 확인하세요.</p>
         </header>
+        <EventAftercare initial={initialAftercare} scope="hosting" />
         {error && (
           <p className="participation-error" role="alert">
             {error}

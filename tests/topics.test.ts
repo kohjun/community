@@ -14,10 +14,14 @@ import { CATEGORIES } from "../src/domain/categories";
 import { emptyEventPlan } from "../src/domain/event-plan";
 import {
   TOPICS,
+  TOPIC_TAG_WHITESPACE,
+  normalizeTopicTag,
   topicsForTags,
   topicAliases,
   topicQuerySchema,
   topicUrl,
+  topicCreationUrl,
+  topicSectionFromHash,
 } from "../src/domain/topics";
 import { topicService } from "../src/server/topic-service";
 import { AppError } from "../src/server/errors";
@@ -275,4 +279,63 @@ test("unknown topics and invalid input fail without query fallback; closed viewe
     service.detail(viewer, "mystery"),
     (error: unknown) => error instanceof AppError && error.code === "FORBIDDEN",
   );
+});
+
+test("topic creation carries an explicit topic, category and matching content kind", () => {
+  for (const topic of TOPICS) {
+    for (const section of ["stories", "recruitment"] as const) {
+      const url = new URL(topicCreationUrl(topic.slug, section), "https://sliper.example");
+      assert.equal(url.pathname, "/stories");
+      assert.equal(url.searchParams.get("composeTopic"), topic.slug);
+      assert.equal(url.searchParams.get("category"), topic.category);
+      assert.equal(url.searchParams.get("kind"), section === "recruitment" ? "모집" : "이야기");
+    }
+    const url = new URL(topicCreationUrl(topic.slug, "library"), "https://sliper.example");
+    assert.equal(url.pathname, "/archive/new");
+    assert.equal(url.searchParams.get("topic"), topic.slug);
+  }
+});
+
+test("shared topic URLs preserve the active section and independent pagination when focus changes", () => {
+  const url = topicUrl(
+    "mission-race",
+    { focus: "interests", storiesPage: 2, libraryPage: 3 },
+    "library",
+  );
+  assert.equal(url, "/topics/mission-race?focus=interests&storiesPage=2&libraryPage=3#library");
+  assert.equal(topicSectionFromHash(new URL(url, "https://sliper.example").hash), "library");
+  assert.equal(topicSectionFromHash("#recruitment"), "recruitment");
+  assert.equal(topicSectionFromHash(""), "stories");
+  assert.equal(topicSectionFromHash("#unknown"), "stories");
+});
+
+test("Unicode whitespace gives the same explicit topic links and counts for historical story and paid library tags", async () => {
+  const tags = [" #미션\u00a0레이스 ", "\u2003#미션\u2003레이스", "\ufeff#미션\ufeff레이스"];
+  const createdPosts = await Promise.all(tags.map((tag) => post({ tags: [tag] })));
+  const createdLibraries = await Promise.all(tags.map((tag) => library({ tags: [tag] })));
+  for (const tag of tags)
+    assert.deepEqual(
+      topicsForTags([tag]).map((topic) => topic.slug),
+      ["mission-race"],
+    );
+  const result = await service.detail(viewer, "mission-race");
+  assert.equal(result.stories.total, tags.length);
+  assert.equal(result.library.total, tags.length);
+  assert.deepEqual(
+    result.stories.items.map((item) => item.id).sort(),
+    createdPosts.map((item) => item.id).sort(),
+  );
+  assert.deepEqual(
+    result.library.items.map((item) => item.id).sort(),
+    createdLibraries.map((item) => item.id).sort(),
+  );
+  assert.equal(JSON.stringify(result).includes("PROTECTED_"), false);
+  for (const whitespace of TOPIC_TAG_WHITESPACE) {
+    const tag = whitespace + "#MISSION" + whitespace + "-RACE" + whitespace;
+    assert.equal(normalizeTopicTag(tag), "mission-race");
+    assert.equal(
+      normalizeTopicTag(tag),
+      tag.trim().replace(/^#/, "").replace(/\s+/g, "").toLowerCase(),
+    );
+  }
 });
