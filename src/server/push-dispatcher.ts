@@ -145,6 +145,7 @@ export function pushDispatcher(
       /^application:([0-9a-f-]{36}):(confirmed|refunded|cancelled|rejected|pending_approval|review)$/i.exec(
         delivery.dedupeKey,
       );
+    const waitlistMatch = /^waitlist:([0-9a-f-]{36}):[0-9]+$/i.exec(delivery.dedupeKey);
     const roomMatch = /^room:([0-9a-f-]{36})$/i.exec(delivery.dedupeKey);
     const eventChangeMatch = /^event-change:([0-9a-f-]{36})$/i.exec(delivery.dedupeKey);
     const engagementEligible = sql`exists(select 1 from sliper.inbox_items inbox
@@ -156,7 +157,7 @@ export function pushDispatcher(
         ? delivery.commentId
         : delivery.kind === "announcement"
           ? roomMatch?.[1]
-          : (eventChangeMatch?.[1] ?? applicationMatch?.[1]);
+          : (waitlistMatch?.[1] ?? eventChangeMatch?.[1] ?? applicationMatch?.[1]);
     const currentSourceEligible = ["comment", "announcement", "participation"].includes(
       delivery.kind,
     )
@@ -192,22 +193,24 @@ export function pushDispatcher(
           or exists(select 1 from sliper.room_members m join sliper.event_applications a on a.id=m.application_id
             where m.post_id=p.id and m.user_id=${delivery.recipientId}::uuid and m.revoked_at is null and a.status='confirmed')
         ))`
-            : delivery.kind === "participation" && eventChangeMatch
-              ? sql`
+            : delivery.kind === "participation" && waitlistMatch
+              ? currentSourceEligible
+              : delivery.kind === "participation" && eventChangeMatch
+                ? sql`
       exists(select 1 from sliper.event_changes change
         join sliper.event_change_recipients recipient on recipient.change_id=change.id and recipient.post_id=change.post_id
         join sliper.posts p on p.id=change.post_id
         where change.id=${eventChangeMatch[1]}::uuid and change.post_id=${delivery.postId}::uuid
           and recipient.user_id=${delivery.recipientId}::uuid and p.status='published')`
-              : delivery.kind === "participation" && applicationMatch
-                ? sql`
+                : delivery.kind === "participation" && applicationMatch
+                  ? sql`
       exists(select 1 from sliper.event_applications a join sliper.posts p on p.id=a.post_id
         where a.id=${applicationMatch[1]}::uuid and a.user_id=${delivery.recipientId}::uuid and a.post_id=${delivery.postId}::uuid
           and a.status=${applicationMatch[2]} and p.status='published'
           and (a.status<>'confirmed' or exists(select 1 from sliper.room_members m where m.application_id=a.id and m.revoked_at is null)))`
-                : delivery.kind === "test"
-                  ? sql`true`
-                  : sql`false`;
+                  : delivery.kind === "test"
+                    ? sql`true`
+                    : sql`false`;
     const [row] = await db
       .select({ id: pushDeliveries.id })
       .from(pushDeliveries)

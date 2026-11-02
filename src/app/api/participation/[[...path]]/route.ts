@@ -50,6 +50,14 @@ async function handle(request: Request, context: { params: Promise<{ path?: stri
     if (
       resource === "applications" &&
       id &&
+      action === "site-decision" &&
+      path.length === 3 &&
+      method === "POST"
+    )
+      return service.decideSiteApplication(actor, id, await readJson(request));
+    if (
+      resource === "applications" &&
+      id &&
       action === "decision" &&
       path.length === 3 &&
       method === "POST"

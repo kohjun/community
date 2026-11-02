@@ -116,7 +116,7 @@ test("standalone detail preserves one heading, sharing, owner controls, comments
 test("readonly readers can share and follow the login link but cannot submit reactions or comments", () => {
   const markup = detailMarkup({ isMine: false }, false);
   assert.doesNotMatch(markup, />글 수정<|>글 삭제</);
-  assert.match(markup, /href="\/login\?next=\/posts\//);
+  assert.match(markup, /href="\/login\?returnTo=%2Fposts%2F/);
   assert.match(markup, /<textarea[^>]*disabled=""/);
   assert.match(markup, /aria-label="글 공유하기"/);
   assert.match(markup, /신고/);

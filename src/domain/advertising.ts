@@ -152,3 +152,20 @@ export function produceAdsTxt(configuration: AdSenseConfiguration): string | nul
     return null;
   return "google.com, " + configuration.clientId.slice(3) + ", DIRECT, f08c47fec0942fa0\n";
 }
+
+/** A loopback upstream may reconstruct request.url with its internal hostname.
+ * Nginx must replace Host / X-Forwarded-Host / X-Forwarded-Proto with trusted values.
+ * This fallback only serves the public verification file; live browser ads still check window.origin.
+ */
+export function isAdvertisingRequest(request: Request, siteOrigin: string | null): boolean {
+  if (isAdvertisingOrigin(new URL(request.url).origin, siteOrigin)) return true;
+  if (!siteOrigin || !publicSiteOrigin(siteOrigin)) return false;
+  const incoming = new URL(request.url);
+  if (!["127.0.0.1", "localhost", "[::1]"].includes(incoming.hostname)) return false;
+  const expected = new URL(siteOrigin);
+  return (
+    request.headers.get("host") === expected.host &&
+    request.headers.get("x-forwarded-host") === expected.host &&
+    request.headers.get("x-forwarded-proto") === "https"
+  );
+}

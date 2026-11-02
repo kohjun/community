@@ -27,6 +27,7 @@ function eligible(t: Table, kind: RetentionAssetKind, at: Date) {
     isNull(t.postId),
     isNull(t.recordPostId),
     isNull(t.recordOriginPostId),
+    "reunionOriginPostId" in t ? isNull(t.reunionOriginPostId) : undefined,
     sql`${t.unattachedSince} <= ${new Date(at.getTime() - UNATTACHED_MEDIA_RETENTION_DAYS * 86400000).toISOString()}::timestamptz`,
     sql`not exists(select 1 from sliper.media_retention_jobs j where j.asset_kind=${kind} and j.asset_id=${t.id})`,
   );
@@ -159,6 +160,7 @@ export function mediaRetentionService(db: Database) {
       (asset.postId ||
         asset.recordPostId ||
         asset.recordOriginPostId ||
+        ("reunionOriginPostId" in asset && asset.reunionOriginPostId) ||
         asset.status !== "pending" ||
         asset.objectKey !== job.objectKey ||
         asset.storageBackend !== job.storageBackend)

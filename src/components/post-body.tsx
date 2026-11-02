@@ -67,7 +67,14 @@ export function PostBody({
     return (
       <>
         {[...byId.values()].map((image) => (
-          <img key={image.id} className="detail-image" src={image.src} alt="첨부 이미지" />
+          <img
+            key={image.id}
+            className="detail-image"
+            src={image.src}
+            alt="첨부 이미지"
+            loading="lazy"
+            decoding="async"
+          />
         ))}
         <Markdown>{body}</Markdown>
       </>
@@ -134,7 +141,12 @@ export function PostBody({
           placed.add(image.id);
           return (
             <figure key={index} className="post-inline-image">
-              <img src={image.src} alt={node.attrs.alt || "첨부 이미지"} loading="lazy" />
+              <img
+                src={image.src}
+                alt={node.attrs.alt || "첨부 이미지"}
+                loading="lazy"
+                decoding="async"
+              />
             </figure>
           );
         }
@@ -149,7 +161,7 @@ export function PostBody({
         <div className="post-unplaced-images" aria-label="첨부 이미지">
           {unplaced.map((image) => (
             <figure key={image.id} className="post-inline-image">
-              <img src={image.src} alt="첨부 이미지" loading="lazy" />
+              <img src={image.src} alt="첨부 이미지" loading="lazy" decoding="async" />
             </figure>
           ))}
         </div>

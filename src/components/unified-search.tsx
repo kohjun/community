@@ -12,6 +12,8 @@ import {
   Users,
 } from "lucide-react";
 import { ParticipationShell } from "./participation-shell";
+import { TopicCatalogue } from "./topic-catalogue";
+import styles from "./workspace-navigation.module.css";
 import { CATEGORIES } from "@/domain/categories";
 import {
   SEARCH_LABELS,
@@ -51,8 +53,11 @@ export function UnifiedSearch({
     <ParticipationShell>
       <section className="unified-search-hero">
         <span>SLIPER SEARCH</span>
-        <h1>다음 이야기를 찾아보세요</h1>
+        <h1>취향에 맞는 즐거움을 찾아보세요</h1>
         <p>함께 놀 모임부터 새로운 게임 아이디어까지, 한곳에서 검색해요.</p>
+        <Link className={styles.searchTopicLink} href="/search#topics">
+          주제별로 둘러보기 <ArrowRight size={14} aria-hidden="true" />
+        </Link>
       </section>
       <form className="unified-search-form" action="/search" method="get" role="search">
         <label className="unified-search-input">
@@ -110,19 +115,20 @@ export function UnifiedSearch({
         ))}
       </nav>
       {!query.q ? (
-        <section className="unified-search-empty">
-          <Search size={30} aria-hidden="true" />
-          <h2>어떤 즐거움을 찾고 있나요?</h2>
-          <p>프로그램 이름, 모임 주제나 태그를 입력해보세요.</p>
-          <div className="unified-search-suggestions">
-            {["추리", "파티", "여행", "소개팅"].map((q) => (
-              <Link key={q} href={searchHref({ q, type: "all", page: 1 })}>
-                {q}
-                <ArrowRight size={13} />
-              </Link>
-            ))}
-          </div>
-        </section>
+        <>
+          <TopicCatalogue />
+          <section className={styles.quickSearch} aria-label="추천 검색어">
+            <span>많이 찾는 키워드</span>
+            <div className="unified-search-suggestions">
+              {["추리", "파티", "여행", "소개팅"].map((q) => (
+                <Link key={q} href={searchHref({ q, type: "all", page: 1 })}>
+                  {q}
+                  <ArrowRight size={13} />
+                </Link>
+              ))}
+            </div>
+          </section>
+        </>
       ) : (
         <>
           <div className="unified-search-summary">

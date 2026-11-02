@@ -385,3 +385,40 @@ test("the server issues a fresh period anchor and later pages retain its window 
     code("VALIDATION"),
   );
 });
+
+test("monthly home rankings start on the Korean calendar month and preserve shared URL periods", () => {
+  assert.equal(
+    popularityWindow("month", new Date("2027-01-01T00:00:00+09:00"))?.start.toISOString(),
+    "2026-12-31T15:00:00.000Z",
+  );
+  assert.equal(
+    popularityWindow("month", new Date("2028-02-29T18:00:00+09:00"))?.start.toISOString(),
+    "2028-01-31T15:00:00.000Z",
+  );
+  assert.equal(communityLocation(new URLSearchParams("sort=popular&period=month")).period, "month");
+});
+test("home story tabs count only reactions in the requested period and keep hidden/sample posts out", async () => {
+  const old = await post(),
+    weekly = await post(),
+    daily = await post(),
+    sample = await post(owner, "이야기", true);
+  await like(old.id, reader, "2026-10-02T01:00:00Z");
+  await like(weekly.id, reader, "2026-10-08T01:00:00Z");
+  await like(daily.id, reader, "2026-10-11T01:00:00Z");
+  await like(sample.id, reader, "2026-10-11T01:00:00Z");
+  assert.deepEqual(
+    (await community.homeStories(reader, { period: "today" })).map((p) => p.id),
+    [daily.id],
+  );
+  assert.equal((await community.homeStories(reader, { period: "week" })).length, 2);
+  assert.equal((await community.homeStories(reader, { period: "month" })).length, 3);
+  await db.insert(safety.contentRestrictions).values({
+    targetType: "post",
+    targetId: old.id,
+    hidden: true,
+    reason: "검토",
+    updatedBy: admin,
+  });
+  assert.equal((await community.homeStories(reader, { period: "month" })).length, 2);
+  await assert.rejects(() => community.homeStories(reader, { period: "all" }));
+});

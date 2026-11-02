@@ -1,0 +1,88 @@
+# Managed Sliper IP HTTPS endpoint. Keep the existing site's Nginx/PM2 independent.
+# Requires Caddy 2.11.7 and port-80 HTTP-01 routing to 127.0.0.1:13080.
+# Certificate state contains private keys and must remain owned by sliper-tls, 0700.
+{
+	admin off
+	persist_config off
+	http_port 13080
+	auto_https disable_redirects
+	default_sni {$SLIPER_TLS_HOST:211.188.59.204}
+	storage file_system /var/lib/sliper-tls/certificates
+	grace_period 30s
+	# Access logs stay disabled. Runtime errors must not retain OAuth codes or cookies.
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>uri replace "[redacted]"
+				request>headers delete
+			}
+		}
+	}
+	# Redirect the previous HTTP address on this same port, preserving path/query.
+	# Keep this wrapper scoped to HTTPS: HTTP-01 on 13080 must stay unwrapped.
+	servers {$SLIPER_TLS_BIND_ADDRESS:0.0.0.0}:{$SLIPER_TLS_PORT:13000} {
+		protocols h1 h2
+		max_header_size 32KB
+		timeouts {
+			read_header 10s
+			read_body 2m
+			idle 2m
+		}
+		listener_wrappers {
+			http_redirect
+			tls
+		}
+	}
+	servers 127.0.0.1:13080 {
+		protocols h1
+	}
+}
+
+https://{$SLIPER_TLS_HOST:211.188.59.204}:{$SLIPER_TLS_PORT:13000} {
+	bind {$SLIPER_TLS_BIND_ADDRESS:0.0.0.0}
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+			profile shortlived
+			disable_tlsalpn_challenge
+			alt_http_port 13080
+		}
+	}
+	# 50MiB uploads plus multipart overhead; route-specific app limits still apply.
+	request_body {
+		max_size 64MB
+	}
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+	# This minimal health route remains available when the Next process is unhealthy.
+	handle /ops/health {
+		reverse_proxy 127.0.0.1:13002 {
+			transport http {
+				dial_timeout 3s
+				response_header_timeout 5s
+			}
+		}
+	}
+	handle {
+		reverse_proxy 127.0.0.1:{$SLIPER_UPSTREAM_PORT:13001} {
+			# Preserve immediate SSE updates and streamed/Range media without response buffering.
+			flush_interval -1
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 90s
+			}
+		}
+	}
+}
+
+# Declare this listener explicitly so Caddy's HTTP-01 handler is loopback only.
+# Nginx forwards the unchanged ACME path and original Host to this listener.
+http://:13080 {
+	bind 127.0.0.1
+	respond 404
+}

@@ -22,7 +22,14 @@ export async function POST(request: Request) {
     const client = await supabaseAuth();
     const { data, error } = await client!.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: callback.toString(), skipBrowserRedirect: true },
+      options: {
+        redirectTo: callback.toString(),
+        skipBrowserRedirect: true,
+        // Supabase appends `scopes` to Kakao defaults. Replace `scope` to omit email.
+        ...(provider === "kakao"
+          ? { queryParams: { scope: "profile_nickname profile_image" } }
+          : {}),
+      },
     });
     if (error || !data.url) throw new Error("OAuth unavailable");
     const response = NextResponse.redirect(data.url, 303);

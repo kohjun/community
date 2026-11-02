@@ -1,3 +1,4 @@
+import { enqueueObjectCleanup } from "./object-cleanup-service";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Database } from "../db/connection";
@@ -512,6 +513,8 @@ export function safetyService(db: Database) {
           objectKey: profilePhotos.objectKey,
           storageBackend: profilePhotos.storageBackend,
         });
+      if (removedPhoto)
+        await enqueueObjectCleanup(tx, { kind: "profile", ...removedPhoto }, "account-closed");
       photoObjectKey = removedPhoto?.objectKey ?? null;
       photoStorageBackend = removedPhoto?.storageBackend === "supabase" ? "supabase" : "local";
       await tx.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));

@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { participantGuideSchema } from "./participant-guide";
 import { lightningCategorySchema } from "./lightning-categories";
-import { applicationUrlSchema } from "./application-url";
 export const venueSchema = z.strictObject({
   latitude: z.number().finite().min(-90).max(90),
   longitude: z.number().finite().min(-180).max(180),
+  address: z.string().trim().min(5).max(120).optional(),
   communityVenueId: z.uuid().optional(),
   communityVenueVersion: z.number().int().positive().optional(),
 });
@@ -34,16 +35,11 @@ export const lightningInputSchema = z
     startsAt: z.iso.datetime({ offset: true }),
     endsAt: z.iso.datetime({ offset: true }),
     capacity: z.number().int().min(2).max(12),
-    priceKRW: z.number().int().min(0).max(10000000).default(0),
-    applicationUrl: applicationUrlSchema.nullable().default(null),
+    priceKRW: z.literal(0).default(0),
+    applicationUrl: z.null().default(null),
+    participantGuide: participantGuideSchema.nullable().optional(),
   })
   .superRefine((value, context) => {
-    if (value.priceKRW > 0 && !value.applicationUrl)
-      context.addIssue({
-        code: "custom",
-        path: ["applicationUrl"],
-        message: "유료 번개는 외부 신청·결제 링크를 연결해주세요. 슬리퍼 직접 참가는 무료예요.",
-      });
     const duration = Date.parse(value.endsAt) - Date.parse(value.startsAt);
     if (duration < 15 * 60000 || duration > 12 * 3600000)
       context.addIssue({

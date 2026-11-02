@@ -1,3 +1,4 @@
+import { communityQueries } from "@/server/community-queries";
 import { z } from "zod";
 import { getDatabase } from "@/db/client";
 import { hashVisitor } from "@/domain/visitor";
@@ -23,12 +24,17 @@ async function handle(request: Request, context: Context) {
       actor = await currentActor(),
       service = communityService(getDatabase());
     if (method !== "GET") assertSameOrigin(request);
+    if (method === "GET" && resource === "home-stories" && parts.length === 1)
+      return communityQueries(getDatabase()).homeStories(
+        actor,
+        Object.fromEntries(new URL(request.url).searchParams),
+      );
     if (method === "GET" && resource === "highlights" && parts.length === 1)
-      return service.highlights(actor);
+      return communityQueries(getDatabase()).highlights(actor);
     if (method === "GET" && !parts.length) {
       const query = feedQuerySchema.parse(Object.fromEntries(new URL(request.url).searchParams));
       const [feed, notifications] = await Promise.all([
-        service.feed(actor, query),
+        communityQueries(getDatabase()).feed(actor, query),
         service.inbox(actor),
       ]);
       return {

@@ -1,3 +1,5 @@
+import { invalidateDiscoveryCache } from "./discovery-cache-store";
+import { assertContentAllowed } from "./content-policy";
 import { DISCUSSION_TYPES } from "../domain/discussions";
 import { visibleAnswerId, previewTitleSql, previewBodySql } from "./discussion-policy";
 import { questionResolutions } from "../db/schema";
@@ -86,7 +88,7 @@ export const feedQuerySchema = z
     search: z.string().trim().max(100).optional(),
     view: z.enum(["home", "popular", "bookmarks", "mine"]).default("home"),
     sort: z.enum(["latest", "popular", "nearest"]).default("latest"),
-    period: z.enum(["today", "week", "all"]).default("all"),
+    period: z.enum(["today", "week", "month", "all"]).default("all"),
     rankingAt: z.iso.datetime().optional(),
     latitude: numericQuery(-90, 90),
     longitude: numericQuery(-180, 180),
@@ -145,9 +147,41 @@ export const feedQuerySchema = z
         message: "최대 참가비는 최소 참가비 이상이어야 해요.",
       });
   });
+export function feedCursorScope(
+  q: z.infer<typeof feedQuerySchema>,
+  actor: string | null,
+  rankingAt: string,
+) {
+  return pageScope([
+    "feed",
+    actor,
+    q.category,
+    q.kind,
+    q.search,
+    q.topic,
+    q.discussionType,
+    q.focus,
+    q.tag,
+    q.view,
+    q.sort,
+    q.period,
+    q.sort !== "popular" || q.period === "all" ? null : rankingAt,
+    q.latitude,
+    q.longitude,
+    q.radiusKm,
+    q.eventOnly,
+    q.meetupType,
+    q.activityCategory,
+    q.fromDate,
+    q.toDate,
+    q.minPriceKRW,
+    q.maxPriceKRW,
+    q.availableOnly,
+  ]);
+}
 // Shared by RSC, Route Handlers and future Server Actions. Never trusts client authors.
 export function communityService(db: Database, clock: () => Date = () => new Date()) {
-  const { projectPosts, getPost, highlights } = createPostReader(db);
+  const { projectPosts, getPost, highlights, projectFeed } = createPostReader(db);
   const { me, updateProfile, visit, completeOnboarding } = profileService(db, projectPosts);
   const { inbox, markRead } = notificationService(db);
   async function feed(actor: string | null, input: FeedQuery = {}): Promise<CommunityFeed> {
@@ -285,25 +319,28 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
     )
       conditions.push(eq(posts.featured, false));
     if (q.page !== undefined) {
-      const [count] = await db
+      const countQuery = db
         .select({ total: sql<number>`count(*)::int` })
         .from(posts)
         .leftJoin(eventSettings, eq(eventSettings.postId, posts.id))
         .where(and(eq(posts.status, "published"), ...conditions));
-      const totalItems = count?.total ?? 0;
+      const readPage = (page: number) =>
+        projectFeed(actor, {
+          where: and(...conditions),
+          limit: q.limit,
+          popular: q.sort === "popular" ? score : false,
+          location: distance ? { distance, nearest: q.sort === "nearest" } : undefined,
+          offset: (page - 1) * q.limit,
+        });
+      // Page one never needs clamping, so count and content have no dependency.
+      const [counts, firstPage] = await Promise.all([
+        countQuery,
+        q.page === 1 ? readPage(1) : Promise.resolve(null),
+      ]);
+      const totalItems = counts[0]?.total ?? 0;
       const totalPages = Math.max(1, Math.ceil(totalItems / q.limit));
       const page = Math.min(q.page, totalPages);
-      const [items, discovery] = await Promise.all([
-        projectPosts(
-          and(...conditions),
-          actor,
-          q.limit,
-          q.sort === "popular" ? score : false,
-          distance ? { distance, nearest: q.sort === "nearest" } : undefined,
-          (page - 1) * q.limit,
-        ),
-        highlights(actor),
-      ]);
+      const { posts: items, ...discovery } = firstPage ?? (await readPage(page));
       return {
         interestFeed,
         posts: items,
@@ -313,32 +350,7 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
         pagination: { page, pageSize: q.limit, totalItems, totalPages },
       };
     }
-    const scope = pageScope([
-      "feed",
-      actor,
-      q.category,
-      q.kind,
-      q.search,
-      q.topic,
-      q.discussionType,
-      q.focus,
-      q.tag,
-      q.view,
-      q.sort,
-      q.period,
-      q.sort !== "popular" || q.period === "all" ? null : rankingAt.toISOString(),
-      q.latitude,
-      q.longitude,
-      q.radiusKm,
-      q.eventOnly,
-      q.meetupType,
-      q.activityCategory,
-      q.fromDate,
-      q.toDate,
-      q.minPriceKRW,
-      q.maxPriceKRW,
-      q.availableOnly,
-    ]);
+    const scope = feedCursorScope(q, actor, rankingAt.toISOString());
     if (q.sort === "nearest") {
       const cursor = decodeNearbyCursor(q.cursor, scope);
       if (cursor) {
@@ -363,16 +375,12 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
         } else conditions.push(position);
       }
     }
-    const [items, discovery] = await Promise.all([
-      projectPosts(
-        and(...conditions),
-        actor,
-        q.limit + 1,
-        q.sort === "popular" ? score : false,
-        distance ? { distance, nearest: q.sort === "nearest" } : undefined,
-      ),
-      highlights(actor),
-    ]);
+    const { posts: items, ...discovery } = await projectFeed(actor, {
+      where: and(...conditions),
+      limit: q.limit + 1,
+      popular: q.sort === "popular" ? score : false,
+      location: distance ? { distance, nearest: q.sort === "nearest" } : undefined,
+    });
     const page = items.slice(0, q.limit),
       tail = page.at(-1);
     return {
@@ -477,11 +485,31 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
       )[0]
     )
       throw new AppError("NOT_FOUND", "댓글을 찾을 수 없어요.");
+    return readCommentPage(id, actor, q);
+  }
+  async function readCommentPage(
+    id: string,
+    actor: string | null,
+    q: z.infer<typeof commentQuerySchema>,
+  ): Promise<CursorPage<CommunityComment>> {
     const scope = pageScope(["comments", id, q.parentId]);
     const cursor = decodeCursor(q.cursor, scope);
     const rows = await projectComments(
       and(
         eq(comments.postId, id),
+        exists(
+          db
+            .select({ id: posts.id })
+            .from(posts)
+            .where(
+              and(
+                eq(posts.id, id),
+                eq(posts.status, "published"),
+                contentVisible("post", posts.id),
+                authorVisible(posts.authorId, actor),
+              ),
+            ),
+        ),
         q.parentId ? eq(comments.parentId, q.parentId) : isNull(comments.parentId),
         cursor ? afterPosition(comments.createdAt, comments.id, cursor, "asc") : undefined,
       )!,
@@ -493,8 +521,12 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
     return { items, nextCursor: rows.length > q.limit && tail ? encodeCursor(scope, tail) : null };
   }
   async function detail(id: string, actor: string | null): Promise<CommunityDetail> {
-    const post = await getPost(id, actor),
-      page = await commentPage(id, actor);
+    const canonicalId = uuidSchema.parse(id);
+    // Both reads enforce parent visibility; a missing/blocked parent still rejects the detail.
+    const [post, page] = await Promise.all([
+      getPost(canonicalId, actor),
+      readCommentPage(canonicalId, actor, commentQuerySchema.parse({})),
+    ]);
     const acceptedAnswer = post.acceptedAnswerId
       ? ((await projectComments(eq(comments.id, post.acceptedAnswerId), actor, 1))[0] ?? null)
       : null;
@@ -577,6 +609,7 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
           a.uploaderId !== actor ||
           a.status !== "ready" ||
           a.recordOriginPostId !== null ||
+          a.reunionOriginPostId !== null ||
           a.recordPostId !== null ||
           (a.postId && a.postId !== postId),
       )
@@ -618,6 +651,7 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
   async function createPost(actor: string | null, input: unknown) {
     const userId = requireActor(actor),
       value = createPostSchema.parse(input);
+    assertContentAllowed(value);
     await enforceRequestLimit(db, userId, "post", 20);
     const id = await db.transaction(async (tx) => {
       const [row] = await tx
@@ -673,6 +707,7 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
       value = updatePostSchema.parse(input);
     await db.transaction(async (tx) => {
       const previous = await lockPost(tx, value.postId, userId);
+      assertContentAllowed(value);
       const discussionType =
         value.kind !== "이야기"
           ? null
@@ -704,10 +739,17 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
         .select({ type: eventSettings.meetupType, amountKRW: eventSettings.amountKRW })
         .from(eventSettings)
         .where(eq(eventSettings.postId, value.postId));
+      if (configuration?.type === "lightning" && !previous.applicationUrl && value.applicationUrl)
+        throw new AppError(
+          "VALIDATION",
+          "번개는 사전 결제 없이 사이트에서 신청하고 담당자가 승인해요. 외부 신청 링크를 추가할 수 없어요.",
+        );
       if (
         configuration?.type === "lightning" &&
         (value.kind !== "모집" ||
-          (!value.applicationUrl && (configuration.amountKRW !== 0 || value.eventFee !== "무료")))
+          (!value.applicationUrl &&
+            (configuration.amountKRW !== 0 ||
+              !["무료", "현장 정산"].includes(value.eventFee ?? ""))))
       )
         throw new AppError(
           "VALIDATION",
@@ -715,6 +757,24 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
         );
       if (value.kind !== "모집" || !!previous.applicationUrl !== !!value.applicationUrl)
         await guardActiveRecruitment(tx, value.postId);
+      if (previous.kind === "모집" && value.location !== previous.location) {
+        const [venueState] = await tx
+          .select({ latitude: eventSettings.venueLatitude, completedAt: eventSettings.completedAt })
+          .from(eventSettings)
+          .where(eq(eventSettings.postId, value.postId))
+          .for("update");
+        if (venueState?.completedAt)
+          throw new AppError("CONFLICT", "완료된 행사의 장소는 변경할 수 없어요.");
+        if (venueState?.latitude != null) {
+          const [attendee] = await tx
+            .select({ id: eventApplications.id })
+            .from(eventApplications)
+            .where(eq(eventApplications.postId, value.postId))
+            .limit(1);
+          if (attendee)
+            throw new AppError("CONFLICT", "참가 내역이 있는 행사의 장소는 변경할 수 없어요.");
+        }
+      }
       // Compare inside the existing row lock, using PostgreSQL microsecond precision.
       const [current] = await tx
         .select({ id: posts.id })
@@ -751,9 +811,11 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
           eventDate: value.eventDate,
           eventFee:
             configuration?.type === "lightning"
-              ? configuration.amountKRW === 0
-                ? "무료"
-                : configuration.amountKRW.toLocaleString("ko-KR") + "원"
+              ? !value.applicationUrl
+                ? "현장 정산"
+                : configuration.amountKRW === 0
+                  ? "무료"
+                  : configuration.amountKRW.toLocaleString("ko-KR") + "원"
               : value.eventFee,
           contactInfo: value.contactInfo,
           discussionType,
@@ -854,6 +916,7 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
   async function createComment(actor: string | null, input: unknown) {
     const userId = requireActor(actor),
       value = createCommentSchema.parse(input);
+    assertContentAllowed({ bodyMarkdown: value.bodyMarkdown });
     await enforceRequestLimit(db, userId, "comment", 60);
     const id = await db.transaction(async (tx) => {
       const post = await lockPost(tx, value.postId, undefined, userId);
@@ -911,6 +974,7 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
         throw new AppError("NOT_FOUND", "댓글이 삭제되었어요.");
       if (row.authorId !== userId)
         throw new AppError("FORBIDDEN", "본인이 작성한 댓글만 변경할 수 있어요.");
+      if (!deleting) assertContentAllowed({ bodyMarkdown: value.bodyMarkdown });
       await tx
         .update(comments)
         .set(deleting ? { status: "deleted" } : { bodyMarkdown: value.bodyMarkdown })
@@ -967,26 +1031,44 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
     return getPost(id, actor);
   }
 
+  async function homeStories(actor: string | null, input: unknown) {
+    const value = z.strictObject({ period: z.enum(["today", "week", "month"]) }).parse(input);
+    const score = periodLikeCount(value.period, clock());
+    return projectPosts(
+      and(sql`${posts.kind} in ('이야기','후기','투표')`, eq(posts.sample, false), sql`${score}>0`),
+      actor,
+      6,
+      score,
+    );
+  }
+  function changed<Args extends unknown[], Result>(work: (...args: Args) => Promise<Result>) {
+    return async (...args: Args): Promise<Result> => {
+      const result = await work(...args);
+      invalidateDiscoveryCache(db);
+      return result;
+    };
+  }
   return {
+    homeStories,
     feed,
     detail,
     getPost,
     commentPage,
-    resolveQuestion,
-    createPost,
-    updatePost,
-    deletePost,
-    createComment,
-    changeComment,
-    react,
+    resolveQuestion: changed(resolveQuestion),
+    createPost: changed(createPost),
+    updatePost: changed(updatePost),
+    deletePost: changed(deletePost),
+    createComment: changed(createComment),
+    changeComment: changed(changeComment),
+    react: changed(react),
     recordView,
     inbox,
     markRead,
     highlights,
-    vote,
+    vote: changed(vote),
     me,
-    updateProfile,
-    completeOnboarding,
+    updateProfile: changed(updateProfile),
+    completeOnboarding: changed(completeOnboarding),
     visit,
   };
 }

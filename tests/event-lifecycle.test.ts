@@ -548,7 +548,9 @@ test("the push worker delivers an event-change notice even when host cancellatio
   const config = {
     subject: "mailto:test@example.invalid",
     publicKey: vapid.getPublicKey().toString("base64url"),
-    privateKey: vapid.getPrivateKey().toString("base64url"),
+    privateKey: Buffer.from(vapid.getPrivateKey("hex").padStart(64, "0"), "hex").toString(
+      "base64url",
+    ),
   };
   for (const userId of [alice, bob]) {
     const browser = createECDH("prime256v1");

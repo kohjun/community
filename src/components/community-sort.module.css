@@ -1,0 +1,54 @@
+.consent {
+  max-width: 420px;
+  padding: 28px;
+}
+.icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  background: #edf6ff;
+  color: #0a84fe;
+}
+.title {
+  padding-right: 28px;
+  margin: 0 0 10px;
+  color: #252c36;
+  font-size: 21px;
+  font-weight: 750;
+  line-height: 1.45;
+  letter-spacing: -0.5px;
+}
+.description {
+  color: #687486;
+  font-size: 14px;
+  line-height: 1.8;
+  word-break: keep-all;
+}
+.error {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f2f7fc;
+  color: #426183;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: grid;
+  gap: 6px;
+  margin-top: 24px;
+}
+.actions button {
+  min-height: 44px;
+}
+.note {
+  margin: 14px 0 0;
+  color: #8290a1;
+  font-size: 11px;
+  line-height: 1.7;
+  text-align: center;
+}

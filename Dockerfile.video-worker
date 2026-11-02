@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim
+FROM node:24-bookworm-slim
 WORKDIR /app
 # tsx runs the TypeScript entrypoint; native FFmpeg is installed here rather than in a web trace.
 COPY package.json package-lock.json ./
@@ -9,8 +9,10 @@ RUN npm ci --include=dev --no-audit --no-fund \
 COPY tsconfig.json ./
 COPY src ./src
 COPY scripts/video-worker.ts ./scripts/video-worker.ts
-RUN mkdir -p .local && chown -R node:node .local
-ENV NODE_ENV=production
+COPY scripts/worker-health.ts ./scripts/worker-health.ts
+ENV NODE_ENV=production SLIPER_CLOUD_ONLY=true SLIPER_AUTH_MODE=supabase LOCAL_DATABASE=0 MEDIA_STORAGE_BACKEND=supabase
 USER node
 STOPSIGNAL SIGTERM
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD ["node", "--import", "tsx", "scripts/worker-health.ts", "video"]
 CMD ["./node_modules/.bin/tsx", "scripts/video-worker.ts"]

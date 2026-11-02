@@ -1,3 +1,6 @@
+import { invalidateDiscoveryCache } from "./discovery-cache-store";
+import { advanceWaitlist, waitlistReservations } from "./waitlist-service";
+import { eventWaitlist } from "../db/growth-schema";
 import { createHash } from "node:crypto";
 import { and, eq, sql, desc, lt, or } from "drizzle-orm";
 import { z } from "zod";
@@ -37,7 +40,7 @@ import { authorizeRoom, readRoomRoster } from "./room-roster-service";
 import { eventManagementService } from "./event-management-service";
 import { enqueueAnnouncementPush } from "./push-events";
 import { publishRoomWake } from "./room-realtime";
-import { assertContentVisible } from "./safety-visibility";
+import { authorVisible, contentVisible } from "./safety-visibility";
 import { bindEventVenue, readEventVenueReference } from "./event-venue-service";
 import {
   assertEventRunning,
@@ -45,6 +48,7 @@ import {
   readEventLifecycle,
 } from "./event-lifecycle-service";
 
+import { assertContentAllowed } from "./content-policy";
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 const idSchema = z.uuid();
 const active = sql`(status='confirmed' or (status='pending_payment' and expires_at>statement_timestamp()))`;
@@ -112,10 +116,20 @@ export function applicationView(row: {
       ? "expired"
       : row.status) as ApplicationStatus,
     createdAt: row.createdAt,
-    expiresAt: row.expiresAt?.toISOString() ?? null,
+    // Zero-amount site requests have no payment deadline. Keep the legacy DB anchor private.
+    expiresAt:
+      row.source === "site" && row.amountKRW === 0 ? null : (row.expiresAt?.toISOString() ?? null),
     eventStartsAt: row.eventStartsAt?.toISOString() ?? null,
     source: row.source as "site" | "external",
   };
+}
+function participantGuideVersion(guide: unknown): string {
+  return (
+    "g1-" +
+    createHash("sha256")
+      .update(JSON.stringify(guide ?? null))
+      .digest("hex")
+  );
 }
 export function questionnaireVersion(questions: readonly ApplicationQuestion[]): string {
   return "q1-" + createHash("sha256").update(JSON.stringify(questions)).digest("hex");
@@ -163,11 +177,42 @@ export function participationService(db: Database) {
       refundConsentAt: value.refundConsent ? sql`statement_timestamp()` : null,
     };
   }
-  async function lockEvent(tx: Tx, postId: string) {
+  function publicEventVisible(actor: string | null) {
+    return and(contentVisible("post", posts.id), authorVisible(posts.authorId, actor));
+  }
+  // Only private operation responses use this path. Its actor must still be tied
+  // to this event, so moderation cannot prevent management or cancellation.
+  function associatedEvent(actor: string | null) {
+    return actor
+      ? sql`(${posts.authorId}=${actor}::uuid
+          or exists(select 1 from sliper.room_managers rm where rm.post_id=${posts.id} and rm.user_id=${actor}::uuid)
+          or exists(select 1 from sliper.event_applications ea where ea.post_id=${posts.id} and ea.user_id=${actor}::uuid))`
+      : sql`false`;
+  }
+  async function assertPublicEvent(actor: string, postId: string) {
+    const [post] = await db
+      .select({ id: posts.id })
+      .from(posts)
+      .where(
+        and(
+          eq(posts.id, idSchema.parse(postId)),
+          eq(posts.kind, "모집"),
+          eq(posts.status, "published"),
+          publicEventVisible(actor),
+        ),
+      );
+    if (!post) throw new AppError("NOT_FOUND", "모집글을 찾을 수 없어요.");
+  }
+  async function lockEvent(tx: Tx, postId: string, viewer?: string) {
     const [post] = await tx
       .select()
       .from(posts)
-      .where(eq(posts.id, idSchema.parse(postId)))
+      .where(
+        and(
+          eq(posts.id, idSchema.parse(postId)),
+          viewer === undefined ? undefined : publicEventVisible(viewer),
+        ),
+      )
       .for("update");
     if (!post || post.kind !== "모집" || post.status !== "published")
       throw new AppError("NOT_FOUND", "모집글을 찾을 수 없어요.");
@@ -189,6 +234,19 @@ export function participationService(db: Database) {
       const { post, settings } = await lockEvent(tx, postId);
       if (post.authorId !== user)
         throw new AppError("FORBIDDEN", "모집글 등록자만 신청 설정을 변경할 수 있어요.");
+      if (
+        value.questions !== undefined &&
+        JSON.stringify(value.questions) !== JSON.stringify(settings?.questions ?? [])
+      )
+        assertContentAllowed({ questions: value.questions });
+      if (value.participantGuide !== undefined) {
+        if (settings && value.guideVersion !== participantGuideVersion(settings.participantGuide))
+          throw new AppError(
+            "CONFLICT",
+            "첫 참가 안내가 변경되었어요. 새로고침 후 최신 내용을 확인하고 다시 저장해주세요.",
+          );
+        assertContentAllowed({ participantGuide: value.participantGuide });
+      }
       await assertEventRunning(tx, postId);
       if (settings?.completedAt)
         throw new AppError(
@@ -239,7 +297,7 @@ export function participationService(db: Database) {
             };
       if (
         settings?.meetupType === "lightning" &&
-        ((value.amountKRW !== 0 && !post.applicationUrl) ||
+        ((!post.applicationUrl && (value.amountKRW !== 0 || value.approvalMode !== "manual")) ||
           value.capacity < 2 ||
           value.capacity > 12 ||
           !dates.startsAt ||
@@ -253,7 +311,7 @@ export function participationService(db: Database) {
       )
         throw new AppError(
           "VALIDATION",
-          "번개는 2~12명, 개설 후 7일 이내 일정과 행사장 위치가 필요해요. 유료 참가비는 외부 신청 링크가 있을 때만 설정할 수 있어요.",
+          "번개는 2~12명, 개설 후 7일 이내 일정과 행사장 위치가 필요해요. 직접 신청은 사전 결제 없이 담당자 승인으로 진행해주세요.",
         );
       venue = await bindEventVenue(tx, user, postId, value.venue);
       if (
@@ -276,12 +334,16 @@ export function participationService(db: Database) {
         open: value.open,
         approvalMode: value.approvalMode,
         questions: value.questions ?? settings?.questions ?? [],
+        participantGuide:
+          value.participantGuide === undefined
+            ? (settings?.participantGuide ?? null)
+            : value.participantGuide,
       };
       const [total] = await tx
         .select({ count: sql<number>`count(*)::int` })
         .from(eventApplications)
         .where(and(eq(eventApplications.postId, postId), active));
-      if (value.capacity < total!.count)
+      if (value.capacity < total!.count + (await waitlistReservations(tx, postId)))
         throw new AppError("CONFLICT", "정원을 현재 참가 확정·결제 대기 인원보다 줄일 수 없어요.");
       await tx
         .insert(eventSettings)
@@ -294,14 +356,28 @@ export function participationService(db: Database) {
         await tx
           .update(posts)
           .set({
-            eventFee:
-              value.amountKRW === 0 ? "무료" : value.amountKRW.toLocaleString("ko-KR") + "원",
+            eventFee: !post.applicationUrl
+              ? "현장 정산"
+              : value.amountKRW === 0
+                ? "무료"
+                : value.amountKRW.toLocaleString("ko-KR") + "원",
           })
           .where(eq(posts.id, postId));
     });
-    return overview(actor, postId);
+    invalidateDiscoveryCache(db);
+    return operationalOverview(actor, postId);
   }
   async function overview(actor: string | null, postId: string): Promise<EventOverview> {
+    return readOverview(actor, postId, false);
+  }
+  async function operationalOverview(actor: string | null, postId: string): Promise<EventOverview> {
+    return readOverview(requireActor(actor), postId, true);
+  }
+  async function readOverview(
+    actor: string | null,
+    postId: string,
+    operational: boolean,
+  ): Promise<EventOverview> {
     const [p] = await db
       .select({
         id: posts.id,
@@ -317,6 +393,7 @@ export function participationService(db: Database) {
           eq(posts.id, idSchema.parse(postId)),
           eq(posts.kind, "모집"),
           eq(posts.status, "published"),
+          operational ? associatedEvent(actor) : publicEventVisible(actor),
         ),
       );
     if (!p) throw new AppError("NOT_FOUND", "모집글을 찾을 수 없어요.");
@@ -363,14 +440,14 @@ export function participationService(db: Database) {
           .where(and(eq(roomManagers.postId, postId), eq(roomManagers.userId, actor)))
       : [];
     return {
-      canManage: p.authorId === actor || !!manager,
+      canManage: !!actor && (p.authorId === actor || !!manager),
       publicProfileId: profile?.publicId ?? null,
       postId: p.id,
       title: p.title,
       location: p.location,
       eventDate: p.eventDate,
       externalUrl: p.externalUrl,
-      isOwner: p.authorId === actor,
+      isOwner: !!actor && p.authorId === actor,
       canApply: !!actor && !lifecycle.cancelledAt,
       applicantProfile: profile
         ? {
@@ -392,6 +469,8 @@ export function participationService(db: Database) {
             endsAt: settings.endsAt?.toISOString() ?? null,
             refundPolicy: settings.refundPolicy,
             completedAt: settings.completedAt?.toISOString() ?? null,
+            participantGuide: settings.participantGuide,
+            guideVersion: participantGuideVersion(settings.participantGuide),
             questions: settings.questions,
             questionnaireVersion: questionnaireVersion(settings.questions),
             meetupType: settings.meetupType as "event" | "lightning",
@@ -416,22 +495,26 @@ export function participationService(db: Database) {
   ) {
     const user = requireActor(actor),
       value = applicationSchema.parse(input);
-    await assertContentVisible(db, "post", idSchema.parse(postId));
     if (provider && !/^[a-zA-Z0-9_-]{1,40}$/.test(provider))
       throw new AppError("VALIDATION", "결제 플랫폼 설정을 확인해주세요.");
     await db.transaction(async (tx) => {
-      const { post, settings } = await lockEvent(tx, postId);
+      const { post, settings } = await lockEvent(tx, postId, user);
       await assertEventRunning(tx, postId);
       if (post.applicationUrl)
         throw new AppError(
           "CONFLICT",
           "이 모집글은 외부 플랫폼에서 신청·결제해주세요. 결제 후 참가 확인을 요청할 수 있어요.",
         );
+      const manualLightning = settings?.meetupType === "lightning";
       const [existing] = await tx
         .select({ id: eventApplications.id })
         .from(eventApplications)
         .where(
-          and(eq(eventApplications.postId, postId), eq(eventApplications.userId, user), active),
+          and(
+            eq(eventApplications.postId, postId),
+            eq(eventApplications.userId, user),
+            manualLightning ? sql`(${active} or status='pending_approval')` : active,
+          ),
         );
       if (existing) return; // Retry is idempotent; never create a second order.
       if (!settings?.open)
@@ -443,7 +526,11 @@ export function participationService(db: Database) {
         .select({ count: sql<number>`count(*)::int` })
         .from(eventApplications)
         .where(and(eq(eventApplications.postId, postId), active));
-      if (total!.count >= settings.capacity) throw new AppError("CONFLICT", "모집 정원이 찼어요.");
+      await advanceWaitlist(tx, postId);
+      if (total!.count + (await waitlistReservations(tx, postId, user)) >= settings.capacity)
+        throw new AppError("CONFLICT", "정원이 찼거나 대기 순서에 따라 자리를 안내 중이에요.");
+      if (manualLightning && settings.amountKRW !== 0)
+        throw new AppError("CONFLICT", "번개는 사전 결제 없이 담당자 승인으로 참가할 수 있어요.");
       if (settings.amountKRW > 0 && !provider)
         throw new AppError("CONFLICT", "결제 플랫폼 연결 준비 중이에요. 담당자에게 문의해주세요.");
       const [app] = await tx
@@ -453,11 +540,30 @@ export function participationService(db: Database) {
           userId: user,
           ...submission,
           amountKRW: settings.amountKRW,
-          status: settings.amountKRW === 0 ? "confirmed" : "pending_payment",
-          expiresAt: sql`statement_timestamp()+interval '30 minutes'`,
-          confirmedAt: settings.amountKRW === 0 ? sql`statement_timestamp()` : null,
+          status: manualLightning
+            ? "pending_approval"
+            : settings.amountKRW === 0
+              ? "confirmed"
+              : "pending_payment",
+          // The existing site-source CHECK requires an anchor. Only pending_payment expires;
+          // lightning approval requests use the event end and never reserve or expire a payment.
+          expiresAt: manualLightning
+            ? settings.endsAt
+            : sql`statement_timestamp()+interval '30 minutes'`,
+          confirmedAt:
+            !manualLightning && settings.amountKRW === 0 ? sql`statement_timestamp()` : null,
         })
         .returning({ id: eventApplications.id });
+      await tx
+        .update(eventWaitlist)
+        .set({ state: "submitted" })
+        .where(
+          and(
+            eq(eventWaitlist.postId, postId),
+            eq(eventWaitlist.userId, user),
+            eq(eventWaitlist.state, "offered"),
+          ),
+        );
       if (settings.amountKRW > 0)
         await tx
           .insert(paymentOrders)
@@ -508,7 +614,7 @@ export function participationService(db: Database) {
           .set({ status: "cancelled", updatedAt: sql`statement_timestamp()` })
           .where(eq(eventApplications.id, applicationId));
     });
-    return overview(actor, lookup.postId);
+    return operationalOverview(actor, lookup.postId);
   }
   async function checkoutOrder(actor: string | null, orderId: string) {
     const user = requireActor(actor);
@@ -767,6 +873,7 @@ export function participationService(db: Database) {
         .where(and(eq(roomManagers.postId, postId), eq(roomManagers.userId, user)));
       if (post.authorId !== user && !manager)
         throw new AppError("FORBIDDEN", "담당자만 공지를 보낼 수 있어요.");
+      assertContentAllowed(value);
       const [recent] = await tx
         .select({ id: roomMessages.id })
         .from(roomMessages)
@@ -918,7 +1025,7 @@ export function participationService(db: Database) {
   }
   const management = eventManagementService(db, {
     lockEvent,
-    overview,
+    overview: operationalOverview,
     appProjection,
     applicationView,
     prepareApplication,
@@ -926,6 +1033,11 @@ export function participationService(db: Database) {
   });
   return {
     ...management,
+    async claimExternal(actor: string | null, postId: string, input: unknown) {
+      const user = requireActor(actor);
+      await assertPublicEvent(user, postId);
+      return management.claimExternal(user, postId, input);
+    },
     configure,
     overview,
     apply,

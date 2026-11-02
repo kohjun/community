@@ -1,10 +1,12 @@
-import "dotenv/config";
+import { workerHeartbeat } from "../src/server/worker-health";
+import { config as loadEnvironment } from "dotenv";
 import { createDatabase } from "../src/db/connection";
 import { pushConfiguration } from "../src/server/push-configuration";
 import { pushDispatcher } from "../src/server/push-dispatcher";
 import { startPushWorker } from "../src/server/push-worker-loop";
 import { engagementWorker } from "../src/server/engagement-worker";
 
+loadEnvironment({ path: [".env.local", ".env"], quiet: true });
 const config = pushConfiguration();
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
 const connection = createDatabase(process.env.DATABASE_URL, 2);
@@ -17,13 +19,15 @@ if (process.argv.includes("--once")) {
     await connection.close();
   }
 } else {
-  const worker = startPushWorker(connection.db, config);
+  const heartbeat = await workerHeartbeat("notification");
+  const worker = startPushWorker(connection.db, config, { onProgress: heartbeat.success });
   console.log("Sliper notification worker ready.");
   let stopping = false;
   async function stop() {
     if (stopping) return;
     stopping = true;
     await worker.stop();
+    await heartbeat.stop();
     await connection.close();
   }
   process.once("SIGINT", () => {

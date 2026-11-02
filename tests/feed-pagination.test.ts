@@ -12,7 +12,16 @@ import { communityService, feedQuerySchema } from "../src/server/community-servi
 import { AppError } from "../src/server/errors";
 
 const pg = new PGlite();
-const db = drizzle(pg, { schema });
+const tracedQueries: string[] = [];
+let traceQueries = false;
+const db = drizzle(pg, {
+  schema,
+  logger: {
+    logQuery(query) {
+      if (traceQueries) tracedQueries.push(query);
+    },
+  },
+});
 const service = communityService(db as unknown as Database);
 let owner: string, other: string;
 const ids = (items: CommunityPost[]) => items.map((item) => item.id);
@@ -333,4 +342,121 @@ test("empty and deleted final pages clamp to a valid page while cursor mode stay
   assert.equal(cursorSecond.pagination, undefined);
   assert.equal(cursorSecond.nextCursor, null);
   assert.equal(new Set([...ids(cursorFirst.posts), ...ids(cursorSecond.posts)]).size, 40);
+});
+
+test("overlapping home and hot posts share metadata queries without leaking votes across viewers or requests", async () => {
+  const [postId] = await stories(1);
+  await pg.query("update sliper.posts set kind='투표', poll=$2::jsonb where id=$1", [
+    postId,
+    JSON.stringify({ question: "다음 모임은?", options: ["레이스", "추리"] }),
+  ]);
+  await db.insert(schema.postLikes).values({ postId: postId!, userId: owner });
+  await db.insert(schema.pollVotes).values({ postId: postId!, userId: owner, optionIndex: 0 });
+  const imageId = randomUUID();
+  await db.insert(schema.mediaAssets).values({
+    id: imageId,
+    uploaderId: owner,
+    postId: postId!,
+    objectKey: imageId + ".webp",
+    contentType: "image/webp",
+    byteSize: 256,
+    status: "ready",
+  });
+  tracedQueries.length = 0;
+  traceQueries = true;
+  let mine;
+  try {
+    mine = await service.feed(owner, { ...pageQuery, focus: "all" });
+  } finally {
+    traceQueries = false;
+  }
+  assert.equal(mine.posts[0]?.id, postId);
+  assert.equal(mine.hot?.[0]?.id, postId);
+  for (const post of [mine.posts[0]!, mine.hot![0]!]) {
+    assert.equal(post.poll?.selected, 0);
+    assert.equal(post.poll?.total, 1);
+    assert.equal(post.isLiked, true);
+    assert.equal(post.images[0]?.id, imageId);
+  }
+  for (const table of ["media_assets", "video_assets", "verified_event_reviews"])
+    assert.equal(
+      tracedQueries.filter(
+        (query) =>
+          query.includes('from "sliper"."' + table + '"') ||
+          query.includes("from sliper." + table + " "),
+      ).length,
+      1,
+      table,
+    );
+  // Aggregate totals and viewer-specific selection remain separate subqueries in the same round trip.
+  assert.equal(
+    tracedQueries.reduce(
+      (total, query) =>
+        total +
+        Number(
+          /from sliper\.poll_votes pv where pv\.post_id=[^)]*group by pv\.option_index/.test(query),
+        ) +
+        Number(/from sliper\.poll_votes pv where pv\.post_id=[^)]*and pv\.user_id=/.test(query)),
+      0,
+    ),
+    2,
+  );
+  const theirs = await service.feed(other, { ...pageQuery, focus: "all" });
+  assert.equal(theirs.posts[0]?.poll?.selected, null);
+  assert.equal(theirs.hot?.[0]?.poll?.selected, null);
+  assert.equal(theirs.posts[0]?.isLiked, false);
+  await db.insert(schema.pollVotes).values({ postId: postId!, userId: other, optionIndex: 1 });
+  const fresh = await service.feed(owner, { ...pageQuery, focus: "all" });
+  assert.equal(fresh.posts[0]?.poll?.total, 2);
+  assert.equal(fresh.hot?.[0]?.poll?.total, 2);
+  assert.equal(fresh.posts[0]?.poll?.selected, 0);
+  assert.equal(
+    tracedQueries.length,
+    2,
+    "first page must not accumulate remote metadata round trips",
+  );
+  const guest = await service.feed(null, { ...pageQuery, focus: "all" });
+  assert.equal(guest.posts[0]?.poll?.selected, null);
+  assert.equal(guest.posts[0]?.poll?.total, 2);
+  await pg.query(
+    "insert into sliper.member_blocks (blocker_id,blocked_id,display_label) values ($1,$2,'blocked')",
+    [other, owner],
+  );
+  const blocked = await service.feed(other, { ...pageQuery, focus: "all" });
+  assert.equal(
+    blocked.posts.some((post) => post.id === postId),
+    false,
+  );
+  assert.equal(
+    blocked.hot?.some((post) => post.id === postId),
+    false,
+  );
+  await assert.rejects(
+    service.detail(postId!, other),
+    (error: unknown) => error instanceof AppError && error.code === "NOT_FOUND",
+  );
+  await assert.rejects(
+    service.commentPage(postId!, other),
+    (error: unknown) => error instanceof AppError && error.code === "NOT_FOUND",
+  );
+});
+
+test("combined feed preserves each section's ranking when UNION rows arrive out of order", async () => {
+  await stories(25);
+  const expected = await service.feed(null, { ...pageQuery, focus: "all" });
+  const originalQuery = pg.query.bind(pg);
+  pg.query = (async (...args: Parameters<typeof pg.query>) => {
+    const result = await originalQuery(...args);
+    if (/\bunion all\b/i.test(args[0])) result.rows.reverse();
+    return result;
+  }) as typeof pg.query;
+  try {
+    const actual = await service.feed(null, { ...pageQuery, focus: "all" });
+    assert.deepEqual(ids(actual.posts), ids(expected.posts));
+    assert.deepEqual(ids(actual.featured), ids(expected.featured));
+    assert.deepEqual(ids(actual.hot ?? []), ids(expected.hot ?? []));
+    assert.deepEqual(ids(actual.upcoming ?? []), ids(expected.upcoming ?? []));
+  } finally {
+    pg.query = originalQuery;
+  }
 });

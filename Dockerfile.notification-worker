@@ -1,0 +1,14 @@
+FROM node:24-bookworm-slim
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --include=dev --no-audit --no-fund && npm cache clean --force
+COPY tsconfig.json ./
+COPY src ./src
+COPY scripts/push-worker.ts ./scripts/push-worker.ts
+COPY scripts/worker-health.ts ./scripts/worker-health.ts
+ENV NODE_ENV=production SLIPER_CLOUD_ONLY=true SLIPER_AUTH_MODE=supabase LOCAL_DATABASE=0 PUSH_WORKER_MODE=external
+USER node
+STOPSIGNAL SIGTERM
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD ["node", "--import", "tsx", "scripts/worker-health.ts", "notification"]
+CMD ["./node_modules/.bin/tsx", "scripts/push-worker.ts"]

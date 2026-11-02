@@ -14,10 +14,17 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     if (params.getAll("room").length > 1)
       throw new AppError("VALIDATION", "공지방 정보를 확인해주세요.");
     const query = querySchema.parse(Object.fromEntries(params));
-    return await readProfilePhoto((await context.params).id, await currentActor(), query.room);
+    return await readProfilePhoto(
+      (await context.params).id,
+      await currentActor(),
+      query.room,
+      request,
+    );
   } catch (error) {
     return apiResponse(async () => {
       throw error;
     });
   }
 }
+
+export { GET as HEAD };

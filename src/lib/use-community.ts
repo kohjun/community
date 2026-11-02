@@ -32,22 +32,19 @@ import { communityLocationUrl } from "@/domain/community-location";
 import { markPostRead, normalizeReadPostId } from "./read-posts";
 import { adoptServerRankingAnchor } from "./ranking-anchor";
 
-const queryString = (query: FeedQuery) =>
-  new URLSearchParams(
-    Object.entries(query)
-      .filter(([, v]) => v !== undefined)
-      .map(([k, v]) => [k, String(v)]),
-  ).toString();
+import { feedFilterKey } from "./feed-query-key";
 
 export function useCommunity(
   initial: CommunitySnapshot,
   query: FeedQuery,
   {
     initialDetail,
+    initialQuery,
     detailOnly = false,
     onRankingAnchor,
   }: {
     initialDetail?: CommunityDetail;
+    initialQuery?: FeedQuery;
     detailOnly?: boolean;
     onRankingAnchor?: (rankingAt: string) => void;
   } = {},
@@ -75,7 +72,8 @@ export function useCommunity(
   const notificationVersion = useRef(0);
   const notificationLock = useRef(false);
   const lock = useRef(false);
-  const filterKey = queryString({ ...query, limit: 20 });
+  const filterKey = feedFilterKey(query);
+  const initialFilterKey = feedFilterKey(initialQuery ?? query);
   const [pageSelection, setPageSelection] = useState({
     filterKey,
     page: initial.pagination?.page ?? 1,
@@ -105,7 +103,7 @@ export function useCommunity(
   }, [key, detailOnly, historyRevision]);
   const currentFilterKey = useRef(filterKey);
   currentFilterKey.current = filterKey;
-  const loadedFilterKey = useRef(filterKey);
+  const loadedFilterKey = useRef(initialFilterKey);
   const currentKey = useRef(key);
   currentKey.current = key;
   const feedVersion = useRef(0);
@@ -114,7 +112,7 @@ export function useCommunity(
   const postChanges = useRef(new Map<string, PostChange>());
   const commentChanges = useRef(new Map<string, CommentChange>());
   const highlightsVersion = useRef(0);
-  const loadedKey = useRef(key);
+  const loadedKey = useRef(`${initialFilterKey}&page=${initial.pagination?.page ?? 1}`);
   useEffect(() => {
     const restored = restorePage.current;
     restorePage.current = null;
@@ -170,7 +168,7 @@ export function useCommunity(
       ? adoptServerRankingAnchor(currentQuery.current, next.rankingAt)
       : null;
     if (anchoredQuery?.rankingAt) {
-      const anchoredFilterKey = queryString({ ...anchoredQuery, limit: 20 });
+      const anchoredFilterKey = feedFilterKey(anchoredQuery);
       const page = Number(new URLSearchParams(keyAtRequest).get("page") ?? 1);
       loadedKey.current = anchoredFilterKey + "&page=" + page;
       loadedFilterKey.current = anchoredFilterKey;
@@ -202,8 +200,9 @@ export function useCommunity(
     if (detailOnly) return;
     const adopted = adoptedRankingKey.current;
     adoptedRankingKey.current = null;
-    if (adopted === key) {
-      // The first response already contains this page at the server-issued anchor.
+    if (adopted === key || loadedKey.current === key) {
+      // SSR and adopted ranking responses already contain this exact page.
+      setFeedError("");
       setLoading(false);
       return;
     }

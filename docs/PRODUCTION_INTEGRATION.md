@@ -49,7 +49,11 @@ media_assets, profile_photos, video_assets와 영상 작업/결과 원장에 **�
 
 설정 변경은 과거 파일을 자동 복사하지 않는다. 업로드 파일은 빌드 추적에서 제외하며 .env·.local·Git·캐시도 서버 배포 산출물에 포함시키지 않는다. 운영 키는 배포 환경변수에서 제공한다. 새 배포 호스트에서 기존 local 이미지를 제공하려면 원래 .local 파일과 지속 디스크가 필요하다. 전체 오브젝트 이전·기존 행의 경로 변경과 원격 백업 복원은 별도 운영 작업이다. 로컬 암호화 백업과 원본을 덮어쓰지 않는 분리 복원은 F2에서 실제 검증했으며 Supabase 객체/운영 DB의 복구 성공을 뜻하지 않는다. 본문 저장소 식별자는 DB 트리거로 임의 변경을 막는다. 반쪽 이전으로 파일이 사라지지 않게 원본을 유지하고 검증 후 전환한다.
 
-## 영상 Worker와 Redis 운영
+## 영상 Worker와 실시간 운영 (현재 Supabase)
+
+2026-10-16 활성 사이트는 Supabase private Broadcast로 전환했다. 아래 Redis 절차는 이전 격리 개발 검증 기록이다. 운영에는 `compose.production.yaml`의 웹·영상·알림 워커를 사용하며 Redis 서비스는 필요하지 않다. [현재 구성·실제 검증·배포 가이드](SUPABASE_CLOUD_RUNTIME.md).
+
+### 이전 개발 구성
 
 ```powershell
 npm run db:migrate
@@ -72,10 +76,12 @@ Worker는 운영 DB 연결·미디어 비밀키와 Web이 사용하는 원본/�
 - 설정 누락·개발 접근·SSL·공개 비밀키·부분 결제/승인/AdSense 설정을 판별하는 정적 점검
 - F2의 30일 미첨부 정리 원장·명시적 실행·암호화 로컬 백업과 분리 DB/미디어의 실제 복원 검증
 
-실제 Supabase Storage, OAuth, 거래·환불·정산, 기기 푸시 수신과 실서비스 부하는 아직 검증하지 않았다. API·Worker와 대기열이 있다고 사용자 폭주 대응이 완료된 것은 아니다. 현재 검색은 PostgreSQL ILIKE/pg_trgm이며 외부 검색 엔진은 사용하지 않는다. Redis는 공지방 SSE 갱신용 힌트에만 사용한다. 사진 준비·영상 Worker·Redis를 도입한 당시 검증에서는 회귀/DB593개·형식·타입·Drizzle·운영 빌드와 실제 FFmpeg/비동기 Worker 영상 HTTP1개가 통과했다. 당시 npm audit는 취약점0개였으며 현재 의존성의 재검사 결과를 뜻하지 않는다. 최신 단계별 검증은 [전체 현황](PROJECT_STATUS_AND_ROADMAP.md)을 기준으로 한다. 로컬 Redis 컨테이너를 실행했고 healthy·PING/PONG 및 실제 Pub/Sub 프로세스 간 통합 검사 1개가 통과했다. 공지 작성 HTTP→DB 커밋→Redis→SSE 갱신과 참가 취소 후 접근 회수도 3초 이내로 확인했다.
+2026-10-16 Supabase DB 권한·원장과 private Storage의 기본 객체 저장/읽기/삭제를 확인했다. 회원별 HTTP 미디어 인가·OAuth, 거래·환불·정산, 기기 푸시 수신과 실서비스 부하는 아직 검증하지 않았다. API·Worker와 대기열이 있다고 사용자 폭주 대응이 완료된 것은 아니다. 현재 검색은 PostgreSQL ILIKE/pg_trgm이며 외부 검색 엔진은 사용하지 않는다. 현재 Supabase Realtime을 공지방 SSE 갱신용 힌트에만 사용한다. Redis는 이전 격리 개발용 코드로 남아 있다. 사진 준비·영상 Worker·Redis를 도입한 당시 검증에서는 회귀/DB593개·형식·타입·Drizzle·운영 빌드와 실제 FFmpeg/비동기 Worker 영상 HTTP1개가 통과했다. 당시 npm audit는 취약점0개였으며 현재 의존성의 재검사 결과를 뜻하지 않는다. 최신 단계별 검증은 [전체 현황](PROJECT_STATUS_AND_ROADMAP.md)을 기준으로 한다. 로컬 Redis 컨테이너를 실행했고 healthy·PING/PONG 및 실제 Pub/Sub 프로세스 간 통합 검사 1개가 통과했다. 공지 작성 HTTP→DB 커밋→Redis→SSE 갱신과 참가 취소 후 접근 회수도 3초 이내로 확인했다.
 
 공식 자료: [Supabase PostgreSQL 연결](https://supabase.com/docs/guides/database/connecting-to-postgres), [Postgres 역할](https://supabase.com/docs/guides/database/postgres/roles), [Storage 접근 제어](https://supabase.com/docs/guides/storage/security/access-control).
 
 ## Supabase 입력 준비와 실제 DB 검사
 
 프로젝트 URL과 키 이름을 `.env.supabase.local`에 준비했다. 빈 비밀값은 사용자가 직접 입력하며 현재 로컬 `.env`는 유지한다. [입력 안내](SUPABASE_CONNECTION_PREPARATION.md)를 따른다. 별도 `npm run deploy:db-check -- --env-file .env.supabase.local --json --strict`는 명시한 DB의 실제 카탈로그·역할·RLS·마이그레이션을 읽기 전용으로 확인한다. 기존 화면/API/`deploy:check`의 configuration-only 의미는 그대로다. [실제 DB 검사의 범위와 한계](PRODUCTION_DATABASE_AUDIT.md)를 확인한다.
+
+2026-10-16 새 Supabase에 전체67개 마이그레이션·80개 앱 테이블·기본 카테고리12개와 별도 실행 역할을 준비했다. 실제 DB 읽기 전용 검사는 PASS12/WARN1/FAIL0이며 WARN은 pooler 이후 TLS 미관측이다. private Storage의 이미지2종·영상 원본/결과 왕복과 비회원 직접 URL/HEAD/Range 차단 및 임시 객체 정리도 확인했다. 이후 Google/Kakao 실제 로그인과 Supabase 실행 전환을 완료했다. 현재 활성 구성은 클라우드 실행 가이드를 따른다. [실제 결과와 공급자 설정 순서](SUPABASE_CONNECTION_PREPARATION.md)를 따른다.

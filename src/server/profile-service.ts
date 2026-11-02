@@ -10,6 +10,7 @@ import { AppError, requireActor } from "./errors";
 import { awardActivity } from "./activity";
 import { memberSafety } from "../db/safety-schema";
 import { POLICY_VERSION } from "../domain/safety";
+import { assertContentAllowed } from "./content-policy";
 export function profileService(db: Database, projectPosts: PostProjector) {
   async function me(actor: string | null): Promise<MyProfile> {
     const userId = requireActor(actor);
@@ -121,6 +122,11 @@ export function profileService(db: Database, projectPosts: PostProjector) {
         .where(eq(profiles.id, userId))
         .for("update");
       if (!current) throw new AppError("NOT_FOUND", "프로필을 찾을 수 없어요.");
+      assertContentAllowed({
+        nickname: value.nickname === current.nickname ? undefined : value.nickname,
+        bio: value.bio === current.bio ? undefined : value.bio,
+        region: value.region === current.region ? undefined : value.region,
+      });
       const phoneNumber = value.phoneNumber === undefined ? current.phoneNumber : value.phoneNumber;
       const now = new Date();
       if (onboarding)

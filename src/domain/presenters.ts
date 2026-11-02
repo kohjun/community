@@ -17,9 +17,12 @@ function presentAuthor(
   authorId: string | null,
   anonymous: boolean,
   profile: AuthorProfile | null,
+  importedAuthorName: string | null = null,
 ): PublicAuthor {
   // Anonymous content remains anonymous even after account deletion.
   if (anonymous) return { kind: "anonymous", displayName: "익명" };
+  if (!authorId && importedAuthorName)
+    return { kind: "imported", displayName: `${importedAuthorName} · 이전 작성자` };
   if (!authorId || !profile || profile.id !== authorId)
     return { kind: "deleted", displayName: "탈퇴한 회원" };
   return { kind: "member", displayName: profile.nickname, publicProfileId: profile.publicId };
@@ -40,7 +43,7 @@ export function presentPostSummary(row: PostRecord, context: PostPresentationCon
     id: row.id,
     categorySlug: row.categorySlug,
     title: row.title,
-    author: presentAuthor(row.authorId, row.isAnonymous, context.profile),
+    author: presentAuthor(row.authorId, row.isAnonymous, context.profile, row.importedAuthorName),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     stats: {
@@ -103,7 +106,9 @@ export function presentComment(
     id: row.id,
     postId: row.postId,
     parentId: row.parentId,
-    author: deleted ? null : presentAuthor(row.authorId, row.isAnonymous, profile),
+    author: deleted
+      ? null
+      : presentAuthor(row.authorId, row.isAnonymous, profile, row.importedAuthorName),
     bodyMarkdown: deleted ? null : row.bodyMarkdown,
     isDeleted: deleted,
     isMine: !deleted && viewerId !== null && row.authorId === viewerId,

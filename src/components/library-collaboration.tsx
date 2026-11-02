@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { ChevronDown, GitPullRequest, Link2, Search } from "lucide-react";
@@ -191,9 +192,7 @@ export function LibraryCollaborationPanel({
       </p>
       {open && !authenticated && (
         <p>
-          <Link href={"/login?returnTo=" + encodeURIComponent("/archive/" + entry.id)}>
-            로그인하고 협업 참여하기
-          </Link>
+          <Link href={loginHref("/archive/" + entry.id)}>로그인하고 협업 참여하기</Link>
         </p>
       )}
       {open && authenticated && (

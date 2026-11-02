@@ -6,18 +6,20 @@ test("all main menus keep their active section on list and detail pages", () => 
   const routes = [
     ["/", "home"],
     ["/stories", "stories"],
-    ["/topics", "topics"],
-    ["/topics/mystery", "topics"],
     ["/posts/example", "stories"],
     ["/crews", "players"],
     ["/crews/example", "players"],
     ["/crews/new", "players"],
     ["/crews/example/edit", "players"],
-    ["/search", "search"],
     ["/lightning", "lightning"],
     ["/map", "map"],
+    ["/games", "games"],
+    ["/games/example", "games"],
     ["/map/example", "map"],
     ["/archive", "archive"],
+    ["/records", "archive"],
+    ["/records/example", "archive"],
+    ["/records/example/edit", "archive"],
     ["/archive/new", "archive"],
     ["/archive/example/edit", "archive"],
     ["/archive/example/host", "archive"],
@@ -30,8 +32,6 @@ test("all main menus keep their active section on list and detail pages", () => 
     ["/players", "players"],
     ["/players/example", "players"],
     ["/players/review/example", "players"],
-    ["/management", "management"],
-    ["/management/events/example", "management"],
   ] as const;
   for (const [path, section] of routes) {
     assert.equal(activeNavigationSection(path), section, path);
@@ -50,6 +50,12 @@ test("partial route prefixes and unrelated activity pages do not select the wron
     "/managements",
     "/maps-other",
     "/mypage",
+    "/management",
+    "/management/events/example",
+    "/participation",
+    "/search",
+    "/topics",
+    "/topics/mystery",
     "/rooms/example",
     "/login",
   ]) {
@@ -77,4 +83,11 @@ test("individual players and teams share one people navigation destination", () 
   assert.equal(people[0]?.label, "플레이어·크루");
   assert.ok(SITE_NAVIGATION.every((item) => !item.href.startsWith("/crews")));
   assert.equal(activeNavigationSection("/crews/example", "stories"), "players");
+});
+
+test("personal tools and discovery destinations are consolidated outside the primary menu", () => {
+  assert.deepEqual(
+    SITE_NAVIGATION.map((item) => item.id),
+    ["home", "stories", "lightning", "map", "archive", "games", "players"],
+  );
 });

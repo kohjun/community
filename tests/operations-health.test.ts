@@ -12,6 +12,7 @@ import { memberSafety, staffRoles } from "../src/db/safety-schema";
 import { engagementJobs } from "../src/db/engagement-schema";
 import { pushDeliveries, pushSubscriptions } from "../src/db/push-schema";
 import { videoAssets } from "../src/db/video-schema";
+import { objectCleanupJobs } from "../src/db/object-cleanup-schema";
 import { mediaRetentionJobs } from "../src/db/media-retention-schema";
 import { mediaRetentionService } from "../src/server/media-retention-service";
 import { eventOperationsService } from "../src/server/event-operations-service";
@@ -37,7 +38,9 @@ before(async () => {
   await db.insert(base.categories).values([...CATEGORIES]);
 });
 beforeEach(async () => {
-  await pg.exec("truncate auth.users cascade;truncate sliper.media_retention_jobs");
+  await pg.exec(
+    "truncate auth.users cascade;truncate sliper.media_retention_jobs, sliper.object_cleanup_jobs",
+  );
   async function profile(name: string) {
     const id = randomUUID();
     await pg.query("insert into auth.users values($1)", [id]);
@@ -69,7 +72,7 @@ test("health counters require an active admin and do not turn role membership in
   await assert.rejects(service.snapshot(null), errorCode("UNAUTHENTICATED"));
   await assert.rejects(service.snapshot(member), errorCode("FORBIDDEN"));
   await assert.rejects(service.snapshot(mod), errorCode("FORBIDDEN"));
-  assert.equal((await service.snapshot(admin)).queues.length, 3);
+  assert.equal((await service.snapshot(admin)).queues.length, 4);
   for (const status of ["suspended", "closed"]) {
     await db
       .insert(memberSafety)
@@ -81,7 +84,7 @@ test("health counters require an active admin and do not turn role membership in
 
 test("empty durable queues have bounded counter projections and no invented worker heartbeat", async () => {
   const result = await service.snapshot(admin);
-  assert.equal(result.queues.length, 3);
+  assert.equal(result.queues.length, 4);
   for (const q of result.queues) {
     assert.equal(q.waiting, 0);
     assert.equal(q.processing, 0);
@@ -286,6 +289,7 @@ test("settings expose only classifications and cannot leak credentials, addresse
   assert.deepEqual(value, {
     mediaStorage: "invalid",
     roomUpdates: "configured",
+    roomProvider: "redis",
     push: "disabled",
     pushWorker: "external",
   });
@@ -308,7 +312,9 @@ test("settings expose only classifications and cannot leak credentials, addresse
 test("valid push configuration is reported without returning public or private key material", () => {
   const ec = createECDH("prime256v1");
   ec.generateKeys();
-  const privateKey = ec.getPrivateKey().toString("base64url"),
+  const privateKey = Buffer.from(ec.getPrivateKey("hex").padStart(64, "0"), "hex").toString(
+      "base64url",
+    ),
     publicKey = ec.getPublicKey().toString("base64url");
   const value = healthConfiguration({
     NODE_ENV: "production",
@@ -519,4 +525,21 @@ test("valid Redis format is classified without implying a network connection or 
     healthConfiguration({ NODE_ENV: "production", REDIS_URL: "   " }).roomUpdates,
     "disabled",
   );
+});
+
+test("cleanup failures are visible as aggregate admin counters without object keys", async () => {
+  const objectKey = randomUUID() + ".webp";
+  await db.insert(objectCleanupJobs).values({
+    kind: "profile",
+    storageBackend: "supabase",
+    objectKey,
+    reason: "profile-cleared",
+    status: "failed",
+    attempts: 8,
+    errorCode: "STORAGE_DELETE_FAILED",
+  });
+  const result = await service.snapshot(admin),
+    cleanup = result.queues.find((q) => q.key === "cleanup");
+  assert.equal(cleanup!.failed, 1);
+  assert.equal(JSON.stringify(result).includes(objectKey), false);
 });

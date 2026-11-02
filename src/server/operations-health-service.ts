@@ -1,3 +1,4 @@
+import { objectCleanupJobs } from "../db/object-cleanup-schema";
 import { sql } from "drizzle-orm";
 import type { Database } from "../db/connection";
 import { mediaAssets } from "../db/schema";
@@ -10,7 +11,7 @@ import type { HealthQueue, OperationsHealth } from "../domain/operations-health"
 import { analyticsService } from "./analytics-service";
 import { imageStorageConfiguration } from "./image-storage-config";
 import { isLocalPushDevelopment, pushConfiguration } from "./push-configuration";
-import { parseRedisConfiguration } from "./redis-configuration";
+import { roomRealtimeConfiguration } from "./room-realtime-config";
 
 export function healthConfiguration(
   env: NodeJS.ProcessEnv = process.env,
@@ -21,12 +22,14 @@ export function healthConfiguration(
   } catch {
     /* Never return configuration errors or values. */
   }
-  const rawRedis = env.REDIS_URL?.trim();
-  const roomUpdates: OperationsHealth["configuration"]["roomUpdates"] = !rawRedis
-    ? "disabled"
-    : parseRedisConfiguration(rawRedis)
-      ? "configured"
-      : "invalid";
+  let roomUpdates: OperationsHealth["configuration"]["roomUpdates"] = "invalid";
+  let roomProvider: OperationsHealth["configuration"]["roomProvider"] = "invalid";
+  try {
+    roomProvider = roomRealtimeConfiguration(env).provider;
+    roomUpdates = roomProvider === "polling" ? "disabled" : "configured";
+  } catch {
+    /* No raw configuration values leave the server. */
+  }
   const push = pushConfiguration(env)
     ? "configured"
     : env.VAPID_PUBLIC_KEY || env.VAPID_PRIVATE_KEY || env.VAPID_SUBJECT
@@ -40,7 +43,7 @@ export function healthConfiguration(
           (!mode && env.NODE_ENV === "development" && isLocalPushDevelopment(env))
         ? "embedded"
         : "external";
-  return { mediaStorage, roomUpdates, push, pushWorker };
+  return { mediaStorage, roomUpdates, roomProvider, push, pushWorker };
 }
 
 /** Administrative counters only. Reading this endpoint never drains, retries or deletes work. */
@@ -53,7 +56,7 @@ export function operationsHealthService(db: Database, env: NodeJS.ProcessEnv = p
       const dueInbox = sql`${engagementJobs.completedAt} is null and ${engagementJobs.availableAt}<=${now} and (${engagementJobs.leaseUntil} is null or ${engagementJobs.leaseUntil}<=${now})`;
       const duePush = sql`${pushDeliveries.status}='pending' and ${pushDeliveries.availableAt}<=${now} and ${pushDeliveries.expiresAt}>${now}`;
       const dueVideo = sql`${videoProcessingJobs.status}='queued' and ${videoProcessingJobs.sourceReady} and ${videoProcessingJobs.availableAt}<=${now} and ${videoProcessingJobs.sourceExpiresAt}>${now}`;
-      const [inbox, push, video, media] = await Promise.all([
+      const [inbox, push, video, media, cleanup] = await Promise.all([
         db
           .select({
             waiting: sql<number>`count(*) filter(where ${dueInbox})::int`,
@@ -99,12 +102,25 @@ export function operationsHealthService(db: Database, env: NodeJS.ProcessEnv = p
           .from(videoProcessingJobs),
         db
           .select({
-            abandonedImages: sql<number>`(select count(*)::int from ${mediaAssets} observed where observed.post_id is null and observed.record_post_id is null and observed.record_origin_post_id is null and observed.unattached_since<${now}-interval '24 hours' and not exists(select 1 from ${mediaRetentionJobs} reserved where reserved.asset_kind='image' and reserved.asset_id=observed.id))`,
+            abandonedImages: sql<number>`(select count(*)::int from ${mediaAssets} observed where observed.reunion_origin_post_id is null and observed.post_id is null and observed.record_post_id is null and observed.record_origin_post_id is null and observed.unattached_since<${now}-interval '24 hours' and not exists(select 1 from ${mediaRetentionJobs} reserved where reserved.asset_kind='image' and reserved.asset_id=observed.id))`,
             abandonedVideos: sql<number>`(select count(*)::int from ${videoAssets} observed where observed.post_id is null and observed.record_post_id is null and observed.record_origin_post_id is null and observed.unattached_since<${now}-interval '24 hours' and not exists(select 1 from ${mediaRetentionJobs} reserved where reserved.asset_kind='video' and reserved.asset_id=observed.id))`,
             videoSourcesToClean: sql<number>`(select count(*)::int from ${videoProcessingJobs} where ${videoProcessingJobs.sourceRemovedAt} is null and ${videoProcessingJobs.sourceCleanupAt}<=${now} and (${videoProcessingJobs.status} in ('ready','failed') or ${videoProcessingJobs.sourceExpiresAt}<=${now} or (not ${videoProcessingJobs.sourceReady} and ${videoProcessingJobs.uploadExpiresAt}<=${now})))`,
             videoOutputsToClean: sql<number>`(select count(*)::int from ${videoProcessingOutputs} where ${videoProcessingOutputs.publishedAt} is null and ${videoProcessingOutputs.removedAt} is null and ${videoProcessingOutputs.cleanupAt}<=${now})`,
           })
           .from(sql`(select 1) observation`),
+        db
+          .select({
+            waiting: sql<number>`count(*) filter(where ${objectCleanupJobs.status}='pending' and ${objectCleanupJobs.availableAt}<=${now})::int`,
+            processing: sql<number>`count(*) filter(where ${objectCleanupJobs.status}='processing' and ${objectCleanupJobs.leaseUntil}>${now})::int`,
+            retrying: sql<number>`count(*) filter(where ${objectCleanupJobs.status}='pending' and ${objectCleanupJobs.attempts}>0)::int`,
+            failed: sql<number>`count(*) filter(where ${objectCleanupJobs.status}='failed')::int`,
+            staleLeases: sql<number>`count(*) filter(where ${objectCleanupJobs.status}='processing' and ${objectCleanupJobs.leaseUntil}<=${now})::int`,
+            oldestWaitingAt: sql<
+              string | null
+            >`min(${objectCleanupJobs.availableAt}) filter(where ${objectCleanupJobs.status}='pending')::text`,
+            latestCompletedAt: sql<string | null>`null::text`,
+          })
+          .from(objectCleanupJobs),
       ]);
       const queue = (
         key: HealthQueue["key"],
@@ -129,6 +145,7 @@ export function operationsHealthService(db: Database, env: NodeJS.ProcessEnv = p
           queue("inbox", "알림함 생성", inbox[0]!),
           queue("push", "기기 알림 발송", push[0]!),
           queue("video", "영상 변환", video[0]!),
+          queue("cleanup", "파일 삭제 재시도", cleanup[0]!),
         ],
         media: media[0]!,
         configuration: healthConfiguration(env),

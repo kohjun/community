@@ -16,9 +16,22 @@ const groups = [
   { title: "신청과 결제", ids: ["payment-bridge", "external-approval", "library-payment"] },
   { title: "공지방과 기기 알림", ids: ["room-realtime", "web-push", "notification-worker"] },
   { title: "광고", ids: ["advertising"] },
-  { title: "운영 확인", ids: ["operational-verification"] },
+  {
+    title: "운영·정책·검색",
+    ids: [
+      "operator-contact",
+      "business-disclosure",
+      "privacy-review",
+      "search-discovery",
+      "operational-verification",
+    ],
+  },
 ];
 const labels: Record<string, string> = {
+  "operator-contact": "공개 운영자·문의",
+  "business-disclosure": "사업자 고지",
+  "privacy-review": "개인정보 방침 검토",
+  "search-discovery": "공개 검색 노출",
   "development-access": "운영 인증 모드",
   "site-origin": "서비스 주소",
   authentication: "회원 인증",

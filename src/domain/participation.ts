@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { participantGuideSchema, type ParticipantGuide } from "./participant-guide";
 import { venueSchema, type VenuePoint } from "./discovery";
 import {
   applicationQuestionsSchema,
@@ -16,6 +17,8 @@ export const eventConfigSchema = z
     endsAt: z.iso.datetime({ offset: true }).nullable().optional(),
     venue: venueSchema.nullable().optional(),
     questions: applicationQuestionsSchema.optional(),
+    participantGuide: participantGuideSchema.nullable().optional(),
+    guideVersion: z.string().max(80).optional(),
   })
   .strict();
 export const applicationSchema = z
@@ -92,6 +95,8 @@ export interface EventOverview {
     completedAt?: string | null;
     cancelledAt?: string | null;
     lifecycleRevision?: number;
+    participantGuide?: ParticipantGuide | null;
+    guideVersion?: string;
     questions: ApplicationQuestion[];
     questionnaireVersion: string;
     meetupType?: "event" | "lightning";
@@ -143,6 +148,15 @@ export const STATUS_LABELS: Record<ApplicationStatus, string> = {
 export const externalClaimSchema = applicationSchema
   .extend({ externalReference: z.string().trim().min(3).max(160) })
   .strict();
+export const siteApplicationDecisionSchema = z
+  .strictObject({
+    decision: z.enum(["approve", "reject"]),
+    reason: z.string().trim().max(500).default(""),
+  })
+  .superRefine((value, ctx) => {
+    if (value.decision === "reject" && !value.reason)
+      ctx.addIssue({ code: "custom", path: ["reason"], message: "반려 사유를 입력해주세요." });
+  });
 export const externalDecisionSchema = z
   .object({
     decision: z.enum(["approve", "reject", "refund"]),

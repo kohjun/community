@@ -4,11 +4,13 @@ import { lightningInputSchema } from "../domain/discovery";
 import { awardActivity } from "./activity";
 import { bindEventVenue } from "./event-venue-service";
 import { AppError, requireActor } from "./errors";
+import { assertContentAllowed } from "./content-policy";
 export function lightningService(db: Database) {
   return {
     async create(actor: string | null, input: unknown) {
       const user = requireActor(actor),
         value = lightningInputSchema.parse(input);
+      assertContentAllowed(value);
       return db.transaction(async (tx) => {
         const now = Date.now(),
           startsAt = new Date(value.startsAt),
@@ -25,7 +27,7 @@ export function lightningService(db: Database) {
             title: value.title,
             bodyMarkdown: value.description,
             location: value.location,
-            eventFee: value.priceKRW === 0 ? "무료" : value.priceKRW.toLocaleString("ko-KR") + "원",
+            eventFee: "현장 정산",
             applicationUrl: value.applicationUrl,
             eventDate: new Intl.DateTimeFormat("ko-KR", {
               timeZone: "Asia/Seoul",
@@ -47,6 +49,7 @@ export function lightningService(db: Database) {
           capacity: value.capacity,
           open: true,
           approvalMode: "manual",
+          participantGuide: value.participantGuide ?? null,
         });
         await bindEventVenue(tx, user, postId, value.venue);
         await awardActivity(tx, user, "post", postId);

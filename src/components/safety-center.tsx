@@ -1,9 +1,11 @@
 "use client";
+import { HandlingStatus } from "./handling-status";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { appRequest, RequestError } from "@/lib/api-client";
 import {
   REPORT_REASONS,
+  targetSchema,
   SUPPORT_CATEGORIES,
   type ReportView,
   type SupportView,
@@ -29,6 +31,48 @@ const status = (value: string) =>
     answered: "답변 완료",
     closed: "처리 완료",
   })[value] ?? value;
+export function ReportOriginalLink({
+  report,
+  canReview,
+}: {
+  report: Pick<ReportView, "targetType" | "targetId">;
+  canReview: boolean;
+}) {
+  if (!canReview) return null;
+  const target = targetSchema.safeParse({
+    targetType: report.targetType,
+    targetId: report.targetId,
+  });
+  if (!target.success) return null;
+  const { targetType, targetId } = target.data;
+  const href =
+    targetType === "post"
+      ? `/posts/${targetId}`
+      : targetType === "record"
+        ? `/records/${targetId}`
+        : targetType === "library"
+          ? `/archive/${targetId}`
+          : targetType === "venue"
+            ? `/map?place=${targetId}`
+            : targetType === "crew"
+              ? `/crews/${targetId}`
+              : targetType === "player"
+                ? `/players/${targetId}`
+                : null;
+  if (!href) return null;
+  return (
+    <div>
+      <div className="safety-links">
+        <Link href={href} target="_blank" rel="noopener noreferrer">
+          원문에서 사진·영상 확인
+        </Link>
+      </div>
+      <p className="form-note">
+        현재 공개된 원문을 확인해요. 삭제·숨김·비공개 상태라면 열리지 않을 수 있어요.
+      </p>
+    </div>
+  );
+}
 export function SupportReplyPanel({
   item,
   busy,
@@ -479,6 +523,14 @@ export function SafetyCenter({
                     <p>처리 요청 상태 · {status(item.status)}</p>
                   </section>
                 )}
+                {kind !== "admin" && (
+                  <HandlingStatus
+                    status={item.status}
+                    kind="support"
+                    id={item.id}
+                    createdAt={item.createdAt}
+                  />
+                )}
                 <p className="safety-preserve">{item.body}</p>
                 {item.replies.map((message) => (
                   <div className="safety-answer" key={message.id}>
@@ -492,16 +544,33 @@ export function SafetyCenter({
             ) : (
               <article className="safety-entry" id={"safety-entry-" + item.id} key={item.id}>
                 <div className="safety-entry-heading">
-                  <h3>{REPORT_REASONS[item.reason as keyof typeof REPORT_REASONS]}</h3>
+                  <h3>
+                    {REPORT_REASONS[item.reason as keyof typeof REPORT_REASONS] ?? item.reason}
+                  </h3>
                   <span className="safety-badge">{status(item.status)}</span>
                 </div>
                 <small>{date(item.createdAt)}</small>
-                {item.snapshot && (
+                {kind === "admin" && item.snapshot && (
                   <details>
                     <summary>신고 당시 콘텐츠 확인</summary>
                     <p className="safety-preserve">{item.snapshot}</p>
                   </details>
                 )}
+                {kind !== "admin" && (
+                  <HandlingStatus
+                    status={item.status}
+                    kind="report"
+                    id={item.id}
+                    createdAt={item.createdAt}
+                    resolvedAt={item.resolvedAt}
+                  />
+                )}
+                <ReportOriginalLink
+                  report={item}
+                  canReview={
+                    kind === "admin" && (account?.role === "admin" || account?.role === "moderator")
+                  }
+                />
                 {item.detail && <p className="safety-preserve">{item.detail}</p>}
                 {item.resolution && (
                   <div className="safety-answer">

@@ -43,6 +43,7 @@ import { authorVisible, contentVisible } from "./safety-visibility";
 import { enforceRequestLimit } from "./request-limits";
 import { awardActivity } from "./activity";
 import { preciseTimestamp } from "./pagination";
+import { assertContentAllowed } from "./content-policy";
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type QueryDb = Database | Tx;
 type Crew = typeof crews.$inferSelect;
@@ -534,6 +535,7 @@ export function crewService(db: Database, clock = () => new Date()) {
   async function create(actor: string | null, input: unknown): Promise<CrewDetail> {
     const value = crewInputSchema.parse(input),
       user = await throttled(actor, "crew_create", 5);
+    assertContentAllowed(value);
     const id = await db.transaction(async (tx) => {
       await lockPeople(tx, user);
       const [crew] = await tx
@@ -565,6 +567,11 @@ export function crewService(db: Database, clock = () => new Date()) {
         .where(eq(crews.id, id));
       if (value.expectedUpdatedAt !== revision?.value)
         throw new AppError("CONFLICT", "다른 운영진이 수정했어요. 새로고침 후 다시 확인해주세요.");
+      assertContentAllowed({
+        name: value.name === crew.name ? undefined : value.name,
+        description: value.description === crew.description ? undefined : value.description,
+        region: value.region === crew.region ? undefined : value.region,
+      });
       const [members] = await tx
         .select({ count: sql<number>`count(*)::int` })
         .from(crewMembers)
@@ -788,6 +795,7 @@ export function crewService(db: Database, clock = () => new Date()) {
     const value = crewAnnouncementSchema.parse(input);
     return mutate(actor, id, "crew_announce", async (tx, crew, user) => {
       manage(await role(tx, crew, user));
+      assertContentAllowed(value);
       await log(tx, id, user, "announcement", value.body);
     });
   }
@@ -907,6 +915,7 @@ export function crewService(db: Database, clock = () => new Date()) {
             "CONFLICT",
             "QR 입장과 참가 완료 기록이 확인된 멤버만 기여를 인증할 수 있어요.",
           );
+        assertContentAllowed({ note: value.note });
         const [inserted] = await tx
           .insert(crewContributions)
           .values({

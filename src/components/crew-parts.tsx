@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 import Link from "next/link";
 import { RecordBacklink } from "./record-discovery";
 import { useState, type FormEvent } from "react";
@@ -91,7 +92,7 @@ export function CrewJoinPanel({
   if (!canWrite)
     return (
       <p className="crew-form-note">
-        <Link href={"/login?next=/crews/" + crew.id}>로그인하고 이 크루에 참여해보세요.</Link>
+        <Link href={loginHref("/crews/" + crew.id)}>로그인하고 이 크루에 참여해보세요.</Link>
       </p>
     );
   return (

@@ -1,10 +1,12 @@
 import type { AppealOriginalAction } from "./appeals";
 import { z } from "zod";
-export const POLICY_VERSION = "2026-10-04";
+export const POLICY_VERSION = "2026-10-18";
 export const REPORT_REASONS = {
   spam: "광고·도배",
   fraud: "사기성 모집",
   harassment: "욕설·괴롭힘",
+  hate: "혐오·차별",
+  sexual: "음란·성적 콘텐츠",
   privacy: "개인정보 노출",
   unsafe: "위험하거나 부적절한 행사",
   other: "기타",
@@ -22,7 +24,7 @@ export const targetSchema = z.strictObject({
   targetId: z.string().uuid(),
 });
 export const reportInputSchema = targetSchema.extend({
-  reason: z.enum(["spam", "fraud", "harassment", "privacy", "unsafe", "other"]),
+  reason: z.enum(["spam", "fraud", "harassment", "hate", "sexual", "privacy", "unsafe", "other"]),
   detail: z.string().trim().max(2000).default(""),
 });
 export const moderationInputSchema = z.strictObject({

@@ -19,3 +19,20 @@ export function isAllowedRequestOrigin(
   }
   return origin === expectedOrigin;
 }
+
+/** Keep local OAuth cookies on one host; API/mutation and callback requests are never redirected. */
+export function canonicalLocalNavigation(request: Request, expectedOrigin: string): URL | null {
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  const expected = new URL(expectedOrigin);
+  const allowed = ["http://127.0.0.1:3000", "http://localhost:3000"];
+  if (!allowed.includes(expected.origin)) return null;
+  const url = new URL(request.url);
+  if (/^\/(?:api|auth|_next)(?:\/|$)/.test(url.pathname)) return null;
+  const host = request.headers.get("host") ?? url.host;
+  if (!allowed.some((origin) => new URL(origin).host === host) || host === expected.host)
+    return null;
+  const target = new URL(expected.origin);
+  target.pathname = url.pathname;
+  target.search = url.search;
+  return target;
+}

@@ -1,3 +1,4 @@
+import { waitlistReservations } from "./waitlist-service";
 import { createHash } from "node:crypto";
 import { and, eq, desc, sql, or, ilike } from "drizzle-orm";
 import { z } from "zod";
@@ -16,6 +17,7 @@ import {
 import {
   externalClaimSchema,
   externalDecisionSchema,
+  siteApplicationDecisionSchema,
   externalPaymentEventSchema,
   managementQuerySchema,
   type EventOverview,
@@ -186,12 +188,65 @@ export function eventManagementService(db: Database, helpers: Helpers) {
     });
     return helpers.overview(actor, postId);
   }
-  async function hasSeat(tx: Tx, postId: string, capacity: number) {
+  async function hasSeat(tx: Tx, postId: string, capacity: number, exceptUser?: string) {
     const [total] = await tx
       .select({ count: sql<number>`count(*)::int` })
       .from(eventApplications)
       .where(and(eq(eventApplications.postId, postId), occupied));
-    return total!.count < capacity;
+    return total!.count + (await waitlistReservations(tx, postId, exceptUser)) < capacity;
+  }
+  async function decideSiteApplication(
+    actor: string | null,
+    applicationId: string,
+    input: unknown,
+  ) {
+    const user = requireActor(actor),
+      value = siteApplicationDecisionSchema.parse(input),
+      id = z.uuid().parse(applicationId);
+    const [lookup] = await db
+      .select({ postId: eventApplications.postId })
+      .from(eventApplications)
+      .where(eq(eventApplications.id, id));
+    if (!lookup) throw new AppError("NOT_FOUND", "참가 요청을 찾을 수 없어요.");
+    await db.transaction(async (tx) => {
+      // Match apply/cancel/room reads: lock the event before checking a request or a seat.
+      const { post, settings } = await manager(tx, user, lookup.postId);
+      const [app] = await tx.select().from(eventApplications).where(eq(eventApplications.id, id));
+      if (
+        !settings ||
+        settings.meetupType !== "lightning" ||
+        post.applicationUrl ||
+        app!.source !== "site" ||
+        app!.amountKRW !== 0
+      )
+        throw new AppError("CONFLICT", "사이트에서 직접 신청한 번개 참가 요청만 처리할 수 있어요.");
+      const resultStatus = value.decision === "approve" ? "confirmed" : "rejected";
+      if (app!.status === resultStatus) return;
+      if (app!.status !== "pending_approval")
+        throw new AppError("CONFLICT", "승인 대기 중인 참가 요청만 처리할 수 있어요.");
+      if (value.decision === "approve") {
+        await assertEventRunning(tx, lookup.postId);
+        if (settings.completedAt || (settings.endsAt && settings.endsAt.getTime() <= Date.now()))
+          throw new AppError("CONFLICT", "종료된 번개의 참가 요청은 승인할 수 없어요.");
+        if (app!.questionnaireVersion === null)
+          throw new AppError(
+            "CONFLICT",
+            "참가자가 먼저 기본 정보와 참가 질문 답변을 제출해야 해요.",
+          );
+        if (!(await hasSeat(tx, app!.postId, settings.capacity, app!.userId)))
+          throw new AppError("CONFLICT", "참가 정원이 찼어요. 인원을 확인한 뒤 승인해주세요.");
+      }
+      await tx
+        .update(eventApplications)
+        .set({
+          status: resultStatus,
+          confirmedAt: value.decision === "approve" ? sql`statement_timestamp()` : null,
+          decisionNote: value.reason,
+          updatedAt: sql`statement_timestamp()`,
+        })
+        .where(eq(eventApplications.id, id));
+    });
+    return { postId: lookup.postId };
   }
   async function decideExternal(actor: string | null, applicationId: string, input: unknown) {
     const user = requireActor(actor),
@@ -244,7 +299,7 @@ export function eventManagementService(db: Database, helpers: Helpers) {
               "CONFLICT",
               "같은 회원의 다른 참가 내역이 진행 중이에요. 중복 내역을 먼저 확인해주세요.",
             );
-          if (!(await hasSeat(tx, app!.postId, settings.capacity)))
+          if (!(await hasSeat(tx, app!.postId, settings.capacity, app!.userId)))
             throw new AppError(
               "CONFLICT",
               "정원이 찼어요. 외부 플랫폼의 정원·환불 정책을 확인해주세요.",
@@ -605,5 +660,12 @@ export function eventManagementService(db: Database, helpers: Helpers) {
           : null,
     };
   }
-  return { claimExternal, decideExternal, externalPayment, dashboard, managedEvents };
+  return {
+    claimExternal,
+    decideExternal,
+    decideSiteApplication,
+    externalPayment,
+    dashboard,
+    managedEvents,
+  };
 }

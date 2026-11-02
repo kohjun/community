@@ -34,6 +34,7 @@ export type LocalTestAccount = z.infer<typeof accountSchema>;
 // The test adapter cannot activate against a cloud database or production build.
 export function isLocalTestEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
   if (
+    env.SLIPER_CLOUD_ONLY === "true" ||
     env.NODE_ENV !== "development" ||
     env.LOCAL_DATABASE !== "1" ||
     env.SLIPER_AUTH_MODE !== "development"

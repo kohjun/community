@@ -217,11 +217,20 @@ export const databaseAuditSql = {
   migrations:
     "select hash, created_at::text as created_at from drizzle.__drizzle_migrations order by created_at,id",
 } as const;
+/** Read from the connected driver's effective options, never just the environment file. */
+export function databaseAuditClientRequiresTls(options: { ssl?: unknown }): boolean {
+  return (
+    options.ssl === true ||
+    (typeof options.ssl === "string" &&
+      ["require", "verify-full", "verify-ca"].includes(options.ssl))
+  );
+}
 /** Must run inside a bounded READ ONLY REPEATABLE READ transaction. No application rows are read. */
 export async function auditDeploymentDatabase(
   query: DatabaseAuditQuery,
   manifest: DatabaseAuditManifest,
   scope: DatabaseAuditScope,
+  clientRequiresTls = false,
 ): Promise<DatabaseAuditReport> {
   const checks: DatabaseAuditCheck[] = [];
   const add = (id: keyof typeof messages, pass: boolean) =>
@@ -241,16 +250,31 @@ export async function auditDeploymentDatabase(
   add("transaction", safe);
   if (!safe) return report(scope, checks);
   const [transport] = await query<{ encrypted: boolean }>(databaseAuditSql.transport);
+  // A successful query with the driver's mandatory TLS mode proves the client hop.
+  // pg_stat_ssl sees the pooler's DB backend, which may be a separate local socket.
   checks.push({
     id: "transport-security",
-    status: transport?.encrypted === true ? "pass" : scope === "local-diagnostic" ? "warn" : "fail",
-    message:
-      transport?.encrypted === true
+    status:
+      clientRequiresTls || transport?.encrypted === true
+        ? "pass"
+        : scope === "local-diagnostic"
+          ? "warn"
+          : "fail",
+    message: clientRequiresTls
+      ? "접속 드라이버의 필수 TLS 모드로 실제 쿼리를 완료했습니다. 앱→접속 지점 구간의 암호화이며 인증서 검증·pooler 이후·서비스 HTTPS 검증과 구분합니다."
+      : transport?.encrypted === true
         ? "현재 DB 백엔드 세션의 TLS 암호화를 확인했습니다. 프록시·pooler 앞 구간과 서비스 전체 보안 검증은 별도입니다."
         : scope === "local-diagnostic"
           ? "현재 로컬/내부 DB 세션의 TLS를 확인하지 못했습니다. 운영 TLS 검증 완료로 계산하지 않습니다."
-          : "현재 DB 백엔드 세션의 TLS 암호화를 확인하지 못했습니다. 원격 실행 연결과 pooler의 TLS를 확인하세요.",
+          : "현재 DB 백엔드 세션과 클라이언트 접속 구간의 필수 TLS를 확인하지 못했습니다. 원격 실행 연결과 pooler의 TLS를 확인하세요.",
   });
+  if (clientRequiresTls && transport?.encrypted !== true)
+    checks.push({
+      id: "backend-transport",
+      status: "warn",
+      message:
+        "pg_stat_ssl에서 접속 지점 이후 DB 백엔드의 TLS를 관측하지 못했습니다. 클라이언트 TLS와 별개이며 pooler의 내부 연결은 공급자 설정에서 확인하세요.",
+    });
   const [role] = await query<{
     superuser: boolean;
     create_db: boolean;

@@ -1,3 +1,4 @@
+import { workerHeartbeat } from "../src/server/worker-health";
 import { config } from "dotenv";
 import { setTimeout as delay } from "node:timers/promises";
 import { createDatabase } from "../src/db/connection";
@@ -11,6 +12,7 @@ if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
 const backend = imageStorageConfiguration().backend;
 const connection = createDatabase(process.env.DATABASE_URL, 2);
 const controller = new AbortController();
+const heartbeat = process.argv.includes("--once") ? null : await workerHeartbeat("video");
 const worker = videoWorker(connection.db, {
   storage: videoProcessingStorage(),
   transcode: compressVideo,
@@ -26,6 +28,7 @@ try {
     while (!controller.signal.aborted) {
       try {
         const result = await worker.drain(controller.signal);
+        await heartbeat!.success();
         if (result.processed) continue;
       } catch {
         // Credentials, source paths and private uploader IDs never enter logs.
@@ -35,5 +38,6 @@ try {
     }
   }
 } finally {
+  await heartbeat?.stop();
   await connection.close();
 }

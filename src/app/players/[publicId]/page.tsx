@@ -3,7 +3,7 @@ import { getDatabase } from "@/db/client";
 import { currentActor } from "@/server/identity";
 import { playerService } from "@/server/player-service";
 import { AppError } from "@/server/errors";
-import { RecordsLogin } from "@/components/event-records";
+import { RecordsLogin } from "@/components/record-list";
 import { PlayerProfile } from "@/components/player-profile";
 import { z } from "zod";
 export const dynamic = "force-dynamic";

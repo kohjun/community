@@ -1,6 +1,6 @@
 "use client";
+import { LoginLink } from "./login-link";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Bell, BellRing, Check } from "lucide-react";
 import type { HostSubscriptionView } from "@/domain/engagement";
@@ -85,10 +85,10 @@ export function HostSubscriptionButton({
   return (
     <div className="host-subscription">
       {needsLogin || !canAct ? (
-        <Link className="participation-secondary" href="/login">
+        <LoginLink className="participation-secondary">
           <Bell size={15} />
           로그인하고 구독하기
-        </Link>
+        </LoginLink>
       ) : (
         <button
           type="button"

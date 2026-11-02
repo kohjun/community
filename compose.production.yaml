@@ -1,0 +1,52 @@
+name: sliper-cloud
+x-runtime: &runtime
+  env_file: .env.production
+  restart: unless-stopped
+  init: true
+  stop_grace_period: 45s
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=1g,uid=1000,gid=1000,mode=1770
+services:
+  web:
+    <<: *runtime
+    image: sliper-web:${SLIPER_RELEASE:-local}
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?Set the public Supabase URL}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?Set the public Supabase key}
+        NEXT_PUBLIC_NAVER_MAP_KEY_ID: ${NEXT_PUBLIC_NAVER_MAP_KEY_ID:-}
+    ports: ["${SLIPER_BIND_ADDRESS:-127.0.0.1}:${SLIPER_BIND_PORT:-3000}:3000"]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    mem_limit: 1g
+  notifications:
+    <<: *runtime
+    image: sliper-notifications:${SLIPER_RELEASE:-local}
+    stop_grace_period: 180s
+    build:
+      context: .
+      dockerfile: Dockerfile.notification-worker
+    mem_limit: 512m
+  video:
+    <<: *runtime
+    image: sliper-video:${SLIPER_RELEASE:-local}
+    stop_grace_period: 300s
+    build:
+      context: .
+      dockerfile: Dockerfile.video-worker
+    # Reserve scheduling room for web requests during CPU-bound transcoding.
+    cpus: "1.0"
+    mem_limit: 2g

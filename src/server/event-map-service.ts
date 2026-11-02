@@ -20,6 +20,7 @@ import { registeredVenueVisible } from "./place-policy";
 import { contentVisible, authorVisible } from "./safety-visibility";
 import { eventAvailable } from "./post-reader";
 
+import { assertContentAllowed } from "./content-policy";
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Connection = Database | Transaction;
 type Venue = typeof communityVenues.$inferSelect;
@@ -250,6 +251,7 @@ export function eventMapService(db: Database) {
           .where(eq(profiles.id, user))
           .for("update");
         if (!profile) throw new AppError("UNAUTHENTICATED", "로그인 정보를 확인해주세요.");
+        assertContentAllowed({ ...value, body: value.address, note: value.feeNote });
         const [recent] = await tx
           .select({ value: sql<number>`count(*)::int` })
           .from(communityVenues)
@@ -276,6 +278,13 @@ export function eventMapService(db: Database) {
         { version, ...value } = venueUpdateSchema.parse(input);
       return db.transaction(async (tx) => {
         const venue = await owned(tx, user, id, version);
+        const changed = Object.fromEntries(
+          Object.entries(value).filter(
+            ([key, next]) =>
+              JSON.stringify(next) !== JSON.stringify(venue[key as keyof typeof venue]),
+          ),
+        );
+        assertContentAllowed({ ...changed, body: changed.address, note: changed.feeNote });
         await tx
           .update(communityVenues)
           .set({ ...value, version: venue.version + 1, updatedAt: new Date() })

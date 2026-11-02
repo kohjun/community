@@ -100,6 +100,8 @@ function item(row: Row, ownPublicId: string): AftercareItem {
     if (row.record_visible) actions.push({ label: "행사 기록 보기", href: recordHref });
     else actions.push({ label: "행사 보기", href: eventHref });
   }
+  if (row.completed)
+    actions.push({ label: "경험·사진·다음 활동", href: "/events/" + row.post_id + "/reunion" });
   return {
     id: row.id,
     postId: row.post_id,

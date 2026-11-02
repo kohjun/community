@@ -6,11 +6,13 @@ import path from "node:path";
 import os from "node:os";
 import { after, before, test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
+import postgres from "postgres";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import {
   auditDeploymentDatabase,
   databaseAuditFailure,
+  databaseAuditClientRequiresTls,
   databaseAuditSql,
   databaseAuditTarget,
   readDatabaseAuditManifest,
@@ -41,6 +43,7 @@ async function inspect(
   expected: DatabaseAuditManifest = manifest,
   statements: string[] = [],
   scope: DatabaseAuditScope = "local-diagnostic",
+  clientRequiresTls = false,
 ) {
   await pg.exec(`begin isolation level repeatable read read only; set local role ${runtime};`);
   const query: DatabaseAuditQuery = async <Row extends Record<string, unknown>>(text: string) => {
@@ -48,7 +51,7 @@ async function inspect(
     return (await pg.query<Row>(text)).rows;
   };
   try {
-    return await auditDeploymentDatabase(query, expected, scope);
+    return await auditDeploymentDatabase(query, expected, scope, clientRequiresTls);
   } finally {
     await pg.exec("rollback");
   }
@@ -313,4 +316,37 @@ test("remote scope cannot pass when the observed DB session is unencrypted", asy
   const report = await inspect(manifest, [], "remote-database-readonly");
   assert.equal(row(report, "transport-security").status, "fail");
   assert.equal(report.releaseApproval, "not-performed");
+});
+
+test("pooler client TLS can pass while backend TLS remains an explicit unverified warning", async () => {
+  const report = await inspect(manifest, [], "remote-database-readonly", true);
+  assert.equal(row(report, "transport-security").status, "pass");
+  assert.equal(row(report, "backend-transport").status, "warn");
+  assert.equal(report.summary.fail, 0);
+  assert.equal(report.releaseApproval, "not-performed");
+  assert.match(row(report, "transport-security").message, /인증서 검증/);
+});
+
+test("client TLS evidence uses actual Postgres.js options and rejects modes that allow fallback", async () => {
+  const password = randomBytes(24).toString("hex");
+  for (const [mode, expected] of [
+    ["require", true],
+    ["verify-full", true],
+    ["disable", false],
+    ["prefer", false],
+    ["allow", false],
+  ] as const) {
+    const client = postgres(
+      `postgresql://runtime:${password}@127.0.0.1:1/postgres?sslmode=${mode}`,
+      { max: 1, prepare: false },
+    );
+    try {
+      assert.equal(databaseAuditClientRequiresTls(client.options), expected);
+    } finally {
+      await client.end();
+    }
+  }
+  assert.equal(databaseAuditClientRequiresTls({ ssl: false }), false);
+  assert.equal(databaseAuditClientRequiresTls({ ssl: { rejectUnauthorized: false } }), false);
+  assert.equal(databaseAuditClientRequiresTls({ ssl: undefined }), false);
 });

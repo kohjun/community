@@ -1,0 +1,47 @@
+export type ToastMode = "basic" | "target";
+export type ToastSettings = { mode: ToastMode; rounds: number; answerSeconds: number };
+export type ToastResult = {
+  turn: number;
+  round: number;
+  questionerId: string;
+  question: string | null;
+  expected: number | null;
+  actual: number | null;
+  automaticPasses: number;
+  points: number;
+  outcome: "matched" | "missed" | "no-prediction" | "skipped";
+};
+export type ToastState = {
+  settings: ToastSettings;
+  stage: "lobby" | "asking" | "answering" | "review" | "result" | "aborted";
+  turn: number;
+  roster: { id: string; nickname: string; score: number }[];
+  question: string | null;
+  target: number | null;
+  endsAt: number | null;
+  suggestions: string[];
+  deck: number[];
+  responses: Record<string, { cheers: boolean; prediction: number | null }>;
+  history: ToastResult[];
+  lastWords: Record<string, { targetId: string; turn: number }>;
+};
+export type ToastView = {
+  settings: ToastSettings;
+  stage: ToastState["stage"];
+  turn: number;
+  round: number;
+  totalTurns: number;
+  questionerId: string | null;
+  question: string | null;
+  target: number | null;
+  endsAt: number | null;
+  serverNow: number;
+  suggestions: string[];
+  submittedCount: number;
+  mySubmitted: boolean;
+  myAnswer: { cheers: boolean; prediction: number | null } | null;
+  roster: { id: string; nickname: string; score: number; rank: number }[];
+  history: ToastResult[];
+  winners: string[];
+  lastWords: { fromId: string; targetId: string; turn: number; question: string }[];
+};

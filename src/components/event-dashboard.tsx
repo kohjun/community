@@ -1,4 +1,5 @@
 "use client";
+import { ParticipantGuideEditor } from "./participant-guide";
 import Link from "next/link";
 import { EventLocationField } from "./event-location-field";
 import type { VenuePoint } from "@/domain/discovery";
@@ -50,15 +51,21 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
     open: initial.event.config?.open ?? true,
     approvalMode: initial.event.config?.approvalMode ?? "manual",
     questions: initial.event.config?.questions ?? [],
+    participantGuide: initial.event.config?.participantGuide ?? null,
     startsAt: koreanDateTimeInput(initial.event.config?.startsAt),
     endsAt: koreanDateTimeInput(initial.event.config?.endsAt),
   });
+  const [guideVersion, setGuideVersion] = useState(initial.event.config?.guideVersion);
   const [venue, setVenue] = useState<VenuePoint | null>(initial.event.config?.venue ?? null);
   const [venueChanged, setVenueChanged] = useState(false);
   const [cancelled, setCancelled] = useState(!!initial.event.config?.cancelledAt);
   const [lifecycleRevision, setLifecycleRevision] = useState(
     initial.event.config?.lifecycleRevision ?? 0,
   );
+  const decisionPanel = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (selection) decisionPanel.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selection?.app.id, selection?.decision]);
   const sequence = useRef(new RequestSequence()),
     gate = useRef(false),
     hasOlder = useRef(false),
@@ -121,11 +128,19 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
     e.preventDefault();
     if (!selection) return;
     void work(async () => {
-      await request(`/applications/${selection.app.id}/decision`, "POST", {
-        decision: selection.decision,
-        paymentChecked: checked,
-        reason,
-      });
+      const siteLightning =
+        data?.event.config?.meetupType === "lightning" &&
+        !data.event.externalUrl &&
+        selection.app.source === "site";
+      await request(
+        `/applications/${selection.app.id}/${siteLightning ? "site-decision" : "decision"}`,
+        "POST",
+        {
+          decision: selection.decision,
+          ...(siteLightning ? {} : { paymentChecked: checked }),
+          reason,
+        },
+      );
       setSelection(null);
       hasOlder.current = false;
       await refresh();
@@ -142,6 +157,10 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
     void work(async () => {
       const parsed = eventConfigSchema.safeParse({
         ...settings,
+        guideVersion,
+        ...(data?.event.config?.meetupType === "lightning" && !data.event.externalUrl
+          ? { amountKRW: 0, approvalMode: "manual" }
+          : {}),
         venue: venueChanged ? venue : undefined,
         startsAt: koreanDateTimeISO(settings.startsAt),
         endsAt: koreanDateTimeISO(settings.endsAt),
@@ -149,9 +168,11 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
       if (!parsed.success)
         throw new Error(parsed.error.issues[0]?.message || "행사 설정과 참가 질문을 확인해주세요.");
       await request(`/events/${postId}/settings`, "PUT", parsed.data);
+      const saved = await request<EventDashboard>(base);
+      setGuideVersion(saved.event.config?.guideVersion);
+      setData(saved);
       setVenueChanged(false);
       hasOlder.current = false;
-      await refresh();
     });
   }
   if (!data)
@@ -161,20 +182,25 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
       </ParticipationShell>
     );
   const { event, stats } = data;
+  const lightning = event.config?.meetupType === "lightning" && !event.externalUrl;
   return (
     <ParticipationShell>
-      <div className="participation-workspace participation-dashboard">
+      <div
+        className={`participation-workspace participation-dashboard${lightning ? " lightning-dashboard" : ""}`}
+      >
         <header className="participation-heading dashboard-heading">
           <div>
             <span>EVENT CONTROL ROOM</span>
             <h1>{event.title}</h1>
             <p>
-              {event.externalUrl
-                ? "외부 신청·결제 확인과 참가 승인을 관리해요."
-                : "참가 신청과 결제 확인 현황을 관리해요."}
+              {lightning
+                ? "참가 요청을 확인하고 승인하면 전용 공지방에 초대돼요."
+                : event.externalUrl
+                  ? "외부 신청·결제 확인과 참가 승인을 관리해요."
+                  : "참가 신청과 결제 확인 현황을 관리해요."}
             </p>
           </div>
-          <Link className="participation-secondary" href="/management">
+          <Link className="participation-secondary" href="/mypage?tab=events&view=hosting">
             <ArrowLeft size={15} />내 행사
           </Link>
         </header>
@@ -182,9 +208,13 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
           {[
             { label: "참가 확정", count: stats.confirmed, tone: "blue" },
             { label: "승인 대기", count: stats.pendingApproval, tone: "blue-soft" },
-            { label: "결제 대기", count: stats.pendingPayment, tone: "gray" },
-            { label: "확인 필요", count: stats.review, tone: "blue-soft" },
-            { label: "환불 완료", count: stats.refunded, tone: "gray" },
+            ...(!lightning
+              ? [{ label: "결제 대기", count: stats.pendingPayment, tone: "gray" }]
+              : []),
+            ...(!lightning ? [{ label: "확인 필요", count: stats.review, tone: "blue-soft" }] : []),
+            ...(!lightning
+              ? [{ label: "환불 완료", count: stats.refunded, tone: "gray" }]
+              : [{ label: "신청 취소", count: stats.cancelled, tone: "gray" }]),
             { label: "전체 내역", count: stats.total, tone: "gray" },
           ].map((item) => (
             <div className={`participation-card dashboard-metric ${item.tone}`} key={item.label}>
@@ -197,21 +227,27 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
           ))}
         </div>
         <div className="dashboard-toolbar-links">
-          {cancelled ? (
-            <span className="participation-secondary" aria-disabled="true">
-              QR 입장 종료
-            </span>
-          ) : (
+          {!lightning &&
+            (cancelled ? (
+              <span className="participation-secondary" aria-disabled="true">
+                QR 입장 종료
+              </span>
+            ) : (
+              <Link
+                href={`/management/events/${postId}/check-in`}
+                className="participation-secondary"
+              >
+                QR 입장 확인
+              </Link>
+            ))}
+          {!lightning && (
             <Link
-              href={`/management/events/${postId}/check-in`}
+              href={`/management/events/${postId}/payments`}
               className="participation-secondary"
             >
-              QR 입장 확인
+              결제 예외 관리
             </Link>
           )}
-          <Link href={`/management/events/${postId}/payments`} className="participation-secondary">
-            결제 예외 관리
-          </Link>
           <Link href={`/events/${postId}`} className="participation-secondary">
             {event.externalUrl ? "참가 확인 화면" : "신청 화면"}
           </Link>
@@ -284,11 +320,17 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
                   }}
                 >
                   <option value="all">전체 내역</option>
-                  {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                    <option value={value} key={value}>
-                      {label}
-                    </option>
-                  ))}
+                  {Object.entries(STATUS_LABELS)
+                    .filter(
+                      ([value]) =>
+                        !lightning ||
+                        !["pending_payment", "review", "refunded", "expired"].includes(value),
+                    )
+                    .map(([value, label]) => (
+                      <option value={value} key={value}>
+                        {label}
+                      </option>
+                    ))}
                 </select>
               </label>
               <form
@@ -342,14 +384,28 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
                       </td>
                       <td>
                         <span className={`participation-status ${app.status}`}>
-                          {STATUS_LABELS[app.status]}
+                          {lightning && app.status === "rejected"
+                            ? "참가 신청 반려"
+                            : STATUS_LABELS[app.status]}
                         </span>
                         {app.externalPaymentVerified && <small>외부 결제 확인됨</small>}
                         {app.decisionNote && <small>{app.decisionNote}</small>}
                       </td>
                       <td>
-                        {app.source === "external" &&
-                        ["pending_approval", "review"].includes(app.status) ? (
+                        {lightning && app.source === "site" && app.status === "pending_approval" ? (
+                          <div className="dashboard-row-actions">
+                            <button
+                              disabled={busy || cancelled || !app.questionnaireCompleted}
+                              onClick={() => select(app, "approve")}
+                            >
+                              <Check size={14} /> 승인
+                            </button>
+                            <button disabled={busy} onClick={() => select(app, "reject")}>
+                              <X size={14} /> 반려
+                            </button>
+                          </div>
+                        ) : app.source === "external" &&
+                          ["pending_approval", "review"].includes(app.status) ? (
                           <div className="dashboard-row-actions">
                             <button
                               disabled={busy || cancelled || !app.questionnaireCompleted}
@@ -416,34 +472,45 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
               </p>
             )}
             {selection && (
-              <form className="dashboard-decision-panel" onSubmit={decide}>
+              <form ref={decisionPanel} className="dashboard-decision-panel" onSubmit={decide}>
                 <h3>
                   {selection.app.attendeeName}님 ·{" "}
                   {selection.decision === "approve"
                     ? "참가 승인"
                     : selection.decision === "reject"
-                      ? "확인 요청 반려"
+                      ? "참가 요청 반려"
                       : "외부 환불 확인"}
                 </h3>
                 <p>
-                  신청 번호 {selection.app.externalReference} · 확인 금액{" "}
-                  {selection.app.amountKRW.toLocaleString("ko-KR")}원
+                  {lightning && selection.app.source === "site" ? (
+                    selection.decision === "approve" ? (
+                      "승인하면 참가가 확정되고 전용 공지방에 자동 초대돼요. 사전 결제는 없으며 비용은 현장에서 정산해요."
+                    ) : (
+                      "사유를 작성해 참가자에게 전달해주세요. 공지방에는 초대되지 않아요."
+                    )
+                  ) : (
+                    <>
+                      신청 번호 {selection.app.externalReference} · 확인 금액{" "}
+                      {selection.app.amountKRW.toLocaleString("ko-KR")}원
+                    </>
+                  )}
                 </p>
-                {selection.decision !== "reject" && (
-                  <label className="participation-checkbox">
-                    <input
-                      required
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => setChecked(e.target.checked)}
-                    />
-                    <span>
-                      {selection.decision === "approve"
-                        ? "외부 플랫폼에서 신청자·신청 번호·결제 금액을 대조하여 참가를 확인했습니다."
-                        : "외부 플랫폼에서 환불 또는 취소 완료 내역을 확인했습니다. 처리 후 공지방 접근이 해제됩니다."}
-                    </span>
-                  </label>
-                )}
+                {selection.decision !== "reject" &&
+                  !(lightning && selection.app.source === "site") && (
+                    <label className="participation-checkbox">
+                      <input
+                        required
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => setChecked(e.target.checked)}
+                      />
+                      <span>
+                        {selection.decision === "approve"
+                          ? "외부 플랫폼에서 신청자·신청 번호·결제 금액을 대조하여 참가를 확인했습니다."
+                          : "외부 플랫폼에서 환불 또는 취소 완료 내역을 확인했습니다. 처리 후 공지방 접근이 해제됩니다."}
+                      </span>
+                    </label>
+                  )}
                 <label>
                   {selection.decision === "reject"
                     ? "반려 사유 (필수)"
@@ -488,6 +555,7 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
                   <fieldset className="lifecycle-settings-fields" disabled={busy || cancelled}>
                     <EventLocationField
                       value={venue}
+                      address={venue?.address ?? event.location ?? ""}
                       onChange={(next) => {
                         setVenueChanged(true);
                         setVenue(next);
@@ -496,8 +564,8 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
                       purpose="venue"
                     />
                     <small>
-                      공개 행사장 좌표로 반경·거리 검색에 표시합니다. 참가 내역이 있으면 지정한
-                      좌표는 고정돼요.
+                      선택한 주소와 지도 위치로 반경·거리 검색에 표시해요. 참가 내역이 있으면 장소는
+                      변경할 수 없어요.
                     </small>
                     <label>
                       시작 일시 (한국 시간)
@@ -522,26 +590,27 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
                       변경해주세요. 참가자에게 변경 안내와 전액 취소·환불 요청 권리가 전달됩니다.
                     </small>
 
-                    <label>
-                      {event.externalUrl ? "외부 플랫폼 참가 금액 (원)" : "참가 금액 (원)"}
-                      <input
-                        required
-                        type="number"
-                        min="0"
-                        max="10000000"
-                        readOnly={event.config?.meetupType === "lightning" && !event.externalUrl}
-                        value={settings.amountKRW}
-                        onChange={(e) =>
-                          setSettings({ ...settings, amountKRW: Number(e.target.value) })
-                        }
-                      />
-                    </label>
-                    {event.config?.meetupType === "lightning" && (
-                      <small>
-                        {event.externalUrl
-                          ? "실제 외부 플랫폼 참가비와 같은 금액을 설정해주세요. 결제 확인·승인 후 공지방에 초대돼요."
-                          : "슬리퍼 직접 번개 참가는 무료예요. 유료 모집은 글 수정에서 외부 신청 링크를 연결해주세요."}
-                      </small>
+                    {!lightning && (
+                      <label>
+                        {event.externalUrl ? "외부 플랫폼 참가 금액 (원)" : "참가 금액 (원)"}
+                        <input
+                          required
+                          type="number"
+                          min="0"
+                          max="10000000"
+                          value={settings.amountKRW}
+                          onChange={(e) =>
+                            setSettings({ ...settings, amountKRW: Number(e.target.value) })
+                          }
+                        />
+                      </label>
+                    )}
+                    {lightning && (
+                      <p className="participation-muted">
+                        담당자 승인 후 참가 확정 · 사전 결제 없음
+                        <br />
+                        비용은 모임 현장에서 함께 정산해요.
+                      </p>
                     )}
                     <label>
                       정원
@@ -577,6 +646,12 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
                         </small>
                       </label>
                     )}
+                    <ParticipantGuideEditor
+                      value={settings.participantGuide}
+                      onChange={(participantGuide) =>
+                        setSettings({ ...settings, participantGuide })
+                      }
+                    />
                     <EventQuestionEditor
                       questions={settings.questions}
                       onChange={(questions) => setSettings({ ...settings, questions })}
@@ -609,12 +684,14 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
                 승인과 공지방
               </h2>
               <p className="participation-muted">
-                외부 신청은 담당자가 결제 내역을 확인하거나 연결된 플랫폼의 검증된 알림을 받은 후
-                승인됩니다. 승인 시 전용 공지방에 자동 참여합니다.
+                {lightning
+                  ? "참가 요청과 질문 답변을 확인한 뒤 승인해주세요. 승인된 참가자는 공지방에 자동 참여하고 담당자의 안내를 읽을 수 있어요."
+                  : "외부 신청은 담당자가 결제 내역을 확인하거나 연결된 플랫폼의 검증된 알림을 받은 후 승인됩니다. 승인 시 전용 공지방에 자동 참여합니다."}
               </p>
               <p className="participation-muted">
-                이 대시보드에서는 실제 결제·환불·정산을 실행하지 않습니다. 외부 플랫폼의 정원과
-                접수·환불 상태도 함께 관리해주세요.
+                {lightning
+                  ? "번개에서는 결제·환불 절차를 사용하지 않아요. 비용은 모임 현장에서 함께 정산해주세요."
+                  : "이 대시보드에서는 실제 결제·환불·정산을 실행하지 않습니다. 외부 플랫폼의 정원과 접수·환불 상태도 함께 관리해주세요."}
               </p>
             </section>
           </aside>
@@ -649,15 +726,17 @@ export function EventManagementDashboard({ initial }: { initial: EventDashboard 
           <summary>참가 전적 기록</summary>
           <PlayerRecordManager postId={postId} />
         </details>
-        <details className="participation-card workspace-disclosure workspace-detail-section">
-          <summary>취소·환불 관리</summary>
-          <RefundPanel
-            postId={postId}
-            startsAt={event.config?.startsAt}
-            refreshRevision={lifecycleRevision}
-            manage
-          />
-        </details>
+        {!lightning && (
+          <details className="participation-card workspace-disclosure workspace-detail-section">
+            <summary>취소·환불 관리</summary>
+            <RefundPanel
+              postId={postId}
+              startsAt={event.config?.startsAt}
+              refreshRevision={lifecycleRevision}
+              manage
+            />
+          </details>
+        )}
       </div>
     </ParticipationShell>
   );

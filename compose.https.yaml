@@ -1,0 +1,37 @@
+# Start only after the owned domain resolves to this server and ports 80/443 are reachable.
+# docker compose --env-file .env.production -f compose.production.yaml -f compose.https.yaml up -d
+services:
+  proxy:
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    environment:
+      SLIPER_DOMAIN: ${SLIPER_DOMAIN:?Set the owned DNS hostname without scheme}
+      ACME_EMAIL: ${ACME_EMAIL:?Set the certificate contact email}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m,mode=1777
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  caddy_data:
+  caddy_config:

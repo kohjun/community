@@ -1,3 +1,9 @@
+import { publicPageMetadata } from "@/domain/search-visibility";
+import { ParticipationShell } from "@/components/participation-shell";
+import { ArchiveHeading } from "@/components/archive-heading";
+import { ArchiveNavigation } from "@/components/workspace-navigation";
+import { RecordsList, RecordsLogin } from "@/components/record-list";
+import { archiveRecordsHref } from "@/domain/workspace-navigation";
 import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 import { getDatabase } from "@/db/client";
@@ -24,6 +30,21 @@ export default async function Page({
     if (Array.isArray(value)) value.forEach((item) => params.append(key, item));
     else if (value !== undefined) params.set(key, value);
   }
+  if (incoming.tab === "records") {
+    const libraryId = typeof incoming.libraryId === "string" ? incoming.libraryId : undefined;
+    return (
+      <ParticipationShell advertising={false}>
+        <ArchiveHeading canWrite={!!actor} />
+        <ArchiveNavigation active="records" />
+        {actor ? (
+          <RecordsList {...(libraryId ? { libraryId } : {})} embedded />
+        ) : (
+          <RecordsLogin returnTo={archiveRecordsHref(libraryId)} embedded />
+        )}
+      </ParticipationShell>
+    );
+  }
+  params.delete("tab");
   let query: LibraryListQuery;
   let initialError = "";
   try {
@@ -59,4 +80,16 @@ export default async function Page({
       initial={initial}
     />
   );
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const personal = Object.keys(params).some((key) =>
+    ["mine", "used", "tab", "libraryId"].includes(key),
+  );
+  return publicPageMetadata("/archive", personal);
 }

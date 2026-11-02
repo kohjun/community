@@ -1,0 +1,25 @@
+[Unit]
+Description=Sliper Town private ephemeral Redis cache
+After=network-online.target
+[Service]
+Type=exec
+User=sliper
+Group=sliper
+ExecStart=/opt/sliper/runtime/redis-8.2.11/src/redis-server /etc/sliper/town-redis.conf
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+KillSignal=SIGTERM
+UMask=0077
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+CapabilityBoundingSet=
+MemoryMax=128M
+CPUQuota=25%
+StandardOutput=journal
+StandardError=journal
+[Install]
+WantedBy=multi-user.target

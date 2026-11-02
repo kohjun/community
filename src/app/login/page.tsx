@@ -1,27 +1,21 @@
 import { headers } from "next/headers";
 import { LoginPage } from "@/components/login-page";
 import { localTestAuthAvailable } from "@/server/local-test-access";
-import { safeProfileReturnTo } from "@/domain/profile";
+import { loginReturnTo } from "@/domain/login-return";
 import { authConfiguration } from "@/server/auth-config";
 export const dynamic = "force-dynamic";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ returnTo?: string | string[]; error?: string; withdrawn?: string }>;
+  searchParams: Promise<{
+    returnTo?: string | string[];
+    next?: string | string[];
+    error?: string;
+    withdrawn?: string;
+  }>;
 }) {
   const params = await searchParams;
-  let target = params.returnTo;
-  // A guest can arrive from the basic-information screen; keep its event destination.
-  if (typeof target === "string") {
-    try {
-      const parsed = new URL(target, "https://sliper.local");
-      if (parsed.origin === "https://sliper.local" && parsed.pathname === "/signup")
-        target = parsed.searchParams.get("returnTo") ?? "/mypage";
-    } catch {
-      target = undefined;
-    }
-  }
-  const returnTo = target === undefined ? "/" : safeProfileReturnTo(target);
+  const returnTo = loginReturnTo(params);
   return (
     <LoginPage
       localTestLoginAvailable={localTestAuthAvailable((await headers()).get("host"))}

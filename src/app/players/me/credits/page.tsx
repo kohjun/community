@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { currentActor } from "@/server/identity";
-import { RecordsLogin } from "@/components/event-records";
+import { RecordsLogin } from "@/components/record-list";
 import { MyEventCredits } from "@/components/event-credits";
 import { ParticipationShell } from "@/components/participation-shell";
 export const dynamic = "force-dynamic";

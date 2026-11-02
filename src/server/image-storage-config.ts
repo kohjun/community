@@ -11,11 +11,13 @@ export function imageStorageConfiguration(
   backend?: ImageStorageBackend,
   env: Record<string, string | undefined> = process.env,
 ): ImageStorageConfiguration {
-  const selected = backend ?? env.MEDIA_STORAGE_BACKEND ?? "local";
+  const cloud = env.SLIPER_CLOUD_ONLY === "true";
+  const selected = backend ?? env.MEDIA_STORAGE_BACKEND ?? (cloud ? "supabase" : "local");
+  if (cloud && selected !== "supabase") throw new ImageStorageConfigurationError();
   if (selected === "local") return { backend: "local" };
   if (selected !== "supabase") throw new ImageStorageConfigurationError();
   const rawUrl = env.SUPABASE_STORAGE_URL ?? "";
-  const key = env.SUPABASE_STORAGE_SECRET_KEY?.trim() ?? "";
+  const key = (env.SUPABASE_STORAGE_SECRET_KEY ?? env.SUPABASE_SERVER_SECRET_KEY)?.trim() ?? "";
   const bucket = env.SUPABASE_STORAGE_BUCKET ?? "";
   try {
     const url = new URL(rawUrl);
@@ -28,6 +30,7 @@ export function imageStorageConfiguration(
           "service_role";
     }
     if (
+      (cloud && url.origin !== new URL(env.NEXT_PUBLIC_SUPABASE_URL ?? "").origin) ||
       !safeExternalLink(rawUrl) ||
       url.protocol !== "https:" ||
       url.port ||

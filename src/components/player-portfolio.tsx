@@ -9,7 +9,7 @@ import { CREDIT_ROLES } from "@/domain/records";
 import { PLAYER_ROLE_LABELS } from "@/domain/player";
 import { appRequest, RequestError } from "@/lib/api-client";
 import { MyEventCredits } from "./event-credits";
-import { RecordPagination, recordDate } from "./event-records";
+import { RecordPagination, recordDate } from "./record-list";
 const TAB_LABELS: Record<PortfolioTab, string> = {
   participation: "참가 경험",
   creation: "만든 행사",
@@ -190,7 +190,7 @@ export function PlayerPortfolio({ publicId, isMe }: { publicId: string; isMe: bo
           <h2 style={{ margin: "8px 0", fontSize: 21 }}>경험이 쌓이는 포트폴리오</h2>
           <p>Sliper 안에서 완료 확인된 참가 경험과 함께 만든 행사를 모아요.</p>
         </div>
-        <Link className="participation-secondary" href="/records">
+        <Link className="participation-secondary" href="/archive?tab=records">
           행사 기록 둘러보기
         </Link>
       </div>

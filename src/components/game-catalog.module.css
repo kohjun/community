@@ -1,0 +1,825 @@
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 0 34px;
+}
+.hero h1 {
+  font-size: clamp(27px, 3.6vw, 38px);
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -1.6px;
+  margin: 15px 0 12px;
+}
+.hero p {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #77818f;
+}
+.heroFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 19px;
+  margin-top: 18px;
+}
+.heroFacts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #778ba2;
+}
+.heroFacts svg {
+  color: #5294d5;
+}
+.myRooms {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+  border: 1px solid #dce8f5;
+  border-radius: 10px;
+  padding: 12px 15px;
+  font-size: 12px;
+  font-weight: 650;
+  color: #3f79b6;
+  background: white;
+}
+.library {
+  border-top: 1px solid #e8edf3;
+  padding-top: 28px;
+}
+.catalogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.catalogHeader h2 {
+  font-size: 20px;
+  letter-spacing: -0.6px;
+  scroll-margin-top: 110px;
+}
+.catalogHeader small {
+  font-size: 13px;
+  color: #8397b0;
+  font-weight: 500;
+  padding-left: 5px;
+}
+.catalogHeader .search {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 0;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #e0e6ee;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0 12px;
+  color: #9aa9bb;
+  width: 280px;
+}
+.search:focus-within {
+  outline: 2px solid #7ab8f7;
+  outline-offset: 2px;
+}
+.search svg {
+  flex-shrink: 0;
+}
+.search input {
+  border: 0 !important;
+  padding: 10px 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+  height: 42px !important;
+  font-size: 12px !important;
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 22px;
+}
+.filters button {
+  border: 1px solid #e3e8ef;
+  border-radius: 9px;
+  background: #fff;
+  color: #7a889b;
+  min-height: 40px;
+  padding: 9px 13px;
+  font-size: 12px;
+  font-weight: 550;
+}
+.filters button[aria-pressed="true"] {
+  background: #eaf4ff;
+  border-color: #c5e1ff;
+  color: #0879ea;
+  font-weight: 700;
+}
+.gameGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+.gameCard {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  min-width: 0;
+  border: 1px solid #e1e7f0;
+  border-radius: 17px;
+  overflow: hidden;
+  background: #fff;
+  color: #27364a;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.gameCard:hover {
+  transform: translateY(-3px);
+  border-color: #a5caf4;
+  box-shadow: 0 9px 25px #24578c0c;
+}
+.gameCard[aria-pressed="true"] {
+  border-color: #0a84fe;
+  box-shadow: 0 0 0 1px #0a84fe;
+}
+.cover {
+  --accent: #2f84d9;
+  --base: #e8f2ff;
+  --tile: #0a84fe;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-width: 0;
+  height: 178px;
+  background: var(--base);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.cover[data-game="auction"] {
+  --accent: #a87326;
+  --base: #fff0d8;
+  --tile: #d29a43;
+}
+.cover[data-game="word-liar"] {
+  --accent: #8051b3;
+  --base: #f0e8fc;
+  --tile: #9871c5;
+}
+.cover[data-game="lobby"] {
+  --accent: #458d7d;
+  --base: #e2f3ec;
+  --tile: #4d9d88;
+}
+.coverGrid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(#ffffff80 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff80 1px, transparent 1px);
+  background-size: 27px 27px;
+  mask-image: linear-gradient(155deg, #000, transparent 85%);
+}
+.coverBadge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  opacity: 0.85;
+}
+.orbit {
+  position: absolute;
+  width: 170px;
+  height: 170px;
+  top: 46px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  border: 1px solid #ffffffb3;
+  box-shadow:
+    0 0 0 18px #ffffff25,
+    0 0 0 39px #ffffff20;
+}
+.iconTile {
+  position: absolute;
+  top: 51px;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 86px;
+  height: 86px;
+  border-radius: 24px;
+  transform: translateX(-50%) rotate(-9deg);
+  background: var(--tile);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 #ffffff60,
+    0 12px 22px #28436115;
+  border: 3px solid #ffffffb3;
+}
+.iconTile svg {
+  width: 45px;
+  height: 45px;
+  transform: rotate(9deg);
+}
+.tileBack,
+.tileFront {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  background: #fffffff0;
+  border: 1px solid #ffffff;
+  border-radius: 11px;
+  box-shadow: 0 5px 15px #30496810;
+  font-size: 14px;
+  letter-spacing: 0.6px;
+  font-weight: 800;
+  padding: 11px 12px;
+}
+.tileBack {
+  top: 47px;
+  left: 12%;
+  transform: rotate(-15deg);
+}
+.tileFront {
+  bottom: 19px;
+  right: 9%;
+  transform: rotate(10deg);
+  font-size: 15px;
+}
+.coverDot {
+  position: absolute;
+  top: 44px;
+  right: 22px;
+  width: 11px;
+  height: 11px;
+  transform: rotate(25deg);
+  border: 2px solid var(--accent);
+  border-radius: 3px;
+  opacity: 0.4;
+}
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  padding: 17px 15px 14px;
+  flex: 1;
+  min-width: 0;
+}
+.genre {
+  font-size: 10px;
+  font-weight: 650;
+  color: #7990aa;
+}
+.gameCard .cardBody h3 {
+  font-weight: 750;
+  font-size: 15px;
+  line-height: 1.5;
+  letter-spacing: -0.5px;
+  padding-top: 6px;
+  overflow-wrap: anywhere;
+}
+.cardBody p {
+  font-size: 12px;
+  line-height: 1.85;
+  color: #8491a3;
+  padding-top: 8px;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 13px;
+}
+.tags span {
+  font-size: 9px;
+  line-height: 1.4;
+  border-radius: 5px;
+  background: #f3f6fa;
+  color: #8797aa;
+  padding: 4px 5px;
+}
+.cardBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-top: 1px solid #f0f3f7;
+  margin-top: 15px;
+  padding-top: 12px;
+}
+.cardBottom > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #8b9ab0;
+}
+.cardBottom > span:last-child {
+  color: #4c8ac6;
+}
+.catalogNote {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #98a6b9;
+  padding-top: 16px;
+}
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 50px 15px;
+  background: #f8fafc;
+  border: 1px dashed #dce6f2;
+  border-radius: 14px;
+  color: #8294a9;
+}
+.empty h3 {
+  font-size: 16px;
+  color: #4a607a;
+}
+.empty p {
+  font-size: 13px;
+}
+.empty button {
+  border: 1px solid #d4e3f5;
+  border-radius: 9px;
+  min-height: 44px;
+  padding: 10px 16px;
+  background: #fff;
+  color: #267dcf;
+  font-size: 12px;
+}
+.setup {
+  padding-top: 36px;
+  margin-top: 30px;
+  border-top: 1px solid #e6edf6;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 8px 0;
+  margin-bottom: 15px;
+  background: transparent;
+  color: #738aa7;
+  border: 0;
+  font-size: 12px;
+}
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.detail {
+  border: 1px solid #e2e9f3;
+  border-radius: 20px;
+  overflow: hidden;
+  background: white;
+  min-width: 0;
+}
+.largeCover {
+  height: 215px;
+}
+.largeCover .coverBadge {
+  top: 20px;
+  left: 23px;
+  font-size: 10px;
+}
+.largeCover .iconTile {
+  width: 108px;
+  height: 108px;
+  top: 65px;
+  border-radius: 30px;
+}
+.largeCover .iconTile svg {
+  width: 58px;
+  height: 58px;
+}
+.largeCover .tileBack {
+  top: 65px;
+  left: 18%;
+  font-size: 18px;
+  padding: 16px;
+}
+.largeCover .tileFront {
+  bottom: 23px;
+  right: 16%;
+  font-size: 19px;
+  padding: 15px 19px;
+}
+.largeCover .orbit {
+  top: 45px;
+  width: 210px;
+  height: 210px;
+}
+.detailBody {
+  padding: 28px;
+}
+.detailEyebrow {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 1.4px;
+  color: #7da4cd;
+}
+.detail .detailBody h2 {
+  font-weight: 750;
+  font-size: 27px;
+  letter-spacing: -1px;
+  line-height: 1.45;
+  padding-top: 10px;
+  scroll-margin-top: 110px;
+  outline: none;
+}
+.hook {
+  font-size: 13px;
+  color: #8291a4;
+  line-height: 1.8;
+  padding-top: 8px;
+}
+.detailFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  border-top: 1px solid #edf1f6;
+  border-bottom: 1px solid #edf1f6;
+  padding: 16px 0;
+  margin: 20px 0 24px;
+}
+.detailFacts span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #7389a4;
+}
+.detailBody h3 {
+  font-size: 14px;
+  color: #4a6382;
+}
+.highlights {
+  display: grid;
+  gap: 14px;
+  padding: 0;
+  list-style: none;
+  margin: 18px 0 25px;
+}
+.highlights li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.highlights span {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 23px;
+  height: 23px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #eff5fc;
+  border-radius: 7px;
+  color: #6098cc;
+}
+.highlights p {
+  font-size: 13px;
+  color: #7c8da3;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+.settingsIntro {
+  font-size: 12px;
+  color: #8796a9;
+  line-height: 1.85;
+  padding-bottom: 24px;
+}
+.startGuide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 26px;
+  border: 1px solid #e5edf7;
+  background: #f7faff;
+  padding: 22px;
+  border-radius: 15px;
+}
+.startGuide > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.startGuide svg {
+  flex-shrink: 0;
+  color: #77a1cd;
+  margin-top: 2px;
+}
+.startGuide h3 {
+  font-size: 12px;
+  color: #526c8b;
+  line-height: 1.8;
+}
+.startGuide p {
+  font-size: 11px;
+  color: #8c9db3;
+  line-height: 1.9;
+  padding-top: 5px;
+}
+.safety {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 7px;
+  font-size: 11px;
+  color: #96a5b7;
+  line-height: 1.9;
+  padding-top: 20px;
+}
+.safety svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+@media (max-width: 1000px) {
+  .gameGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .cover {
+    height: 195px;
+  }
+  .largeCover {
+    height: 215px;
+  }
+  .iconTile {
+    top: 60px;
+  }
+  .tileBack {
+    left: 22%;
+    top: 55px;
+  }
+  .tileFront {
+    right: 20%;
+    bottom: 25px;
+  }
+}
+@media (max-width: 700px) {
+  .hero {
+    display: block;
+    padding: 12px 0 26px;
+  }
+  .hero h1 {
+    font-size: 27px;
+    letter-spacing: -1.2px;
+    padding-top: 14px;
+    margin: 0;
+  }
+  .hero p {
+    padding-top: 12px;
+    font-size: 13px;
+  }
+  .heroFacts {
+    gap: 8px 12px;
+    margin-top: 15px;
+  }
+  .heroFacts span {
+    font-size: 10px;
+  }
+  .myRooms {
+    margin-top: 20px;
+    min-height: 44px;
+  }
+  .library {
+    padding-top: 22px;
+  }
+  .catalogHeader {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 15px;
+  }
+  .catalogHeader h2 {
+    font-size: 18px;
+    scroll-margin-top: 90px;
+  }
+  .catalogHeader .search {
+    width: auto;
+    min-width: 0;
+  }
+  .search input {
+    height: 44px !important;
+  }
+  .filters {
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+  .filters button {
+    font-size: 11px;
+    padding: 9px 11px;
+    min-height: 40px;
+  }
+  .gameGrid {
+    gap: 12px;
+  }
+  .gameCard {
+    border-radius: 13px;
+  }
+  .cover {
+    height: 151px;
+  }
+  .coverBadge {
+    font-size: 6px;
+    left: 10px;
+    top: 11px;
+    gap: 3px;
+    letter-spacing: 0.3px;
+  }
+  .coverBadge svg {
+    width: 10px;
+  }
+  .iconTile {
+    width: 68px;
+    height: 68px;
+    top: 49px;
+    border-radius: 19px;
+  }
+  .iconTile svg {
+    width: 35px;
+    height: 35px;
+  }
+  .tileBack {
+    left: 8%;
+    top: 47px;
+    font-size: 10px;
+    padding: 8px;
+  }
+  .tileFront {
+    right: 7%;
+    bottom: 17px;
+    font-size: 11px;
+    padding: 8px;
+  }
+  .coverDot {
+    width: 8px;
+    height: 8px;
+    right: 15px;
+    top: 38px;
+  }
+  .orbit {
+    width: 130px;
+    height: 130px;
+    top: 44px;
+  }
+  .cardBody {
+    padding: 13px 12px;
+  }
+  .genre {
+    font-size: 9px;
+  }
+  .gameCard .cardBody h3 {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .cardBody p {
+    font-size: 11px;
+    padding-top: 7px;
+  }
+  .tags {
+    gap: 4px;
+    margin-top: 11px;
+  }
+  .tags span {
+    font-size: 8px;
+    padding: 4px;
+  }
+  .cardBottom {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 11px;
+  }
+  .cardBottom > span {
+    font-size: 10px;
+  }
+  .catalogNote {
+    font-size: 10px;
+  }
+  .setup {
+    padding-top: 22px;
+    margin-top: 24px;
+  }
+  .detailGrid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .detail {
+    border-radius: 16px;
+  }
+  .largeCover {
+    height: 190px;
+  }
+  .largeCover .iconTile {
+    top: 52px;
+    width: 95px;
+    height: 95px;
+  }
+  .largeCover .iconTile svg {
+    width: 48px;
+    height: 48px;
+  }
+  .largeCover .tileBack {
+    left: 18%;
+    top: 54px;
+    font-size: 16px;
+    padding: 12px;
+  }
+  .largeCover .tileFront {
+    right: 15%;
+    bottom: 19px;
+    font-size: 17px;
+    padding: 12px;
+  }
+  .largeCover .coverBadge {
+    top: 15px;
+    left: 18px;
+    font-size: 9px;
+  }
+  .detailBody {
+    padding: 23px 19px;
+  }
+  .detail .detailBody h2 {
+    font-size: 24px;
+    scroll-margin-top: 95px;
+  }
+  .detailFacts {
+    gap: 9px 12px;
+  }
+  .highlights p {
+    font-size: 13px;
+  }
+  .startGuide {
+    grid-template-columns: 1fr;
+    gap: 17px;
+    padding: 20px 18px;
+  }
+  .safety {
+    justify-content: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gameCard {
+    transition: none;
+  }
+  .gameCard:hover {
+    transform: none;
+  }
+}
+
+.openSettings {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  width: 100%;
+  border: 1px solid #0a84fe;
+  background: #0a84fe;
+  color: white;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 650;
+  margin-bottom: 26px;
+}
+.openSettings:hover {
+  background: #0877e6;
+}
+.settingsHeading {
+  scroll-margin-top: 105px;
+  outline: none;
+}
+
+.settings form label {
+  margin-bottom: 0;
+}
+
+.cover[data-game="toast"] {
+  --accent: #318db2;
+  --base: #e1f5fa;
+  --tile: #3d9fbd;
+}

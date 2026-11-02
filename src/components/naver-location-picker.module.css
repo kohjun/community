@@ -1,0 +1,265 @@
+.picker {
+  min-width: 0;
+  border: 1px solid #dce6ef;
+  border-radius: 16px;
+  padding: 18px;
+  background: #fff;
+  color: #192d42;
+}
+.heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.heading strong {
+  font-size: 17px;
+  font-weight: 750;
+}
+.heading p,
+.hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #68798b;
+}
+.picker .iconButton {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: #f3f6f9;
+  color: #697a8d;
+}
+.label {
+  display: block;
+  margin: 14px 0 7px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.label span {
+  margin-left: 5px;
+  color: #8a98a6;
+  font-size: 11px;
+  font-weight: 400;
+}
+.query {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #cbdcec;
+  border-radius: 11px;
+  padding: 5px 5px 5px 11px;
+}
+.query > svg {
+  flex-shrink: 0;
+  color: #708499;
+}
+.picker .query input {
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+  padding: 8px 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.picker .query button {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 7px;
+  padding: 10px 13px;
+  background: #0a84fe;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 650;
+}
+.hint a {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  color: #1673c9;
+  text-decoration: underline;
+}
+.results {
+  list-style: none;
+  max-height: 205px;
+  overflow: auto;
+  margin: 10px 0;
+  padding: 0;
+  border: 1px solid #e4ebf2;
+  border-radius: 10px;
+}
+.results li + li {
+  border-top: 1px solid #edf1f5;
+}
+.picker .results button {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 13px 11px;
+  border: 0;
+  background: #fff;
+  color: #2272ba;
+  text-align: left;
+}
+.results button > span:first-of-type {
+  min-width: 0;
+  flex: 1;
+}
+.results strong,
+.results small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.results strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: #273f56;
+}
+.results small {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #7a8998;
+}
+.results button > span:last-child {
+  font-size: 11px;
+}
+.map {
+  height: 260px;
+  margin-top: 13px;
+  border: 1px solid #e2eaf2;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.map :global(.naver-event-map) {
+  min-height: 0;
+  height: 100%;
+}
+.map :global(.naver-event-map-canvas) {
+  min-height: 0;
+  height: 100%;
+}
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #1379dc;
+  font-size: 12px;
+  margin-top: 10px;
+}
+.spinner {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  margin-top: 12px;
+  background: #f0f7ff;
+  border-radius: 10px;
+  color: #1678d7;
+}
+.selected div {
+  min-width: 0;
+  flex: 1;
+}
+.selected small {
+  display: block;
+  font-size: 10px;
+  color: #6e839a;
+  margin-bottom: 3px;
+}
+.selected strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  color: #214363;
+}
+.picker .detail {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #dae4ed;
+  border-radius: 10px;
+  padding: 11px 12px;
+  font: inherit;
+  font-size: 13px;
+}
+.error {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #c93f43;
+  margin: 10px 0;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+.picker .actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 42px;
+  border: 1px solid #dae4ed;
+  border-radius: 9px;
+  padding: 10px 15px;
+  font-size: 13px;
+  background: #fff;
+  color: #526c83;
+}
+.picker .actions .confirm {
+  border-color: #0a84fe;
+  background: #0a84fe;
+  color: #fff;
+  font-weight: 650;
+}
+.picker button:disabled,
+.picker input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.picker button:focus-visible,
+.picker input:focus-visible {
+  outline: 2px solid #0a84fe;
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .picker {
+    padding: 14px;
+    border-radius: 12px;
+  }
+  .query input,
+  .picker .detail {
+    font-size: 16px;
+  }
+  .map {
+    height: 240px;
+  }
+  .actions button {
+    flex: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

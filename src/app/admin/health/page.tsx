@@ -40,7 +40,10 @@ export default async function Page() {
           ? "클라우드 설정됨 · 권한 미확인"
           : "설정 확인 필요",
     ],
-    ["공지방 빠른 갱신", connection(config.roomUpdates)],
+    [
+      "공지방 빠른 갱신",
+      `${config.roomProvider === "supabase" ? "Supabase Realtime · " : config.roomProvider === "redis" ? "Redis · " : ""}${connection(config.roomUpdates)}`,
+    ],
     ["기기 알림", connection(config.push)],
     [
       "알림 처리",

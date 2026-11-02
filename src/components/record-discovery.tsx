@@ -1,10 +1,11 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, BookOpenCheck, CheckCircle2 } from "lucide-react";
 import type { RecordDetail, RecordPage } from "@/domain/records";
 import { appRequest, RequestError } from "@/lib/api-client";
-import { RecordCard, recordStatus } from "./event-records";
+import { RecordCard, recordStatus } from "./record-list";
 export function LatestEventRecords({ enabled }: { enabled: boolean }) {
   const [data, setData] = useState<RecordPage | null>(null);
   useEffect(() => {
@@ -26,7 +27,7 @@ export function LatestEventRecords({ enabled }: { enabled: boolean }) {
     <section className="record-home-section" aria-labelledby="latest-records-title">
       <div className="section-heading">
         <h2 id="latest-records-title">최근 완료된 행사 기록</h2>
-        <Link className="record-backlink" href="/records">
+        <Link className="record-backlink" href="/archive?tab=records">
           모든 기록
           <ArrowRight size={14} />
         </Link>
@@ -45,7 +46,7 @@ export function LatestEventRecords({ enabled }: { enabled: boolean }) {
           </p>
         )
       ) : (
-        <Link className="record-backlink" href="/login?returnTo=%2Frecords">
+        <Link className="record-backlink" href={loginHref("/archive?tab=records")}>
           로그인하고 행사 회고 보기
           <ArrowRight size={14} />
         </Link>
@@ -230,7 +231,7 @@ export function LibraryRecordBacklinks({
           <RecordCard key={item.postId} item={item} />
         ))}
       </ul>
-      <Link className="record-backlink" href={"/records?libraryId=" + libraryId}>
+      <Link className="record-backlink" href={"/archive?tab=records&libraryId=" + libraryId}>
         관련 기록 모두 보기
         <ArrowRight size={14} />
       </Link>

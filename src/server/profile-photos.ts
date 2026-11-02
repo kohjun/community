@@ -1,8 +1,11 @@
+import { authorizedImageResponse } from "./image-delivery";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import type { ImageStorageBackend, StoredImageObject } from "../domain/image-storage";
 import { imageObjectStore } from "./image-storage";
-import { persistImageObject } from "./image-storage-core";
+import { persistManagedImage } from "./image-persistence";
+import { enqueueObjectCleanup, objectCleanupService } from "./object-cleanup-service";
+import type { Database } from "../db/connection";
 import { compressUploadedImage } from "./image-compression";
 import { getDatabase } from "../db/client";
 import { AppError, requireActor } from "./errors";
@@ -19,7 +22,15 @@ export async function removeFile(
 ) {
   if (!objectKey) return;
   try {
-    await imageObjectStore(storageBackend).remove("profile", objectKey);
+    const db = getDatabase();
+    const id = await enqueueObjectCleanup(
+      db,
+      { kind: "profile", storageBackend, objectKey },
+      "profile-cleared",
+    );
+    await objectCleanupService(db, async (object) =>
+      imageObjectStore(object.storageBackend).remove(object.kind, object.objectKey),
+    ).processOne(id);
   } catch {
     console.error("Sliper profile photo cleanup failed.");
   }
@@ -59,13 +70,14 @@ export async function uploadProfilePhoto(request: Request, actor: string | null)
   const output = await compressUploadedImage(Buffer.from(await file.arrayBuffer()), "profile");
   const id = randomUUID(),
     objectKey = id + ".webp";
-  const previous = await persistImageObject(
+  const previous = await persistManagedImage(
+    getDatabase(),
     imageObjectStore(),
     "profile",
     objectKey,
     output,
-    async (stored) => {
-      return profilePhotoService(getDatabase()).replaceStored(userId, {
+    async (connection, stored) => {
+      return profilePhotoService(connection as Database).replaceStored(userId, {
         id,
         ...stored,
         contentType: "image/webp",
@@ -82,15 +94,16 @@ export async function clearProfilePhoto(request: Request, actor: string | null) 
   await removePreviousPhoto(await profilePhotoService(getDatabase()).clearStored(userId));
 }
 
-export async function readProfilePhoto(id: string, actor: string | null, roomId?: string | null) {
+export async function readProfilePhoto(
+  id: string,
+  actor: string | null,
+  roomId?: string | null,
+  request?: Request,
+) {
   const photo = await profilePhotoService(getDatabase()).read(actor, id, roomId);
-  const bytes = await imageObjectStore(photo.storageBackend).read("profile", photo.objectKey);
-  return new Response(new Uint8Array(bytes), {
-    headers: {
-      "Content-Type": "image/webp",
-      "X-Content-Type-Options": "nosniff",
-      "Cache-Control": "private, no-store",
-      "Content-Disposition": "inline",
-    },
-  });
+  return authorizedImageResponse(
+    request,
+    { id: photo.id, contentType: "image/webp", byteSize: photo.bytes, browserCache: false },
+    () => imageObjectStore(photo.storageBackend).read("profile", photo.objectKey),
+  );
 }

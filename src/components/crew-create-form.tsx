@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -62,7 +63,7 @@ export function CrewCreateForm({ canWrite }: { canWrite: boolean }) {
       {!canWrite ? (
         <section className="crew-panel crew-empty">
           <h2>로그인하고 크루를 만들어보세요.</h2>
-          <Link className="participation-primary" href="/login?next=/crews/new">
+          <Link className="participation-primary" href={loginHref("/crews/new")}>
             로그인 안내
           </Link>
         </section>

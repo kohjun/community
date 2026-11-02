@@ -6,6 +6,7 @@ import postgres from "postgres";
 import {
   auditDeploymentDatabase,
   databaseAuditFailure,
+  databaseAuditClientRequiresTls,
   databaseAuditTarget,
   readDatabaseAuditManifest,
   type DatabaseAuditQuery,
@@ -76,7 +77,12 @@ if (args.includes("--help")) {
           const query: DatabaseAuditQuery = async <Row extends Record<string, unknown>>(
             text: string,
           ) => Array.from(await transaction.unsafe<Row[]>(text));
-          return auditDeploymentDatabase(query, manifest, target.scope);
+          return auditDeploymentDatabase(
+            query,
+            manifest,
+            target.scope,
+            databaseAuditClientRequiresTls(connection.options),
+          );
         }),
         new Promise<never>((_resolve, reject) => {
           timeout = setTimeout(() => reject(new Error("DB audit timeout")), 30000);

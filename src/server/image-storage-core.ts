@@ -1,5 +1,10 @@
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  localObjectRangeStream,
+  type ObjectByteRange,
+  type ObjectRangeReader,
+} from "./object-range-stream";
 import {
   isImageStorageKey,
   type ImageStorageBackend,
@@ -12,6 +17,12 @@ export interface ImageObjectStore {
   readonly backend: ImageStorageBackend;
   write(kind: ImageStorageKind, objectKey: string, bytes: Uint8Array): Promise<void>;
   read(kind: ImageStorageKind, objectKey: string): Promise<Uint8Array>;
+  readRange?(
+    kind: ImageStorageKind,
+    objectKey: string,
+    range: ObjectByteRange,
+    signal?: AbortSignal,
+  ): Promise<ReadableStream<Uint8Array>>;
   remove(kind: ImageStorageKind, objectKey: string): Promise<void>;
 }
 function key(kind: ImageStorageKind, objectKey: string) {
@@ -60,6 +71,14 @@ export function localImageObjectStore(workspace = process.cwd()): ImageObjectSto
       size(kind, bytes.byteLength);
       return bytes;
     },
+    async readRange(kind, objectKey, range, signal) {
+      const { file } = destination(kind, objectKey);
+      size(kind, range.total);
+      const handle = await open(/* turbopackIgnore: true */ file, "r").catch(() => {
+        throw new AppError("NOT_FOUND", "영상 파일을 찾을 수 없어요.");
+      });
+      return localObjectRangeStream(handle, range, signal);
+    },
     async remove(kind, objectKey) {
       const { file } = destination(kind, objectKey);
       await unlink(file).catch((error: NodeJS.ErrnoException) => {
@@ -86,6 +105,7 @@ export interface SupabaseImageStorageApi {
 export function supabaseImageObjectStore(
   api: SupabaseImageStorageApi,
   bucket: string,
+  rangeReader?: ObjectRangeReader,
 ): ImageObjectStore {
   function objectPath(kind: ImageStorageKind, objectKey: string) {
     return `${kind === "post" ? "posts" : kind === "video" ? "videos" : "profiles"}/${key(kind, objectKey)}`;
@@ -127,6 +147,13 @@ export function supabaseImageObjectStore(
         throw new AppError("NOT_FOUND", "이미지 파일을 찾을 수 없어요.");
       }
     },
+    async readRange(kind, objectKey, range, signal) {
+      const location = objectPath(kind, objectKey);
+      size(kind, range.total);
+      await privateBucket();
+      if (!rangeReader) throw new AppError("INTERNAL", "영상 파일을 확인하지 못했어요.");
+      return rangeReader(location, range, signal);
+    },
     async remove(kind, objectKey) {
       const location = objectPath(kind, objectKey);
       await privateBucket();
@@ -139,7 +166,7 @@ export function supabaseImageObjectStore(
     },
   };
 }
-/** Remove only the newly acknowledged object if metadata persistence rolls back. */
+/** @deprecated Adapter/test helper. Live uploads use persistManagedImage and its durable cleanup intent. */
 export async function persistImageObject<T>(
   store: ImageObjectStore,
   kind: ImageStorageKind,

@@ -81,7 +81,7 @@ test("crew join uses profile identity and requires explicit public nickname cons
 });
 test("anonymous, full, closed and archived crews do not expose an active join form", () => {
   const anonymous = join({}, false);
-  assert.match(anonymous, /\/login\?next=\/crews\//);
+  assert.match(anonymous, /\/login\?returnTo=%2Fcrews%2F/);
   assert.doesNotMatch(anonymous, /<form/);
   for (const overrides of [{ capacity: 2 }, { recruiting: false }, { archived: true }]) {
     const markup = join(overrides);

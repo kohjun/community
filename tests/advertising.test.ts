@@ -1,3 +1,4 @@
+import { isAdvertisingRequest } from "../src/domain/advertising";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -276,4 +277,35 @@ test("personal, creation, duplicate and unknown URL filters exclude live ads on 
     assert.equal(advertisingAllowedLocation(path!, query!), true, path + "?" + query);
     assert.equal(advertisingAllowedLocation(path!, new URLSearchParams(query!)), true);
   }
+});
+
+test("ads verification supports a fixed trusted loopback proxy without allowing another host", () => {
+  const origin = "https://sliper.kr",
+    headers = { host: "sliper.kr", "x-forwarded-host": "sliper.kr", "x-forwarded-proto": "https" };
+  assert.equal(
+    isAdvertisingRequest(new Request("http://127.0.0.1:13001/ads.txt", { headers }), origin),
+    true,
+  );
+  assert.equal(isAdvertisingRequest(new Request(origin + "/ads.txt"), origin), true);
+  for (const override of [
+    { host: "attacker.net" },
+    { "x-forwarded-host": "attacker.net" },
+    { "x-forwarded-proto": "http" },
+    { "x-forwarded-host": "sliper.kr, attacker.net" },
+  ])
+    assert.equal(
+      isAdvertisingRequest(
+        new Request("http://127.0.0.1:13001/ads.txt", { headers: { ...headers, ...override } }),
+        origin,
+      ),
+      false,
+    );
+  assert.equal(
+    isAdvertisingRequest(new Request("https://attacker.net/ads.txt", { headers }), origin),
+    false,
+  );
+  assert.equal(
+    isAdvertisingRequest(new Request("http://127.0.0.1:13001/ads.txt", { headers }), null),
+    false,
+  );
 });

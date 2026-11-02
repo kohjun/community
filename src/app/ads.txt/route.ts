@@ -1,10 +1,10 @@
-import { isAdvertisingOrigin, produceAdsTxt } from "@/domain/advertising";
+import { isAdvertisingRequest, produceAdsTxt } from "@/domain/advertising";
 import { getAdvertisingConfiguration } from "@/server/advertising-config";
 
 export async function GET(request: Request) {
   const configuration = getAdvertisingConfiguration();
   const contents = produceAdsTxt(configuration);
-  const matchesDomain = isAdvertisingOrigin(new URL(request.url).origin, configuration.siteOrigin);
+  const matchesDomain = isAdvertisingRequest(request, configuration.siteOrigin);
   return new Response(contents && matchesDomain ? contents : "Not found\n", {
     status: contents && matchesDomain ? 200 : 404,
     headers: {

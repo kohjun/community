@@ -1,13 +1,19 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { ArrowRight, Megaphone, Ticket } from "lucide-react";
 import type { ParticipationHome } from "@/domain/participation";
 import { STATUS_LABELS } from "@/domain/participation";
 import { participationRequest } from "@/lib/participation-client";
 import { ParticipationShell } from "./participation-shell";
 import { EventNotices } from "./event-notices";
-export function ParticipationDashboard({ initial }: { initial: ParticipationHome }) {
+export function ParticipationDashboard({
+  initial,
+  embedded = false,
+}: {
+  initial: ParticipationHome;
+  embedded?: boolean;
+}) {
   const [home, setHome] = useState(initial),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -26,8 +32,9 @@ export function ParticipationDashboard({ initial }: { initial: ParticipationHome
       setBusy(false);
     }
   }
+  const Shell = embedded ? Fragment : ParticipationShell;
   return (
-    <ParticipationShell>
+    <Shell>
       <div className="participation-workspace participation-overview">
         <header className="participation-heading">
           <span>MY EPISODES</span>
@@ -82,7 +89,9 @@ export function ParticipationDashboard({ initial }: { initial: ParticipationHome
                     <h3>{app.title}</h3>
                     <small>
                       {new Date(app.createdAt).toLocaleDateString("ko-KR")} ·{" "}
-                      {app.amountKRW === 0 ? "무료" : `${app.amountKRW.toLocaleString("ko-KR")}원`}
+                      {app.amountKRW === 0
+                        ? "사전 결제 없음"
+                        : `${app.amountKRW.toLocaleString("ko-KR")}원`}
                     </small>
                   </div>
                   <span className={`participation-status ${app.status}`}>
@@ -116,6 +125,6 @@ export function ParticipationDashboard({ initial }: { initial: ParticipationHome
           )}
         </section>
       </div>
-    </ParticipationShell>
+    </Shell>
   );
 }

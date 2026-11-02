@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
+import { WORKSPACE_REDIRECTS } from "./src/domain/workspace-navigation";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   // FFmpeg is loaded only by the dedicated video worker, never by web routes.
   // Credentials and mutable development data must never travel in server bundles.
   outputFileTracingExcludes: {
@@ -8,10 +10,19 @@ const nextConfig: NextConfig = {
   },
   // Resolve the retired directory before its loading boundary can start streaming.
   async redirects() {
-    return [{ source: "/crews", destination: "/players?tab=crews", permanent: true }];
+    return [
+      { source: "/crews", destination: "/players?tab=crews", permanent: true },
+      ...WORKSPACE_REDIRECTS,
+    ];
   },
   async headers() {
     return [
+      {
+        source: "/images/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=3600, stale-while-revalidate=86400" },
+        ],
+      },
       {
         source: "/sw.js",
         headers: [

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { publicPageMetadata } from "@/domain/search-visibility";
 import { EventMapCommunity } from "@/components/event-map-community";
 import { getDatabase } from "@/db/client";
 import { eventMapService } from "@/server/event-map-service";
@@ -8,10 +8,6 @@ import { uuidSchema } from "@/domain/validation";
 import "../event-map.css";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "함께 만드는 이벤트 맵 | Sliper",
-  description: "유저가 추천하는 모임 장소와 모집 중인 이벤트를 지도에서 만나보세요.",
-};
 export default async function Page({
   searchParams,
 }: {
@@ -44,4 +40,8 @@ export default async function Page({
       clientId={process.env.NEXT_PUBLIC_NAVER_MAP_KEY_ID?.trim() || null}
     />
   );
+}
+
+export function generateMetadata() {
+  return publicPageMetadata("/map");
 }

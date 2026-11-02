@@ -1,3 +1,7 @@
+import * as gameRoomSchema from "./game-room-schema";
+import * as cleanupSchema from "./object-cleanup-schema";
+import * as growthSchema from "./growth-schema";
+import { assertCloudDatabase } from "../server/cloud-runtime-config";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as baseSchema from "./schema";
@@ -17,6 +21,9 @@ import * as analyticsSchema from "./analytics-schema";
 import * as mediaRetentionSchema from "./media-retention-schema";
 import * as eventContactSchema from "./event-contact-schema";
 const schema = {
+  ...gameRoomSchema,
+  ...cleanupSchema,
+  ...growthSchema,
   ...eventContactSchema,
   ...mediaRetentionSchema,
   ...analyticsSchema,
@@ -37,6 +44,7 @@ const schema = {
 
 // Used only by the server-only client and local database scripts.
 export function createDatabase(url: string, maxConnections = 5) {
+  assertCloudDatabase(url);
   const client = postgres(url, { prepare: false, max: maxConnections });
   const db = drizzle(client, { schema });
   return { db, close: () => client.end() };

@@ -807,3 +807,94 @@ test("a closed or currently suspended place owner makes the source unavailable b
     .where(eq(memberSafety.userId, owner));
   assert.equal((await service.history(reader, placeId)).items[0]!.record.postId, id);
 });
+
+test("an address selection updates the event label and coordinates together, with owner checks", async () => {
+  const id = await event({ venueId: null });
+  const venue = {
+    latitude: 37.5665,
+    longitude: 126.978,
+    address: "서울특별시 중구 세종대로 110 · 정문 앞",
+  };
+  await assert.rejects(
+    participation.configure(reader, id, { amountKRW: 0, capacity: 20, open: true, venue }),
+    errorCode("FORBIDDEN"),
+  );
+  await participation.configure(host, id, { amountKRW: 0, capacity: 20, open: true, venue });
+  const [post] = await db.select().from(base.posts).where(eq(base.posts.id, id));
+  const [settings] = await db
+    .select()
+    .from(base.eventSettings)
+    .where(eq(base.eventSettings.postId, id));
+  assert.equal(post!.location, venue.address);
+  assert.equal(settings!.venueLatitude, venue.latitude);
+  assert.equal(settings!.venueLongitude, venue.longitude);
+});
+test("address-only changes with unchanged coordinates cannot bypass attendance location locks", async () => {
+  const id = await event({ venueId: null });
+  await application(id, reader);
+  await assert.rejects(
+    participation.configure(host, id, {
+      amountKRW: 0,
+      capacity: 20,
+      open: true,
+      venue: {
+        latitude: placeInput.latitude,
+        longitude: placeInput.longitude,
+        address: "서울특별시 중구 세종대로 110",
+      },
+    }),
+    errorCode("CONFLICT"),
+  );
+  const [post] = await db.select().from(base.posts).where(eq(base.posts.id, id));
+  assert.equal(post!.location, placeInput.name);
+});
+test("shared venue selection resolves its address from the locked source rather than a client label", async () => {
+  const id = await event({ venueId: null });
+  await participation.configure(host, id, {
+    amountKRW: 0,
+    capacity: 20,
+    open: true,
+    venue: {
+      latitude: placeInput.latitude,
+      longitude: placeInput.longitude,
+      communityVenueId: placeId,
+      address: "이 주소는 클라이언트가 임의로 입력한 다른 주소입니다",
+    },
+  });
+  const [post] = await db.select().from(base.posts).where(eq(base.posts.id, id));
+  assert.equal(post!.location, placeInput.name + " · " + placeInput.address);
+});
+
+test("post editing cannot change a participant event address while keeping its old coordinates", async () => {
+  const id = await event({ venueId: null });
+  await application(id, reader);
+  const community = communityService(connection);
+  const post = await community.getPost(id, host);
+  await assert.rejects(
+    community.updatePost(host, {
+      postId: id,
+      expectedUpdatedAt: post.updatedAt,
+      categorySlug: "party",
+      kind: "모집",
+      title: post.title,
+      bodyMarkdown: post.body,
+      isAnonymous: false,
+      imageAssetIds: [],
+      location: "서울특별시 중구 세종대로 110",
+      eventDate: "2020년 행사",
+      eventFee: "무료",
+      applicationUrl: null,
+      contactInfo: null,
+      tags: [],
+      poll: null,
+      venue: {
+        latitude: placeInput.latitude,
+        longitude: placeInput.longitude,
+        address: "서울특별시 중구 세종대로 110",
+      },
+    }),
+    errorCode("CONFLICT"),
+  );
+  const [unchanged] = await db.select().from(base.posts).where(eq(base.posts.id, id));
+  assert.equal(unchanged!.location, placeInput.name);
+});

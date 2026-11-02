@@ -1,4 +1,5 @@
 "use client";
+import { LoginLink } from "./login-link";
 import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Flag, UserRoundX } from "lucide-react";
@@ -94,12 +95,12 @@ export function SafetyActions({
           <DialogTitle>{mode === "report" ? "함께 지키는 슬리퍼" : "사용자 차단"}</DialogTitle>
           <DialogDescription>
             {mode === "report"
-              ? "신고 내용은 운영자에게만 전달돼요. 개인정보는 적지 말아주세요."
+              ? "이미지·영상 속 욕설, 차별, 음란물도 신고할 수 있어요. 운영자가 문맥과 원문을 확인하며 신고 횟수만으로 제재하지 않아요."
               : "차단한 사용자의 글과 댓글은 내 화면에서 숨겨져요. 참가한 행사의 필수 공지는 계속 받을 수 있어요."}
           </DialogDescription>
           {!canAct ? (
             <p>
-              <Link href="/login">로그인</Link> 후 이용해주세요.
+              <LoginLink>로그인</LoginLink> 후 이용해주세요.
             </p>
           ) : success ? (
             <div>
@@ -124,13 +125,18 @@ export function SafetyActions({
                         ))}
                       </select>
                     </label>
+                    <p className="form-note">
+                      <Link href="/policies/community" target="_blank" rel="noopener noreferrer">
+                        이용규칙 확인
+                      </Link>
+                    </p>
                     <label>
                       추가 설명 <span>(선택)</span>
                       <textarea
                         name="detail"
                         maxLength={2000}
                         rows={4}
-                        placeholder="어떤 문제가 있었는지 알려주세요."
+                        placeholder="문제가 있는 문장이나 이미지 위치, 영상 시간을 알려주세요. 연락처 등 개인정보는 적지 마세요."
                       />
                     </label>
                   </>

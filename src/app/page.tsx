@@ -1,3 +1,5 @@
+import { publicPageMetadata } from "@/domain/search-visibility";
+import { communityQueries } from "@/server/community-queries";
 import { redirect } from "next/navigation";
 import { communityLocation } from "@/domain/community-location";
 import { SliperCommunity } from "@/components/sliper-community";
@@ -28,7 +30,7 @@ export default async function Page({
   }
   const service = communityService(getDatabase());
   const [feed, notifications] = await Promise.all([
-    service.feed(actor, initialQuery),
+    communityQueries(getDatabase()).feed(actor, initialQuery),
     service.inbox(actor),
   ]);
   return (
@@ -45,4 +47,18 @@ export default async function Page({
       }}
     />
   );
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const personal = Object.keys(params).some(
+    (key) =>
+      ["mine", "bookmarks"].includes(String(params.view)) ||
+      ["compose", "write", "post"].includes(key),
+  );
+  return publicPageMetadata("/", personal);
 }

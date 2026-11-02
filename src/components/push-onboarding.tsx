@@ -30,11 +30,11 @@ import {
 } from "@/lib/push-onboarding-policy";
 import {
   PUSH_ONBOARDING_MOMENT_EVENT,
-  PUSH_ONBOARDING_CHANGED_EVENT,
   markPushAuthEntry,
   consumePushAuthEntry,
 } from "@/lib/push-onboarding-events";
 import { PushOnboardingSheet } from "./push-onboarding-sheet";
+import { useSession } from "./session-provider";
 
 interface InstallPrompt extends Event {
   prompt(): Promise<unknown>;
@@ -62,6 +62,10 @@ const authPage = (path: string) => path === "/login" || path === "/signup";
 
 export function PushOnboardingProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const session = useSession();
+  const currentSession = useRef(session);
+  currentSession.current = session;
+  const settingsRevision = useRef<number | null>(null);
   const [environment, setEnvironment] = useState<PushEnvironment | null>(null);
   const [permission, setPermission] = useState<PushPermission>("unavailable");
   const [settings, setSettings] = useState<PushSettingsView | null>(null);
@@ -85,14 +89,26 @@ export function PushOnboardingProvider({ children }: { children: ReactNode }) {
   path.current = pathname;
 
   const refresh = useCallback(async () => {
-    setReady(false);
-    const abort = new AbortController();
-    request.current?.abort();
-    request.current = abort;
     const env = readEnvironment();
     setEnvironment(env);
     setPermission(readPermission());
     setSnoozed((previous) => previous || readPushOnboardingSnooze(storage("localStorage")));
+    const auth = currentSession.current;
+    if (!auth.ready || !auth.session?.authenticated) {
+      request.current?.abort();
+      request.current = null;
+      settingsRevision.current = null;
+      setSettings(null);
+      setAuthenticated(false);
+      setReady(auth.ready);
+      return;
+    }
+    if (settingsRevision.current === auth.revision) return;
+    settingsRevision.current = auth.revision;
+    setReady(false);
+    const abort = new AbortController();
+    request.current?.abort();
+    request.current = abort;
     try {
       const registration = env.canRequestPush
         ? await navigator.serviceWorker.getRegistration("/")
@@ -113,15 +129,13 @@ export function PushOnboardingProvider({ children }: { children: ReactNode }) {
         setMessage("알림 설정을 확인하지 못했어요. 잠시 후 다시 확인해주세요.");
     } finally {
       if (mounted.current && !abort.signal.aborted) setReady(true);
+      if (request.current === abort) request.current = null;
     }
   }, []);
 
   useEffect(() => {
     mounted.current = true;
     const receiveMoment = () => setMoment((value) => value + 1);
-    const changed = () => {
-      if (!gate.current) void refresh();
-    };
     const focus = () => {
       if (document.visibilityState === "visible" && !gate.current) void refresh();
     };
@@ -143,7 +157,6 @@ export function PushOnboardingProvider({ children }: { children: ReactNode }) {
     };
     const media = window.matchMedia("(display-mode: standalone)");
     window.addEventListener(PUSH_ONBOARDING_MOMENT_EVENT, receiveMoment);
-    window.addEventListener(PUSH_ONBOARDING_CHANGED_EVENT, changed);
     window.addEventListener("focus", focus);
     document.addEventListener("visibilitychange", focus);
     window.addEventListener("beforeinstallprompt", beforeInstall);
@@ -156,8 +169,9 @@ export function PushOnboardingProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted.current = false;
       request.current?.abort();
+      request.current = null;
+      settingsRevision.current = null;
       window.removeEventListener(PUSH_ONBOARDING_MOMENT_EVENT, receiveMoment);
-      window.removeEventListener(PUSH_ONBOARDING_CHANGED_EVENT, changed);
       window.removeEventListener("focus", focus);
       document.removeEventListener("visibilitychange", focus);
       window.removeEventListener("beforeinstallprompt", beforeInstall);
@@ -169,7 +183,7 @@ export function PushOnboardingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (authPage(pathname)) markPushAuthEntry(storage("sessionStorage"));
     void refresh();
-  }, [pathname, refresh]);
+  }, [pathname, refresh, session.ready, session.revision]);
 
   let phase: PushOnboardingPhase = environment
     ? pushOnboardingPhase({
@@ -366,7 +380,7 @@ export function PushOnboardingProvider({ children }: { children: ReactNode }) {
           onAcknowledge={acknowledge}
           onEnable={enable}
           onInstall={install}
-          onRefresh={() => void refresh()}
+          onRefresh={() => void session.refresh(true)}
           onCopyLink={copyLink}
         />
       )}

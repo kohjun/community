@@ -45,6 +45,7 @@ export async function attachRecordMedia(
       rows.some(
         (a) =>
           a.uploaderId !== actor ||
+          ("reunionOriginPostId" in a && a.reunionOriginPostId !== null) ||
           a.status !== "ready" ||
           a.postId !== null ||
           (a.recordPostId !== null && a.recordPostId !== postId) ||

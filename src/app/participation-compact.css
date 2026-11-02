@@ -680,3 +680,300 @@
     transition: none;
   }
 }
+
+/* A single reading path from event details to the next participation action. */
+.participation-flow {
+  width: min(100%, 780px);
+  margin-inline: auto;
+}
+.participation-flow .participation-heading {
+  padding-top: 24px;
+}
+.participation-flow .participation-flow-back {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  margin-bottom: 20px;
+  color: #6b7788;
+  font-size: 12px;
+  text-decoration: none;
+}
+.participation-flow .participation-heading > span {
+  color: #0874dc;
+  font-size: 12px;
+}
+.participation-flow .participation-heading h1 {
+  font-size: clamp(24px, 3.5vw, 30px);
+  margin-top: 8px;
+}
+.participation-flow .participation-flow-summary {
+  padding: 20px;
+  background: #fafbfd;
+}
+.participation-flow-summary dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 24px;
+  margin: 0;
+}
+.participation-flow-summary dl > div {
+  min-width: 0;
+}
+.participation-flow-summary dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #738095;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+.participation-flow-summary dd {
+  margin: 0;
+  color: #263345;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.participation-flow .participation-flow-method {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-top: 15px;
+  margin: 18px 0 0;
+  border-top: 1px solid #e8edf3;
+  color: #2671b8;
+  font-size: 12px;
+}
+.participation-flow-method svg {
+  flex: none;
+}
+.participation-flow .participation-flow-steps {
+  gap: 8px;
+  margin: 20px 0;
+}
+.participation-flow .participation-flow-steps li {
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  gap: 7px;
+}
+.participation-flow .participation-flow-steps li.current {
+  color: #0874dc;
+  background: #eaf4ff;
+}
+.participation-flow .participation-flow-steps li.done {
+  background: #f1f6fc;
+  color: #527599;
+}
+.participation-flow .participation-flow-form {
+  padding: 24px;
+  margin-top: 0;
+}
+.participation-flow-form-heading {
+  margin-bottom: 22px;
+}
+.participation-flow .participation-flow-form-heading h2 {
+  font-size: 18px;
+  margin-bottom: 7px;
+}
+.participation-flow-form-heading p,
+.participation-flow-external-start > p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #6b7788;
+}
+.participation-flow .participation-flow-primary {
+  width: 100%;
+  margin: 10px 0;
+}
+.participation-flow .participation-primary {
+  min-height: 44px;
+  font-size: 13px;
+}
+.participation-flow .participation-flow-status-note {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  border-radius: 10px;
+  background: #f1f7ff;
+  color: #2671b8;
+}
+.participation-flow-status-note > svg {
+  flex: none;
+  margin-top: 1px;
+}
+.participation-flow-status-note strong {
+  font-size: 13px;
+}
+.participation-flow .participation-flow-status-note p {
+  margin: 6px 0 0;
+  color: #536d8c;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.participation-flow .application-state .participation-text-link {
+  margin-right: 16px;
+  margin-bottom: 6px;
+}
+.participation-flow .participation-flow-note {
+  margin: 22px 0;
+  padding-inline: 3px;
+}
+.participation-flow .participation-flow-note p {
+  margin-bottom: 0;
+}
+.participation-flow-details > summary {
+  cursor: pointer;
+  color: #536a82;
+  font-size: 12px;
+  font-weight: 600;
+}
+.participation-flow .participation-flow-details > summary > svg {
+  flex: none;
+}
+.participation-flow .application-state > .participation-flow-details {
+  margin-top: 16px;
+}
+.participation-flow .participation-flow-login {
+  display: grid;
+  gap: 12px;
+}
+.participation-flow-login > p {
+  color: #63748b;
+  margin: 0;
+  font-size: 13px;
+}
+.participation-flow .participation-flow-external-start {
+  padding: 22px 24px;
+}
+.participation-flow-external-start > .participation-eyebrow {
+  color: #0874dc;
+}
+.participation-flow-external-start > h2 {
+  margin-top: 8px;
+}
+.participation-flow-external-start > a {
+  margin: 16px 0 9px;
+  width: 100%;
+}
+.participation-flow-external-start > small {
+  display: block;
+}
+.lightning-approval-guide strong {
+  display: block;
+  font-size: 13px;
+  color: #2671b8;
+}
+.lightning-approval-guide p {
+  margin: 10px 0;
+  color: #63748b;
+  font-size: 12px;
+  line-height: 1.8;
+}
+@media (max-width: 600px) {
+  .participation-flow .participation-heading {
+    padding: 20px 0;
+  }
+  .participation-flow .participation-flow-back {
+    margin-bottom: 16px;
+  }
+  .participation-flow .participation-flow-summary,
+  .participation-flow .participation-flow-form,
+  .participation-flow .participation-flow-external-start {
+    padding: 18px 16px;
+  }
+  .participation-flow-summary dl {
+    gap: 16px;
+  }
+  .participation-flow .participation-flow-steps li {
+    justify-content: center;
+    padding: 11px 5px;
+    font-size: 10px;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .participation-flow .participation-flow-steps li > svg {
+    display: none;
+  }
+  .participation-flow .participation-flow-method {
+    align-items: flex-start;
+    font-size: 11px;
+    line-height: 1.7;
+  }
+  .participation-flow-form-heading {
+    margin-bottom: 18px;
+  }
+}
+
+/* Keep lightning approval actions visible on narrow screens. */
+@media (max-width: 600px) {
+  .lightning-dashboard .dashboard-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lightning-dashboard .dashboard-metric:nth-child(2n + 1) {
+    border-left: 0;
+  }
+  .lightning-dashboard .dashboard-metric:nth-child(2n) {
+    border-left: 1px solid #edf1f6;
+  }
+  .lightning-dashboard .dashboard-metric:nth-child(n + 3) {
+    border-top: 1px solid #edf1f6;
+  }
+  .lightning-dashboard .dashboard-table-wrap {
+    overflow: visible;
+  }
+  .lightning-dashboard .dashboard-table,
+  .lightning-dashboard .dashboard-table tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  .lightning-dashboard .dashboard-table thead {
+    display: none;
+  }
+  .lightning-dashboard .dashboard-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 16px 0;
+    border-bottom: 1px solid #e7ecf2;
+  }
+  .lightning-dashboard .dashboard-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .lightning-dashboard .dashboard-table td {
+    display: block;
+    padding: 0;
+    min-width: 0;
+    border: 0;
+  }
+  .lightning-dashboard .dashboard-table td:first-child,
+  .lightning-dashboard .dashboard-table td:nth-child(2) {
+    grid-column: 1 / -1;
+  }
+  .lightning-dashboard .dashboard-table td:nth-child(2) {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px 10px;
+    color: #63748b;
+    font-size: 11px;
+  }
+  .lightning-dashboard .dashboard-table td:nth-child(2) small {
+    margin: 0;
+  }
+  .lightning-dashboard .dashboard-table td:last-child {
+    justify-self: end;
+  }
+  .lightning-dashboard .dashboard-row-actions {
+    flex-direction: row;
+  }
+  .lightning-dashboard .dashboard-row-actions button {
+    min-height: 38px;
+    padding: 8px 10px;
+  }
+}

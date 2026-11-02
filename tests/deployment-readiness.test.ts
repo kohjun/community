@@ -22,15 +22,17 @@ const ready = () => ({
   SUPABASE_STORAGE_BUCKET: "sliper-private",
   VAPID_SUBJECT: "mailto:ops@sliper.example",
   VAPID_PUBLIC_KEY: ec.getPublicKey().toString("base64url"),
-  VAPID_PRIVATE_KEY: ec.getPrivateKey().toString("base64url"),
+  VAPID_PRIVATE_KEY: Buffer.from(ec.getPrivateKey("hex").padStart(64, "0"), "hex").toString(
+    "base64url",
+  ),
 });
 const row = (env: Record<string, string | undefined>, id: string) =>
   deploymentReadiness(env).find((check) => check.id === id)!;
 test("valid core settings pass while missing bridges remain explicitly disconnected", () => {
   const report = deploymentReadiness(ready());
-  assert.equal(
-    report.some((check) => check.status === "fail"),
-    false,
+  assert.deepEqual(
+    report.filter((check) => check.status === "fail").map((check) => check.id),
+    [],
   );
   assert.equal(report.find((check) => check.id === "payment-bridge")?.status, "warn");
   assert.equal(report.find((check) => check.id === "external-approval")?.status, "warn");
@@ -400,4 +402,21 @@ test("authentication preflight only accepts supported public-key formats and red
   const before = { ...configured };
   assert.equal(row(configured, "authentication").status, "fail");
   assert.deepEqual(configured, before);
+});
+
+test("short ECDH scalars need 32-byte padding in valid VAPID fixtures; validation remains strict", () => {
+  const short = createECDH("prime256v1");
+  const scalar = randomBytes(31);
+  scalar[0] = scalar[0]! | 1;
+  short.setPrivateKey(scalar);
+  const env = {
+    ...ready(),
+    VAPID_PUBLIC_KEY: short.getPublicKey().toString("base64url"),
+    VAPID_PRIVATE_KEY: scalar.toString("base64url"),
+  };
+  assert.equal(row(env, "web-push").status, "fail");
+  env.VAPID_PRIVATE_KEY = Buffer.from(short.getPrivateKey("hex").padStart(64, "0"), "hex").toString(
+    "base64url",
+  );
+  assert.equal(row(env, "web-push").status, "pass");
 });

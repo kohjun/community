@@ -1,0 +1,55 @@
+[Unit]
+Description=Sliper independent public-IP HTTPS endpoint
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=exec
+User=sliper-tls
+Group=sliper-tls
+WorkingDirectory=/var/lib/sliper-tls
+Environment=HOME=/var/lib/sliper-tls
+Environment=XDG_DATA_HOME=/var/lib/sliper-tls
+Environment=XDG_CONFIG_HOME=/var/lib/sliper-tls/config
+Environment=SLIPER_TLS_HOST=211.188.59.204
+Environment=SLIPER_TLS_PORT=13000
+Environment=SLIPER_TLS_BIND_ADDRESS=0.0.0.0
+Environment=SLIPER_UPSTREAM_PORT=13001
+# Public endpoint settings only. Never include the application's runtime.env here.
+EnvironmentFile=-/etc/sliper-tls/runtime.env
+ExecStartPre=/opt/sliper/runtime/caddy/caddy validate --config /etc/sliper-tls/Caddyfile --adapter caddyfile
+ExecStart=/opt/sliper/runtime/caddy/caddy run --config /etc/sliper-tls/Caddyfile --adapter caddyfile
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=45s
+KillSignal=SIGTERM
+KillMode=control-group
+UMask=0077
+RuntimeDirectory=sliper-tls
+RuntimeDirectoryMode=0700
+StateDirectory=sliper-tls
+StateDirectoryMode=0700
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sliper-tls /run/sliper-tls
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+CapabilityBoundingSet=
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+SystemCallArchitectures=native
+LimitNOFILE=65536
+MemoryMax=256M
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sliper-tls
+
+[Install]
+WantedBy=multi-user.target

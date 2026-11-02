@@ -1,4 +1,6 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
+import { ParticipantGuideCard } from "./participant-guide";
 import { notifyPushOnboardingMoment } from "@/lib/push-onboarding-events";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -9,6 +11,12 @@ import {
   ShieldCheck,
   Ticket,
   Settings2,
+  ArrowLeft,
+  CalendarDays,
+  MapPin,
+  Wallet,
+  Users,
+  Clock3,
 } from "lucide-react";
 import { externalClaimSchema, STATUS_LABELS, type EventOverview } from "@/domain/participation";
 import { participationRequest as request } from "@/lib/participation-client";
@@ -198,143 +206,182 @@ export function ExternalEvent({ initial }: { initial: EventOverview }) {
       </form>
     );
   }
+  const paid = (event.config?.amountKRW ?? 0) > 0;
   return (
     <ParticipationShell>
-      <header className="participation-heading">
-        <span>EXTERNAL REGISTRATION</span>
-        <h1>{event.title}</h1>
-        <p>신청과 결제는 외부 플랫폼에서, 행사 공지는 슬리퍼에서.</p>
-      </header>
-      <ol className="participation-steps">
-        <li className={!app ? "current" : "done"}>
-          <ArrowUpRight size={17} />
-          01 외부 신청 · 결제
-        </li>
-        <li className={app?.status === "confirmed" ? "done" : active ? "current" : ""}>
-          <ShieldCheck size={17} />
-          02 참가 승인
-        </li>
-        <li className={app?.status === "confirmed" ? "current" : ""}>
-          <Megaphone size={17} />
-          03 전용 공지방
-        </li>
-      </ol>
-      {event.config && (
-        <EventLifecyclePanel
-          postId={event.postId}
-          onChanged={async (view) => {
-            setCancelled(!!view.cancelledAt);
-            setLifecycleRevision(view.revision);
-            if (view.cancelledAt) setShowConfirm(false);
-            setEvent(await request<EventOverview>(`/events/${event.postId}`));
-          }}
-        />
-      )}
-      <div className="participation-grid">
-        <div>
-          <section className="participation-card event-summary">
-            <div className="participation-eyebrow">신청 플랫폼으로 이동</div>
-            <h2>이 모임은 외부에서 신청해요</h2>
-            <p>{event.location || "모집글에서 장소를 확인해주세요"}</p>
-            <p>{event.eventDate || "외부 신청 페이지에서 일정을 확인해주세요"}</p>
-            {event.config && (
-              <p>
-                참가 확정 {event.config.occupied} / {event.config.capacity}명
-              </p>
-            )}
-            {cancelled ? (
-              <p className="lifecycle-cancelled-note">
-                주최자가 행사를 취소하여 신규 신청을 받지 않아요.
-              </p>
-            ) : (
-              <a
-                className="participation-primary"
-                href={event.externalUrl!}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                외부 플랫폼에서 신청하기
-                <ArrowUpRight size={17} />
-              </a>
-            )}
-            <small>
-              새 탭에서 신청과 결제를 완료해주세요. 슬리퍼에서는 별도의 참가 신청이나 결제를 받지
-              않습니다.
-            </small>
-          </section>
-          <section className="participation-note">
-            <ShieldCheck size={23} />
+      <div className="participation-workspace participation-flow">
+        <header className="participation-heading">
+          <Link className="participation-flow-back" href={`/posts/${event.postId}`}>
+            <ArrowLeft size={15} /> 모집글 보기
+          </Link>
+          <span>외부 플랫폼 신청 모임</span>
+          <h1>{event.title}</h1>
+          <p>
+            {paid
+              ? "외부 플랫폼에서 신청·결제를 마친 뒤, 슬리퍼에서 참가 확인을 요청해주세요."
+              : "외부 플랫폼에서 신청을 마친 뒤, 슬리퍼에서 참가 확인을 요청해주세요."}
+          </p>
+        </header>
+        <section
+          className="participation-card participation-flow-summary"
+          aria-label="신청할 모임 요약"
+        >
+          <dl>
             <div>
-              <strong>승인되면 공지방에 자동 참여해요</strong>
-              <p>
-                외부 신청을 마친 후 참가 확인을 요청하면 담당자가 내역을 확인합니다. 자동 승인이
-                연결된 행사는 플랫폼의 결제 확인 알림으로 참여가 승인됩니다. 신청 번호 입력만으로
-                공지방이 열리지는 않아요.
-              </p>
+              <dt>
+                <CalendarDays size={16} /> 일정
+              </dt>
+              <dd>{event.eventDate || "외부 신청 페이지에서 확인해주세요"}</dd>
             </div>
+            <div>
+              <dt>
+                <MapPin size={16} /> 장소
+              </dt>
+              <dd>{event.location || "모집글에서 확인해주세요"}</dd>
+            </div>
+            <div>
+              <dt>
+                <Wallet size={16} /> 비용
+              </dt>
+              <dd>
+                {event.config
+                  ? event.config.amountKRW === 0
+                    ? "사전 결제 없음"
+                    : `${event.config.amountKRW.toLocaleString("ko-KR")}원 / 1인`
+                  : "외부 신청 페이지에서 확인"}
+              </dd>
+            </div>
+            <div>
+              <dt>
+                <Users size={16} /> 모집
+              </dt>
+              <dd>
+                {event.config
+                  ? `${event.config.occupied} / ${event.config.capacity}명 · ${event.config.open ? "확인 접수 중" : "확인 접수 마감"}`
+                  : "참가 확인 준비 중"}
+              </dd>
+            </div>
+          </dl>
+          <p className="participation-flow-method">
+            <ShieldCheck size={16} />
+            외부 신청 내역 확인 후 공지방 입장 · 슬리퍼에서 중복 결제하지 않아요
+          </p>
+        </section>
+        <ParticipantGuideCard guide={event.config?.participantGuide ?? null} />
+        <ol className="participation-steps participation-flow-steps" aria-label="참가 진행 순서">
+          <li className={!app ? "current" : "done"}>
+            <ArrowUpRight size={17} />
+            <span>01 {paid ? "외부 신청·결제" : "외부 신청"}</span>
+          </li>
+          <li
+            className={
+              app?.status === "confirmed" ? "done" : active || showConfirm ? "current" : ""
+            }
+          >
+            <ShieldCheck size={17} />
+            <span>02 참가 확인·승인</span>
+          </li>
+          <li className={app?.status === "confirmed" ? "current" : ""}>
+            <Megaphone size={17} />
+            <span>03 공지방 입장</span>
+          </li>
+        </ol>
+        {cancelled && (
+          <p className="lifecycle-cancelled-note" role="status">
+            주최자가 모임을 취소했어요. 새로운 신청은 받지 않아요.
+          </p>
+        )}
+        {!active && !cancelled && !showConfirm && (
+          <section className="participation-card participation-flow-external-start">
+            <span className="participation-eyebrow">아직 신청하지 않았다면</span>
+            <h2>먼저 외부 플랫폼에서 신청해주세요</h2>
+            <p>
+              {paid
+                ? "신청과 결제는 연결된 플랫폼에서 진행해요. 완료 후 아래에서 참가 내역을 연결하면 공지방에 참여할 수 있어요."
+                : "연결된 플랫폼에서 신청한 후 아래에서 참가 내역을 연결하면 공지방에 참여할 수 있어요."}
+            </p>
+            <a
+              className="participation-primary"
+              href={event.externalUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              외부 플랫폼에서 신청하기 <ArrowUpRight size={17} />
+            </a>
+            <small>새 탭으로 열려요. 신청을 마쳤다면 이 화면으로 돌아와주세요.</small>
           </section>
-          {event.publicProfileId && (
-            <section className="participation-card external-member-code">
-              <h2>나의 회원 연결 코드</h2>
-              <p>연동 플랫폼에서 슬리퍼 회원 코드를 요청하는 경우 아래 코드를 사용하세요.</p>
-              <code>{event.publicProfileId}</code>
-              <small>이름만으로 회원을 자동 연결하지 않습니다.</small>
-            </section>
-          )}
-          {event.canManage && (
-            <Link className="participation-primary" href={`/management/events/${event.postId}`}>
-              <Settings2 size={18} />
-              행사 관리 대시보드
-            </Link>
-          )}
-        </div>
-        <section className="participation-card application-form">
-          <h2>
-            <Ticket size={20} />
-            {active ? "나의 참가 현황" : "결제 후 참가 확인"}
-          </h2>
+        )}
+        <section className="participation-card application-form participation-flow-form">
+          <div className="participation-flow-form-heading">
+            <h2>
+              <Ticket size={19} />
+              {active
+                ? "나의 참가 현황"
+                : showConfirm
+                  ? "외부 신청 내역 연결"
+                  : "이미 외부 신청을 마쳤나요?"}
+            </h2>
+            {!active && (
+              <p>
+                신청 번호와 질문 답변을 제출하면 담당자가 확인해요. 승인 후 전용 공지방이 열려요.
+              </p>
+            )}
+          </div>
           {error && (
             <p className="participation-error" role="alert">
               {error}
             </p>
           )}
           {active && app ? (
-            <div className="application-state">
+            <div className="application-state" role="status" aria-live="polite">
               <span className={`participation-status ${app.status}`}>
                 {STATUS_LABELS[app.status]}
               </span>
-              <h3>{app.attendeeName}님의 참가 내역</h3>
+              <h3>
+                {app.status === "confirmed" ? "함께할 준비가 되었어요" : "참가 확인을 요청했어요"}
+              </h3>
               {app.externalReference && <p>외부 신청 번호: {app.externalReference}</p>}
-              <SubmittedApplicationDetails
-                answers={app.answers}
-                note={app.note}
-                completed={app.questionnaireCompleted}
-              />
               {app.status === "confirmed" ? (
                 <>
-                  <p>참가가 승인되었어요. 행사 준비물과 일정 안내를 확인하세요.</p>
-                  <Link className="participation-primary" href={`/rooms/${event.postId}`}>
-                    <CheckCircle2 size={18} />
-                    공지방 입장
+                  <p>참가가 승인되었어요. 공지방에서 준비물과 모임 안내를 확인하세요.</p>
+                  <Link
+                    className="participation-primary participation-flow-primary"
+                    href={`/rooms/${event.postId}`}
+                  >
+                    <CheckCircle2 size={18} /> 공지방 입장하기
                   </Link>
                   <EventPrivateContact postId={event.postId} />
-                  {!cancelled && <AdmissionTicket postId={event.postId} applicationId={app.id} />}
+                  {!cancelled && (
+                    <details className="participation-flow-details">
+                      <summary>행사 당일 QR 입장권</summary>
+                      <AdmissionTicket postId={event.postId} applicationId={app.id} />
+                    </details>
+                  )}
                   {cancelled && (
                     <p className="lifecycle-cancelled-note">
-                      주최자가 행사를 취소했어요. QR 입장은 중단되었고, 아래에서 전액 취소·환불을
-                      요청할 수 있어요.
+                      QR 입장이 중단되었어요. 결제한 내역은 아래 취소·환불 안내를 확인해주세요.
                     </p>
                   )}
                 </>
               ) : (
                 <>
-                  <p>
-                    {needsAnswers
-                      ? "외부 신청 내역이 연결되었어요. 참가 질문에 답변하고 정보 제공에 동의하면 참가 확인을 이어갈 수 있어요."
-                      : app.status === "review"
-                        ? "결제 확인 내역에 담당자 확인이 필요해요. 정원이나 기존 내역을 확인한 후 담당자가 안내드립니다."
-                        : "담당자가 외부 플랫폼의 신청·결제 내역을 확인하고 있어요. 승인 결과는 이 화면과 내 참가 내역에 자동 반영됩니다."}
-                  </p>
+                  <div className="participation-flow-status-note">
+                    <Clock3 size={20} />
+                    <div>
+                      <strong>
+                        {needsAnswers
+                          ? "참가 질문에 답변해주세요"
+                          : "담당자가 신청 내역을 확인하고 있어요"}
+                      </strong>
+                      <p>
+                        {needsAnswers
+                          ? "신청 내역이 연결되었어요. 질문에 답변하고 정보 제공에 동의하면 참가 확인을 이어갈 수 있어요."
+                          : app.status === "review"
+                            ? "정원이나 결제 내역에 추가 확인이 필요해요. 확인 후 담당자가 안내드립니다."
+                            : "승인 결과가 이 화면과 내 신청 내역에 반영되면 공지방에 입장할 수 있어요."}
+                      </p>
+                    </div>
+                  </div>
                   {!cancelled &&
                     needsAnswers &&
                     (showConfirm ? (
@@ -351,7 +398,7 @@ export function ExternalEvent({ initial }: { initial: EventOverview }) {
                   {app.status === "pending_approval" && !app.externalPaymentVerified && (
                     <button
                       disabled={busy}
-                      className="participation-secondary"
+                      className="participation-text-link"
                       onClick={() => {
                         void work(async () =>
                           setEvent(
@@ -360,7 +407,7 @@ export function ExternalEvent({ initial }: { initial: EventOverview }) {
                         );
                       }}
                     >
-                      확인 요청 취소
+                      참가 확인 요청 취소
                     </button>
                   )}
                 </>
@@ -368,6 +415,11 @@ export function ExternalEvent({ initial }: { initial: EventOverview }) {
               {app.decisionNote && (
                 <p className="dashboard-decision-note">담당자 안내: {app.decisionNote}</p>
               )}
+              <SubmittedApplicationDetails
+                answers={app.answers}
+                note={app.note}
+                completed={app.questionnaireCompleted}
+              />
               <p className="participation-muted">
                 실제 신청 취소·환불은 외부 플랫폼에서 요청해주세요.
               </p>
@@ -381,54 +433,94 @@ export function ExternalEvent({ initial }: { initial: EventOverview }) {
                 </p>
               )}
               {cancelled ? (
-                <p className="lifecycle-cancelled-note">
-                  취소된 행사는 새 참가 확인을 받지 않아요. 이미 결제한 내역은 담당자에게
-                  확인해주세요.
+                <p className="participation-muted">
+                  이미 신청·결제한 내역은 담당자에게 확인해주세요.
                 </p>
               ) : !event.canApply ? (
-                <>
-                  <p className="participation-muted">
-                    외부 신청은 위 링크에서 진행할 수 있어요. 공지방 참여 확인은 로그인 후
-                    이용해주세요.
-                  </p>
+                <div className="participation-flow-login">
+                  <p>외부 신청 내역을 연결하려면 로그인해주세요.</p>
                   <Link
-                    href={`/login?returnTo=${encodeURIComponent(`/events/${event.postId}`)}`}
-                    className="participation-secondary"
+                    href={loginHref(`/events/${event.postId}`)}
+                    className="participation-primary"
                   >
-                    로그인 안내
+                    로그인하고 참가 확인하기
                   </Link>
-                </>
+                </div>
               ) : !event.applicantProfile?.ready ? (
                 <ApplicantProfileSummary profile={event.applicantProfile} postId={event.postId} />
               ) : !event.config?.open ? (
                 <p className="participation-muted">
-                  담당자가 슬리퍼 참가 확인 접수를 준비 중이거나 마감했어요. 신청·결제는 외부
-                  플랫폼의 안내를 확인해주세요.
+                  담당자가 참가 확인 접수를 준비 중이거나 마감했어요. 외부 플랫폼의 안내도
+                  확인해주세요.
                 </p>
               ) : !showConfirm ? (
-                <>
-                  <p className="participation-muted">
-                    이미 외부 플랫폼에서 신청·결제를 마쳤다면 확인 요청을 남겨주세요. 이 요청은 외부
-                    신청 내역과 공지방 계정을 연결하기 위한 절차입니다.
-                  </p>
-                  <button className="participation-primary" onClick={() => setShowConfirm(true)}>
-                    외부 신청 · 결제를 완료했어요
-                  </button>
-                </>
+                <button className="participation-primary" onClick={() => setShowConfirm(true)}>
+                  {paid ? "외부 신청·결제를 완료했어요" : "외부 신청을 완료했어요"}{" "}
+                  <CheckCircle2 size={17} />
+                </button>
               ) : (
                 confirmationForm()
               )}
             </>
           )}
         </section>
+        <section className="participation-note participation-flow-note">
+          <Megaphone size={20} />
+          <div>
+            <strong>승인 후 공지방에 자동 참여해요</strong>
+            <p>
+              신청 번호 입력만으로 참가가 확정되지는 않아요. 담당자 또는 연동 플랫폼의 내역 확인이
+              필요해요.
+            </p>
+          </div>
+        </section>
+        {event.publicProfileId && (
+          <details className="participation-card workspace-disclosure participation-flow-details external-member-code">
+            <summary>외부 플랫폼에서 회원 연결 코드를 요청하나요?</summary>
+            <p>슬리퍼 회원 코드를 요청하는 경우에만 아래 코드를 사용해주세요.</p>
+            <code>{event.publicProfileId}</code>
+            <small>이름만으로 회원을 자동 연결하지 않아요.</small>
+          </details>
+        )}
+        {event.canManage && (
+          <details className="participation-card workspace-disclosure participation-flow-details">
+            <summary>
+              <Settings2 size={18} />
+              담당자 관리
+            </summary>
+            <Link className="participation-secondary" href={`/management/events/${event.postId}`}>
+              참가 확인 · 승인 대시보드
+            </Link>
+          </details>
+        )}
+        {event.config && (
+          <details
+            className="participation-card workspace-disclosure participation-flow-details"
+            open={cancelled || lifecycleRevision > 0}
+          >
+            <summary>일정 변경 · 취소 안내{event.isOwner ? " 및 관리" : ""}</summary>
+            <EventLifecyclePanel
+              postId={event.postId}
+              onChanged={async (view) => {
+                setCancelled(!!view.cancelledAt);
+                setLifecycleRevision(view.revision);
+                if (view.cancelledAt) setShowConfirm(false);
+                setEvent(await request<EventOverview>(`/events/${event.postId}`));
+              }}
+            />
+          </details>
+        )}
+        <details className="participation-card workspace-disclosure participation-flow-details">
+          <summary>취소 · 환불 안내</summary>
+          <RefundPanel
+            postId={event.postId}
+            startsAt={event.config?.startsAt}
+            refreshRevision={lifecycleRevision}
+          />
+        </details>
+        <RecordBacklink postId={event.postId} />
+        <VerifiedEventReviews postId={event.postId} />
       </div>
-      <RecordBacklink postId={event.postId} />
-      <VerifiedEventReviews postId={event.postId} />
-      <RefundPanel
-        postId={event.postId}
-        startsAt={event.config?.startsAt}
-        refreshRevision={lifecycleRevision}
-      />
     </ParticipationShell>
   );
 }

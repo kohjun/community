@@ -23,6 +23,18 @@ export function allowedLocalTestHost(
     host === configuredLocalTestLanHost(env.SLIPER_LAN_HOST)
   );
 }
+// The LAN launcher sets SLIPER_LAN_HOST before binding to all interfaces.
+// Request Host/Origin headers cannot establish that a connection is local.
+export function legacyLocalActorAllowed(
+  host: string | null,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return (
+    !env.SLIPER_LAN_HOST &&
+    allowedLocalTestHost(host, env) &&
+    (host === "127.0.0.1:3000" || host === "localhost:3000")
+  );
+}
 export function localTestAuthAvailable(
   host: string | null,
   env: NodeJS.ProcessEnv = process.env,

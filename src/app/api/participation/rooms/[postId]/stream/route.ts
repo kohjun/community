@@ -4,7 +4,7 @@ import { currentActor } from "@/server/identity";
 import { participationService } from "@/server/participation-service";
 import { apiResponse } from "@/server/http";
 import { requireActor } from "@/server/errors";
-import { roomRealtime } from "@/server/room-realtime";
+import { roomRealtime } from "@/server/room-realtime-runtime";
 import { openRoomEventStream } from "@/server/room-realtime-core";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

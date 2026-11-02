@@ -15,6 +15,7 @@ import { requireRecordMember, recordVisible } from "./record-policy";
 import { enforceRequestLimit } from "./request-limits";
 import { insertInbox } from "./engagement-events";
 import { preciseTimestamp } from "./pagination";
+import { assertContentAllowed } from "./content-policy";
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Connection = Database | Tx;
 type Credit = typeof eventCredits.$inferSelect;
@@ -288,6 +289,7 @@ export function eventCreditService(db: Database, clock = () => new Date()) {
         throw new AppError("CONFLICT", "수정 요청할 수 없는 상태예요.");
       if (value.decision === "correction" && !value.note)
         throw new AppError("VALIDATION", "수정이 필요한 내용을 적어주세요.");
+      if (value.decision === "accept") assertContentAllowed({ note: credit.note });
       const status =
         value.decision === "accept"
           ? "accepted"

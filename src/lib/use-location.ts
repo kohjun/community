@@ -34,7 +34,7 @@ export function useLocation() {
     if (!navigator.geolocation || !window.isSecureContext) {
       setStatus("error");
       setError(
-        "이 환경에서는 현재 위치를 사용할 수 없어요. 지도에서 찾은 위도·경도를 직접 입력해주세요.",
+        "이 환경에서는 현재 위치를 사용할 수 없어요. 주소·지도에서 검색 위치를 선택해주세요.",
       );
       attempt.complete(null);
       return attempt.result;
@@ -56,10 +56,10 @@ export function useLocation() {
           setStatus("error");
           setError(
             failure.code === 1
-              ? "위치 권한이 꺼져 있어요. 브라우저에서 권한을 허용하거나 위도·경도를 직접 입력해주세요."
+              ? "위치 권한이 꺼져 있어요. 브라우저에서 권한을 허용하거나 주소·지도에서 위치를 선택해주세요."
               : failure.code === 3
-                ? "위치 확인 시간이 초과됐어요. 다시 시도하거나 위도·경도를 직접 입력해주세요."
-                : "현재 위치를 확인하지 못했어요. 다시 시도하거나 위도·경도를 직접 입력해주세요.",
+                ? "위치 확인 시간이 초과됐어요. 다시 시도하거나 주소·지도에서 위치를 선택해주세요."
+                : "현재 위치를 확인하지 못했어요. 다시 시도하거나 주소·지도에서 위치를 선택해주세요.",
           );
           attempt.complete(null);
         },
@@ -68,7 +68,7 @@ export function useLocation() {
     } catch {
       if (mounted.current && attempt.isCurrent()) {
         setStatus("error");
-        setError("브라우저에서 위치 요청을 허용하지 않아요. 위도·경도를 직접 입력해주세요.");
+        setError("브라우저에서 위치 요청을 허용하지 않아요. 주소·지도에서 위치를 선택해주세요.");
         attempt.complete(null);
       }
     }

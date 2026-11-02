@@ -52,6 +52,8 @@ import {
 } from "./pagination";
 import { visibleLibraryUseCases } from "./library-discovery";
 
+import { assertContentAllowed } from "./content-policy";
+
 function preserveDiscoveryMetadata(content: LibraryInput, entry: Entry): LibraryInput {
   if (content.discoveryMetadata === undefined && entry.discoveryMetadata === null) return content;
   return {
@@ -503,6 +505,7 @@ export function libraryService(db: Database) {
     async create(actor: string | null, input: unknown) {
       const user = await requireRecordMember(db, actor),
         value = libraryInputSchema.parse(input);
+      assertContentAllowed(value);
       const id = await db.transaction(async (tx) => {
         const [entry] = await tx
           .insert(libraryEntries)
@@ -518,16 +521,18 @@ export function libraryService(db: Database) {
       return detail(user, id);
     },
     async update(actor: string | null, id: string, input: unknown) {
-      const update = libraryUpdateSchema.parse(input),
-        value = update.content;
+      const user = requireActor(actor);
       await db.transaction(async (tx) => {
-        const entry = await owner(tx, actor, id);
+        const entry = await owner(tx, user, id);
+        const update = libraryUpdateSchema.parse(input),
+          value = update.content;
         if (entry.status !== "published" || entry.sourceVersionId || entry.sourceRecordPostId)
           throw new AppError(
             "CONFLICT",
             "초안과 파생 자료는 초안을 저장한 뒤 공개 동의를 확인하여 발행해주세요.",
           );
         await assertRevision(tx, entry, update.expectedUpdatedAt);
+        assertContentAllowed(value);
         const content = preserveDiscoveryMetadata(value, entry);
         await distributionGuard(tx, entry, content);
         const version = await appendLibraryVersion(
@@ -552,9 +557,10 @@ export function libraryService(db: Database) {
       return detail(actor, id);
     },
     async saveDraft(actor: string | null, id: string, input: unknown) {
-      const value = libraryUpdateSchema.parse(input);
+      const user = requireActor(actor);
       await db.transaction(async (tx) => {
-        const entry = await owner(tx, actor, id);
+        const entry = await owner(tx, user, id);
+        const value = libraryUpdateSchema.parse(input);
         await assertRevision(tx, entry, value.expectedUpdatedAt);
         if (entry.kind !== value.content.kind)
           throw new AppError("VALIDATION", "자료 종류는 변경할 수 없어요.");
@@ -588,6 +594,7 @@ export function libraryService(db: Database) {
           libraryInputSchema.parse(entry.draftContent),
           entry,
         );
+        assertContentAllowed({ content, changeSummary: value.changeSummary });
         await distributionGuard(tx, entry, content);
         const version = await appendLibraryVersion(
           tx,
@@ -976,6 +983,8 @@ export function libraryService(db: Database) {
             "FORBIDDEN",
             "이 자료의 이용 조건은 참가비를 받는 모임을 허용하지 않아요.",
           );
+        assertContentAllowed({ ...value, summary: content.summary, tags: content.tags });
+        assertContentAllowed({ title: content.title });
         const base = await summary(entry, user, tx);
         const snapshot: TemplateSnapshot = {
           ...libraryVersionPayload(content),

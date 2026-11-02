@@ -112,25 +112,11 @@ export function TemplateHost({
               ).slice(0, 120)}
             />
           </label>
-          <label className="marketplace-field">
-            장소
-            <input
-              name="location"
-              required
-              minLength={2}
-              maxLength={120}
-              placeholder="지역 · 구체적인 장소"
-              value={location}
-              onChange={(event) => {
-                setLocation(event.target.value);
-                setVenue((before) =>
-                  before ? { latitude: before.latitude, longitude: before.longitude } : null,
-                );
-              }}
-            />
-          </label>
+          <input type="hidden" name="location" value={location} />
           <EventLocationField
             value={venue}
+            address={location}
+            onAddressSelected={setLocation}
             onChange={setVenue}
             onPlaceSelected={(place) => setLocation(meetupVenueLabel(place))}
             disabled={busy}

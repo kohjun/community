@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 import { DISCUSSION_LABELS, safePostTitle, safeSpoilerSummary } from "@/domain/discussions";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Bookmark, Heart, Send, UserRound, X } from "lucide-react";
@@ -17,6 +18,8 @@ import { PostShareButton } from "./post-share-button";
 import { RecruitmentApplyButton, RecruitmentCta } from "./recruitment-cta";
 import { CATEGORIES } from "@/domain/categories";
 import { createCommentSchema } from "@/domain/validation";
+import { evaluateContentPolicy } from "@/domain/content-policy";
+import { contentPolicyFields, ContentPolicyInputError } from "@/domain/content-policy-fields";
 import type { CommunityComment, CommunityPost } from "@/domain/community";
 import type { useCommunity } from "@/lib/use-community";
 import { notifyPushOnboardingMoment } from "@/lib/push-onboarding-events";
@@ -121,6 +124,20 @@ export function PostDetailContent({
     });
     if (!parsed.success) {
       setCommentError("댓글을 1~5,000자 사이로 입력해주세요.");
+      return;
+    }
+    try {
+      const policy = evaluateContentPolicy(contentPolicyFields(parsed.data));
+      if (!policy.allowed) {
+        setCommentError(policy.message);
+        return;
+      }
+    } catch (cause) {
+      setCommentError(
+        cause instanceof ContentPolicyInputError
+          ? cause.message
+          : "댓글을 확인하지 못했어요. 입력한 내용은 유지됩니다. 잠시 후 다시 시도해주세요.",
+      );
       return;
     }
     if (!(await store.addComment(parsed.data))) return;
@@ -508,8 +525,11 @@ export function PostDetailContent({
             {store.canWrite ? (
               "익명으로 남겨도 작성자 본인만 수정·삭제할 수 있어요."
             ) : (
-              <Link href={"/login?next=/posts/" + active.id}>로그인하고 이야기를 나눠보세요.</Link>
-            )}
+              <Link href={loginHref("/posts/" + active.id)}>로그인하고 이야기를 나눠보세요.</Link>
+            )}{" "}
+            <Link href="/policies/community" target="_blank" rel="noopener noreferrer">
+              이용규칙: 욕설·차별·음란 콘텐츠 금지
+            </Link>
           </p>
         </div>
       )}

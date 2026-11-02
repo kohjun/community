@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -335,7 +336,7 @@ export function OperationsCenter({
           <div className="operations-empty">
             <h2>처리함을 열 수 없어요</h2>
             <p>운영 권한이 있는 계정으로 다시 로그인해주세요.</p>
-            <Link className="operations-button" href="/login?returnTo=/admin/operations">
+            <Link className="operations-button" href={loginHref("/admin/operations")}>
               로그인
             </Link>
           </div>

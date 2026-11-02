@@ -1,0 +1,43 @@
+{
+	email {$ACME_EMAIL}
+	admin off
+	servers {
+		max_header_size 32KB
+		timeouts {
+			read_header 10s
+			read_body 2m
+			idle 2m
+		}
+	}
+	# Request access logs stay disabled. Runtime errors must not retain OAuth codes or cookies.
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>uri replace "[redacted]"
+				request>headers delete
+			}
+		}
+	}
+}
+
+{$SLIPER_DOMAIN} {
+	# 50MiB uploads plus multipart overhead; the app retains its stricter per-route limits.
+	request_body {
+		max_size 64MB
+	}
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+	reverse_proxy web:3000 {
+		# Preserve immediate SSE updates and streamed/Range media without response buffering.
+		flush_interval -1
+		transport http {
+			dial_timeout 5s
+			response_header_timeout 90s
+		}
+	}
+}

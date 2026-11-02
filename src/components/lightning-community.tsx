@@ -1,4 +1,7 @@
 "use client";
+import { LoginLink } from "./login-link";
+import { ParticipantGuideEditor } from "./participant-guide";
+import type { ParticipantGuide } from "@/domain/participant-guide";
 import { useAdSenseContentGuard } from "./adsense-provider";
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
@@ -30,7 +33,6 @@ import { meetupVenueLabel, type MeetupVenuePreset } from "@/domain/venue-meetup"
 import { useReadPosts } from "@/lib/use-read-posts";
 import { appRequest } from "@/lib/api-client";
 import type { VenuePoint } from "@/domain/discovery";
-import { applicationUrlSchema } from "@/domain/application-url";
 import { EventLocationField } from "./event-location-field";
 import { ParticipationShell } from "./participation-shell";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
@@ -96,10 +98,8 @@ export function LightningCommunity({
     [title, setTitle] = useState(""),
     [description, setDescription] = useState(""),
     [capacity, setCapacity] = useState("6"),
-    [applicationMode, setApplicationMode] = useState<"direct" | "external">("direct"),
-    [applicationUrl, setApplicationUrl] = useState(""),
-    [priceKRW, setPriceKRW] = useState("0"),
     [created, setCreated] = useState<CreatedMeetup | null>(null);
+  const [participantGuide, setParticipantGuide] = useState<ParticipantGuide | null>(null);
   const advertisingBlocked = open || feed.posts.length === 0;
   useAdSenseContentGuard(advertisingBlocked);
   const readPosts = useReadPosts();
@@ -146,12 +146,10 @@ export function LightningCommunity({
         : null,
     );
     setLocation(initialVenue ? meetupVenueLabel(initialVenue) : "");
+    setParticipantGuide(null);
     setTitle("");
     setDescription("");
     setCapacity("6");
-    setApplicationMode("direct");
-    setApplicationUrl("");
-    setPriceKRW("0");
     setDraftActivity(category);
     setDraftTheme(
       initialVenue?.categorySlug ?? (category ? lightningCategory(category).topic : "party"),
@@ -175,17 +173,6 @@ export function LightningCommunity({
     }
     if (!venue) {
       setFormError("모이는 장소의 지도 위치를 설정해주세요. 가까운 번개를 찾는 데 사용해요.");
-      return;
-    }
-    const external = applicationMode === "external";
-    const parsedUrl = external ? applicationUrlSchema.safeParse(applicationUrl) : null;
-    if (parsedUrl && !parsedUrl.success) {
-      setFormError(parsedUrl.error.issues[0]?.message ?? "외부 신청 링크를 확인해주세요.");
-      return;
-    }
-    const amount = external ? Number(priceKRW) : 0;
-    if (!Number.isInteger(amount) || amount < 0 || amount > 10000000) {
-      setFormError("참가비는 0원부터 10,000,000원까지 정수로 입력해주세요.");
       return;
     }
     const values = new FormData(event.currentTarget);
@@ -215,8 +202,9 @@ export function LightningCommunity({
         startsAt: start,
         endsAt,
         capacity: Number(values.get("capacity")),
-        priceKRW: amount,
-        applicationUrl: parsedUrl?.success ? parsedUrl.data : null,
+        priceKRW: 0,
+        applicationUrl: null,
+        participantGuide,
       });
       setCreated(result);
       setOpen(false);
@@ -269,15 +257,17 @@ export function LightningCommunity({
           </span>
           <h1>지금, 같이 놀 사람?</h1>
           <p>복잡한 준비 없이 취향 맞는 사람들과 작은 모임을 열어보세요.</p>
+          <div className="maturity-actions">
+            <Link href="/discover/saved">조건 저장·모집 알림</Link>
+            <Link href="/ideas">원하는 모임 제안</Link>
+          </div>
         </div>
         {canWrite ? (
           <button className="participation-primary" onClick={begin}>
             <Plus size={18} /> 번개 열기
           </button>
         ) : (
-          <Link className="participation-primary" href="/login">
-            로그인하고 번개 열기
-          </Link>
+          <LoginLink className="participation-primary">로그인하고 번개 열기</LoginLink>
         )}
       </section>
       <div className="lightning-intro">
@@ -288,7 +278,7 @@ export function LightningCommunity({
           <CalendarDays size={17} /> 일정과 장소를 한 번에
         </span>
         <span>
-          <Zap size={17} /> 무료 직접 참가 · 외부 신청 연동
+          <Zap size={17} /> 담당자 승인 후 참가 확정
         </span>
         <Link href="/map">
           이벤트 맵에서 장소 찾기 <ArrowUpRight size={15} />
@@ -308,7 +298,7 @@ export function LightningCommunity({
             <p>
               {created.externalUrl
                 ? "외부 플랫폼에서 신청한 참가자의 신청 번호·결제 내역을 확인하고 승인하면 공지방에 초대돼요."
-                : "슬리퍼에서 신청하면 참가자가 공지방에 자동 초대돼요. 참가 현황과 공지를 관리해보세요."}
+                : "참가 요청을 확인하고 승인하면 공지방에 초대돼요. 비용은 모임 현장에서 함께 정산해요."}
             </p>
           </div>
           <Link className="participation-secondary" href={created.applicationUrl}>
@@ -434,7 +424,7 @@ export function LightningCommunity({
                     ? "모집 마감"
                     : post.applicationUrl
                       ? "외부 신청 · 승인 후 참가"
-                      : "무료 참가"}{" "}
+                      : "담당자 승인 후 참가"}{" "}
                 · {post.time}
               </small>
             </div>
@@ -535,7 +525,7 @@ export function LightningCommunity({
             </DialogDescription>
             <div className="lightning-dialog-badges" aria-label="번개 안내">
               <span>
-                <Zap size={13} /> {applicationMode === "external" ? "외부 신청 연동" : "무료 참가"}
+                <Zap size={13} /> 담당자 승인 후 참가
               </span>
               <span>
                 <Users size={13} /> 참가자 2–12명
@@ -843,30 +833,7 @@ export function LightningCommunity({
                         <Link href="/map">다른 장소 찾기</Link>
                       </p>
                     )}
-                  <label className="lightning-field">
-                    <span>
-                      모이는 장소{" "}
-                      <span className="lightning-required" aria-hidden="true">
-                        *
-                      </span>
-                    </span>
-                    <input
-                      name="location"
-                      required
-                      minLength={2}
-                      maxLength={120}
-                      value={location}
-                      onChange={(event) => {
-                        setLocation(event.target.value);
-                        setVenue((before) =>
-                          before
-                            ? { latitude: before.latitude, longitude: before.longitude }
-                            : null,
-                        );
-                      }}
-                      placeholder="예: 서울숲역 3번 출구 앞"
-                    />
-                  </label>
+                  <input type="hidden" name="location" value={location} />
                   <div className="lightning-venue-card">
                     <div className="lightning-venue-heading">
                       <span>
@@ -888,6 +855,8 @@ export function LightningCommunity({
                     </div>
                     <EventLocationField
                       value={venue}
+                      address={location}
+                      onAddressSelected={setLocation}
                       onChange={setVenue}
                       onPlaceSelected={(place) => setLocation(meetupVenueLabel(place))}
                       disabled={submitting}
@@ -904,64 +873,20 @@ export function LightningCommunity({
                     <span className="lightning-section-number" aria-hidden="true">
                       04
                     </span>
-                    <h3 id="lightning-application-heading">참가 신청은 어디에서 받을까요?</h3>
+                    <h3 id="lightning-application-heading">신청을 확인하고 함께 만나요</h3>
                   </div>
-                  <label className="lightning-field">
-                    <span>신청 방식</span>
-                    <select
-                      name="applicationMode"
-                      value={applicationMode}
-                      onChange={(event) =>
-                        setApplicationMode(event.target.value as "direct" | "external")
-                      }
-                    >
-                      <option value="direct">슬리퍼에서 무료 참가 신청</option>
-                      <option value="external">외부 플랫폼에서 신청·결제</option>
-                    </select>
-                  </label>
-                  {applicationMode === "external" ? (
-                    <>
-                      <label className="lightning-field">
-                        <span>
-                          외부 신청·결제 링크 <span className="lightning-required">*</span>
-                        </span>
-                        <input
-                          name="applicationUrl"
-                          type="url"
-                          required
-                          maxLength={2048}
-                          value={applicationUrl}
-                          onChange={(event) => setApplicationUrl(event.target.value)}
-                          placeholder="https://…"
-                          aria-describedby="lightning-external-hint"
-                        />
-                      </label>
-                      <label className="lightning-field">
-                        <span>외부 플랫폼 참가비 · 원</span>
-                        <input
-                          name="priceKRW"
-                          type="number"
-                          required
-                          min={0}
-                          max={10000000}
-                          step={1}
-                          value={priceKRW}
-                          onChange={(event) => setPriceKRW(event.target.value)}
-                        />
-                        <small>
-                          외부 플랫폼의 실제 참가비와 같게 입력해주세요. 무료 신청은 0원이에요.
-                        </small>
-                      </label>
-                      <small id="lightning-external-hint">
-                        신청·결제는 외부 플랫폼에서 진행해요. 참가자가 슬리퍼에서 신청 번호를
-                        제출하면 담당자가 확인 후 승인하거나, 연결된 결제 연동이 확인한 뒤 공지방에
-                        초대돼요. 링크를 방문하는 것만으로는 참가가 확정되지 않아요.
-                      </small>
-                    </>
-                  ) : (
-                    <small>슬리퍼에서 무료 참가 신청을 완료하면 전용 공지방에 자동 초대돼요.</small>
-                  )}
+                  <div className="lightning-approval-guide">
+                    <strong>참가 요청 → 담당자 승인 → 전용 공지방</strong>
+                    <p>
+                      신청 내용을 확인한 뒤 참가자를 승인해주세요. 승인된 참가자는 읽기 전용
+                      공지방에서 모임 안내를 받을 수 있어요.
+                    </p>
+                    <small>
+                      슬리퍼에서는 미리 결제하지 않아요. 비용은 모임 현장에서 함께 정산해요.
+                    </small>
+                  </div>
                 </section>
+                <ParticipantGuideEditor value={participantGuide} onChange={setParticipantGuide} />
               </fieldset>
             </div>
             <footer className="lightning-dialog-footer">
@@ -972,20 +897,8 @@ export function LightningCommunity({
               )}
               <div className="lightning-footer-row">
                 <div className="lightning-footer-note">
-                  <strong>
-                    {applicationMode === "external" ? "외부 참가비" : "참가비"}{" "}
-                    <span>
-                      {applicationMode === "external"
-                        ? Number(priceKRW || 0).toLocaleString("ko-KR")
-                        : "0"}
-                      원
-                    </span>
-                  </strong>
-                  <p>
-                    {applicationMode === "external"
-                      ? "외부 신청 확인·승인 후 공지방에 초대돼요."
-                      : "신청이 완료되면 공지방에 자동 초대돼요."}
-                  </p>
+                  <strong>담당자 승인 후 참가 확정</strong>
+                  <p>비용은 모임 현장에서 함께 정산해요.</p>
                 </div>
                 <div className="lightning-footer-actions">
                   <button

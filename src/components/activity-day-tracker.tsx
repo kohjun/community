@@ -2,17 +2,29 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { koreanDay } from "@/domain/community-time";
-import { PUSH_ONBOARDING_CHANGED_EVENT } from "@/lib/push-onboarding-events";
+import { useSession } from "./session-provider";
 /** Only the Korean activity date is collected. No route, content or device identifier is sent. */
 export function ActivityDayTracker() {
   const pathname = usePathname(),
     recorded = useRef("");
+  const { session, revision } = useSession();
+  const blockedRevision = useRef<number | null>(null);
   useEffect(() => {
+    if (!session?.authenticated) {
+      recorded.current = "";
+      return;
+    }
     let pending = false;
     const controller = new AbortController();
     const visit = async () => {
       const day = koreanDay(new Date());
-      if (pending || recorded.current === day || document.visibilityState !== "visible") return;
+      if (
+        pending ||
+        recorded.current === day ||
+        blockedRevision.current === revision ||
+        document.visibilityState !== "visible"
+      )
+        return;
       pending = true;
       try {
         const response = await fetch("/api/analytics/visit", {
@@ -21,6 +33,7 @@ export function ActivityDayTracker() {
           body: "{}",
           signal: controller.signal,
         });
+        if (response.status === 401 || response.status === 403) blockedRevision.current = revision;
         const result = await response.json();
         if (result.ok) recorded.current = day;
       } catch {
@@ -29,20 +42,14 @@ export function ActivityDayTracker() {
         pending = false;
       }
     };
-    const sessionChanged = () => {
-      recorded.current = "";
-      void visit();
-    };
     const timer = setInterval(() => void visit(), 60_000);
     document.addEventListener("visibilitychange", visit);
-    window.addEventListener(PUSH_ONBOARDING_CHANGED_EVENT, sessionChanged);
     void visit();
     return () => {
       controller.abort();
       clearInterval(timer);
       document.removeEventListener("visibilitychange", visit);
-      window.removeEventListener(PUSH_ONBOARDING_CHANGED_EVENT, sessionChanged);
     };
-  }, [pathname]);
+  }, [pathname, session?.authenticated, revision]);
   return null;
 }

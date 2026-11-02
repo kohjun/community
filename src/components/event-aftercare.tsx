@@ -222,7 +222,7 @@ export function EventAftercare({
               {hosting ? "다음 행사 준비하기" : "참가할 모임 찾기"}
               <ArrowRight size={13} aria-hidden="true" />
             </Link>
-            <Link className="event-aftercare-action" href="/records">
+            <Link className="event-aftercare-action" href="/archive?tab=records">
               행사 기록 둘러보기
             </Link>
           </div>

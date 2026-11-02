@@ -1,0 +1,22 @@
+services:
+  town:
+    build:
+      context: .
+      dockerfile: Dockerfile.town
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      TOWN_BIND_HOST: 0.0.0.0
+      TOWN_PORT: 13003
+      TOWN_MAX_CLIENTS: 8
+    ports:
+      - "127.0.0.1:13003:13003"
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.75
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

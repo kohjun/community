@@ -1,3 +1,4 @@
+import { savedSearchEligible, waitlistEligible } from "./growth-policy";
 import { sql, type SQLWrapper } from "drizzle-orm";
 export interface InboxEligibilityFields {
   recipientId: SQLWrapper;
@@ -42,6 +43,7 @@ export function engagementInboxEligibility(
               or exists(select 1 from sliper.room_members m join sliper.event_applications a on a.id=m.application_id
                 where m.post_id=p.id and m.user_id=${item.recipientId} and m.revoked_at is null and m.created_at<=message.created_at and a.status='confirmed'))))
         or (${item.kind}='participation' and (
+          (${item.dedupeKey} like 'waitlist:%' and ${waitlistEligible(item.recipientId, item.postId, item.sourceId)}) or
           (${item.dedupeKey} like 'application:%' and exists(select 1 from sliper.event_applications a
             where a.id=${item.sourceId} and a.user_id=${item.recipientId} and a.post_id=p.id))
           or (${item.dedupeKey} like 'event-change:%' and exists(select 1 from sliper.event_change_recipients r
@@ -55,12 +57,12 @@ export function engagementInboxEligibility(
  and not exists(select 1 from sliper.event_lifecycle cancel where cancel.post_id=p.id and cancel.cancelled_at is not null)
  and not exists(select 1 from sliper.member_safety owner where owner.user_id=rec.owner_id and (owner.status='closed' or (owner.status='suspended' and (owner.suspended_until is null or owner.suspended_until>${now}::timestamptz)))) and es.completed_at is not null and not p.sample
  and not exists(select 1 from sliper.content_restrictions hidden where hidden.target_type='record' and hidden.target_id=p.id and hidden.hidden)))
-        or (${item.kind}='subscriptions' and p.kind='모집' and not p.sample and p.author_id<>${item.recipientId}
+        or (${item.kind}='subscriptions' and (${item.dedupeKey} not like 'saved:%' or ${savedSearchEligible(item.recipientId, item.postId, item.sourceId)}) and p.kind='모집' and not p.sample and p.author_id<>${item.recipientId}
           and exists(select 1 from sliper.event_settings e left join sliper.event_lifecycle lifecycle on lifecycle.post_id=e.post_id
             where e.post_id=p.id and e.open and lifecycle.cancelled_at is null and (e.starts_at is null or e.starts_at>${now}::timestamptz))
           and not exists(select 1 from sliper.member_safety host where host.user_id=p.author_id and (host.status='closed'
             or (host.status='suspended' and (host.suspended_until is null or host.suspended_until>${now}::timestamptz))))
-          and (exists(select 1 from sliper.category_subscriptions category where category.user_id=${item.recipientId}
+          and ((${item.dedupeKey} like 'saved:%' and ${savedSearchEligible(item.recipientId, item.postId, item.sourceId)}) or exists(select 1 from sliper.category_subscriptions category where category.user_id=${item.recipientId}
             and category.category_slug=p.category_slug::text and category.created_at<=p.created_at)
             or (not p.is_anonymous and exists(select 1 from sliper.host_subscriptions host where host.user_id=${item.recipientId}
               and host.host_id=p.author_id and host.created_at<=p.created_at))))

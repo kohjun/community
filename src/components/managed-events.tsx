@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { ArrowRight, Settings2 } from "lucide-react";
 import type { ManagedEvent } from "@/domain/participation";
 import type { AftercarePage } from "@/domain/event-aftercare";
@@ -11,9 +11,11 @@ type Page = { items: ManagedEvent[]; nextCursor: string | null };
 export function ManagedEvents({
   initial,
   initialAftercare,
+  embedded = false,
 }: {
   initial: Page;
   initialAftercare: AftercarePage;
+  embedded?: boolean;
 }) {
   const [data, setData] = useState(initial),
     [busy, setBusy] = useState(false),
@@ -32,8 +34,9 @@ export function ManagedEvents({
       setBusy(false);
     }
   }
+  const Shell = embedded ? Fragment : ParticipationShell;
   return (
-    <ParticipationShell>
+    <Shell>
       <div className="participation-workspace participation-managed">
         <header className="participation-heading">
           <span>MY EVENT DESK</span>
@@ -119,6 +122,6 @@ export function ManagedEvents({
           </button>
         )}
       </div>
-    </ParticipationShell>
+    </Shell>
   );
 }

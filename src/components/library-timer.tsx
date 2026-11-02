@@ -116,7 +116,9 @@ export function LibraryChecklist({ materials }: { materials: string[] }) {
           </label>
         ))}
       </div>
-      {!materials.length && <p>추가 준비물이 없어요.</p>}
+      {!materials.length && (
+        <p>준비물이 아직 입력되지 않았어요. 필요한 물품을 작성자에게 확인해주세요.</p>
+      )}
     </section>
   );
 }

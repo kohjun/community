@@ -1,3 +1,5 @@
+import { savedSearchService } from "./saved-search-service";
+import { waitlistService } from "./waitlist-service";
 import { previewTitleSql } from "./discussion-policy";
 import { and, asc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import type { Database } from "../db/connection";
@@ -253,7 +255,9 @@ export function engagementWorker(db: Database, clock: () => Date = () => new Dat
   async function drain(limit = 100) {
     const jobs = await processJobs(limit),
       reminders = await scanReminders(limit);
-    return { ...jobs, ...reminders };
+    const savedMatches = await savedSearchService(db).scan();
+    const waitlistEvents = await waitlistService(db).scan();
+    return { ...jobs, ...reminders, savedMatches, waitlistEvents };
   }
   return { drain, processJobs, scanReminders };
 }

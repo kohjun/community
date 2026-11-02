@@ -36,6 +36,7 @@ import { PushSettings } from "./push-settings";
 import { MemberAvatar } from "./member-avatar";
 import { useReadPosts } from "@/lib/use-read-posts";
 import { EventAftercare } from "./event-aftercare";
+import { MyPageNavigation } from "./workspace-navigation";
 const profileRequest = (
   method: string,
   body: unknown = undefined,
@@ -187,6 +188,7 @@ export function MyPage({
   }
   return (
     <ParticipationShell>
+      <MyPageNavigation section="profile" />
       <div className="account-page my-page">
         <header className="my-heading">
           <div className="flex items-center justify-between gap-3">

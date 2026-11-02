@@ -1,10 +1,12 @@
+import { OperatorContact } from "./operator-contact";
+import { LoginLink } from "./login-link";
 import Link from "next/link";
 import { TestAccountControls } from "./test-account-controls";
 import { SiteNavigation } from "./site-navigation";
 import { AdSlot } from "./ad-slot";
 import { PolicyLinks } from "./policy-links";
 import { NotificationBell } from "./notification-bell";
-import { Megaphone, MessageCircle, UserRound } from "lucide-react";
+import { Megaphone, MessageCircle, Search, UserRound } from "lucide-react";
 export function ParticipationShell({
   children,
   advertising = true,
@@ -28,8 +30,20 @@ export function ParticipationShell({
           <span className="brand-slogan">슬쩍 나와서 리얼하게 노는 퍼블릭 모임</span>
           <SiteNavigation />
           <div className="header-actions">
+            <Link
+              className="profile-button"
+              href="/search"
+              aria-label="통합 검색과 주제 탐색"
+              title="통합 검색과 주제 탐색"
+            >
+              <Search size={20} />
+            </Link>
             <NotificationBell />
-            <Link className="profile-button" href="/participation" aria-label="참가 현황과 공지방">
+            <Link
+              className="profile-button"
+              href="/mypage?tab=events"
+              aria-label="내 행사와 공지방"
+            >
               <MessageCircle size={20} />
             </Link>
             <Link className="profile-button" href="/mypage" aria-label="마이페이지">
@@ -38,8 +52,9 @@ export function ParticipationShell({
             <TestAccountControls fallbackLogin />
           </div>
           <nav className="service-quick-nav" aria-label="나의 활동">
-            <Link href="/participation">참가 현황 · 공지방</Link>
-            <Link href="/management">행사 관리</Link>
+            <Link href="/mypage?tab=events">참가 현황 · 공지방</Link>
+            <Link href="/discover/saved">조건별 모집 알림</Link>
+            <Link href="/ideas">이런 모임 열어주세요</Link>
             <NotificationBell label="알림함" />
           </nav>
         </div>
@@ -53,6 +68,7 @@ export function ParticipationShell({
         <span>슬쩍 나와서 리얼하게 노는 퍼블릭 모임</span>
         <small>© 2026 Sliper</small>
         <PolicyLinks />
+        <OperatorContact compact />
       </footer>
     </>
   );
@@ -64,9 +80,7 @@ export function ParticipationLogin() {
         <Megaphone size={34} />
         <h1>함께하는 즐거움을 시작해요</h1>
         <p>로그인하면 참가 신청과 나의 공지방을 확인할 수 있어요.</p>
-        <Link className="participation-primary" href="/login">
-          로그인 안내
-        </Link>
+        <LoginLink className="participation-primary">로그인 안내</LoginLink>
         <small>처음이라면 이용 안내에서 신청 방법을 확인해보세요.</small>
       </section>
     </ParticipationShell>

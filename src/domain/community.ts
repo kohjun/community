@@ -94,7 +94,7 @@ export interface FeedQuery {
   tag?: string | undefined;
   view?: "home" | "popular" | "bookmarks" | "mine" | undefined;
   sort?: "latest" | "popular" | "nearest" | undefined;
-  period?: "today" | "week" | "all" | undefined;
+  period?: "today" | "week" | "month" | "all" | undefined;
   rankingAt?: string | undefined;
   latitude?: number | undefined;
   longitude?: number | undefined;

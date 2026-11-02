@@ -1,6 +1,5 @@
 "use client";
 
-import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   createContext,
@@ -70,7 +69,7 @@ function hasVisibleOverlay(): boolean {
   });
 }
 
-/** Private views, editors and empty content can opt out without loading an ad script. */
+/** Private views, editors and empty content opt out of manual ad units. */
 export function useAdSenseContentGuard(disabled: boolean): void {
   const { registerContentGuard } = useAdSense();
   useLayoutEffect(() => {
@@ -108,6 +107,20 @@ export function AdSenseProvider({
     requestScope.current.navigate(window.location.pathname + window.location.search);
   }, [pathname, search]);
   const source = adSenseScriptSource(config.clientId);
+  useEffect(() => {
+    if (!source || !adSenseOriginMatches(config.siteOrigin, browserOrigin)) return;
+    const script = document.getElementById("sliper-adsense");
+    if (!(script instanceof HTMLScriptElement) || script.src !== source) {
+      setScriptStatus("blocked");
+      return;
+    }
+    // Google's async snippet permits queue.push before the library finishes loading.
+    // This state means ready to enqueue, not that Google approved or filled an ad.
+    const failed = () => setScriptStatus("blocked");
+    script.addEventListener("error", failed);
+    setScriptStatus("ready");
+    return () => script.removeEventListener("error", failed);
+  }, [source, config.siteOrigin, browserOrigin]);
   const enabled = Boolean(
     config.enabled &&
     source &&
@@ -141,18 +154,6 @@ export function AdSenseProvider({
       }}
     >
       {children}
-      {enabled && source && scriptStatus !== "blocked" ? (
-        <Script
-          id="sliper-adsense"
-          src={source}
-          strategy="afterInteractive"
-          async
-          crossOrigin="anonymous"
-          onLoad={() => setScriptStatus("ready")}
-          onReady={() => setScriptStatus("ready")}
-          onError={() => setScriptStatus("blocked")}
-        />
-      ) : null}
     </AdSenseContext.Provider>
   );
 }

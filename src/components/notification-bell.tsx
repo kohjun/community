@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -6,6 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useId, useRef, useSt
 import { ArrowRight, Bell, Check, RefreshCw, X } from "lucide-react";
 import { appRequest, RequestError } from "@/lib/api-client";
 import { PUSH_ONBOARDING_CHANGED_EVENT } from "@/lib/push-onboarding-events";
+import { useSession } from "./session-provider";
 import type { InboxItem, UnifiedInboxPage } from "@/domain/engagement";
 
 type NotificationContextValue = {
@@ -21,6 +23,7 @@ const NotificationContext = createContext<NotificationContextValue>({
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { session, revision } = useSession();
   const [unread, setUnread] = useState(0);
   const authenticated = useRef(false),
     mounted = useRef(false),
@@ -60,56 +63,24 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     mounted.current = true;
-    const session = new AbortController();
-    let checking = false;
-    const checkSession = async () => {
-      if (checking || document.visibilityState !== "visible") return;
-      checking = true;
-      try {
-        const result = await appRequest<{ authenticated: boolean }>(
-          "/api/auth/session",
-          "GET",
-          undefined,
-          session.signal,
-        );
-        if (session.signal.aborted) return;
-        authenticated.current = result.authenticated;
-        if (!result.authenticated) {
-          epoch.current++;
-          pending.current?.abort();
-          setUnread(0);
-        } else if (pathname !== "/notifications") {
-          await refreshUnread();
-        }
-      } catch {
-        // Keep the current count if the connection temporarily drops.
-      } finally {
-        checking = false;
-      }
-    };
-    const visible = () => {
-      if (document.visibilityState === "visible") void checkSession();
-    };
-    void checkSession();
+    authenticated.current = Boolean(session?.authenticated);
+    if (!authenticated.current) {
+      epoch.current++;
+      pending.current?.abort();
+      setUnread(0);
+    } else if (pathname !== "/notifications") void refreshUnread();
     const timer = setInterval(() => {
       if (document.visibilityState === "visible" && pathname !== "/notifications")
         void refreshUnread();
     }, 30_000);
-    window.addEventListener("focus", checkSession);
-    window.addEventListener(PUSH_ONBOARDING_CHANGED_EVENT, checkSession);
-    document.addEventListener("visibilitychange", visible);
     return () => {
       mounted.current = false;
       authenticated.current = false;
       epoch.current++;
-      session.abort();
       pending.current?.abort();
       clearInterval(timer);
-      window.removeEventListener("focus", checkSession);
-      window.removeEventListener(PUSH_ONBOARDING_CHANGED_EVENT, checkSession);
-      document.removeEventListener("visibilitychange", visible);
     };
-  }, [pathname, refreshUnread]);
+  }, [pathname, session?.authenticated, revision, refreshUnread]);
 
   return (
     <NotificationContext value={{ unread, updateUnread, refreshUnread }}>
@@ -326,7 +297,7 @@ export function NotificationBell({ mobile = false, label }: { mobile?: boolean; 
             ) : needsLogin ? (
               <div className="notification-popover-empty">
                 <p>로그인하고 내 알림을 확인하세요.</p>
-                <Link href="/login?returnTo=%2Fnotifications" onClick={() => setOpen(false)}>
+                <Link href={loginHref("/notifications")} onClick={() => setOpen(false)}>
                   로그인하기
                 </Link>
               </div>

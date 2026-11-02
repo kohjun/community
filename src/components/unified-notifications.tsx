@@ -1,4 +1,5 @@
 "use client";
+import { LoginLink } from "./login-link";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -303,14 +304,14 @@ export function UnifiedNotifications() {
             </h1>
             <p>내 이야기와 모임의 다음 소식을 한곳에서.</p>
           </div>
-          <Link className="participation-secondary" href="/participation">
+          <Link className="participation-secondary" href="/mypage?tab=events">
             내 참가 현황
             <ChevronRight size={14} />
           </Link>
         </header>
         {needsLogin && (
           <p className="inbox-session-note" role="alert">
-            로그인 상태를 다시 확인해주세요. <Link href="/login">로그인하기</Link>
+            로그인 상태를 다시 확인해주세요. <LoginLink>로그인하기</LoginLink>
           </p>
         )}
         <div className="inbox-layout">

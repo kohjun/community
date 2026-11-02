@@ -4,6 +4,9 @@ import { defineConfig } from "drizzle-kit";
 export default defineConfig({
   dialect: "postgresql",
   schema: [
+    "./src/db/game-room-schema.ts",
+    "./src/db/object-cleanup-schema.ts",
+    "./src/db/growth-schema.ts",
     "./src/db/schema.ts",
     "./src/db/analytics-schema.ts",
     "./src/db/records-schema.ts",

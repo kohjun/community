@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, QrCode, RefreshCw, Search } from "lucide-react";
@@ -147,10 +148,7 @@ export function EventCheckIn({ postId }: { postId: string }) {
           </p>
         )}
         {login && (
-          <Link
-            className="participation-primary"
-            href={`/login?returnTo=${encodeURIComponent(returnTo)}`}
-          >
+          <Link className="participation-primary" href={loginHref(returnTo)}>
             담당자 계정으로 로그인
           </Link>
         )}

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ParticipantGuide } from "./participant-guide";
 import { CATEGORY_SLUGS, type CategorySlug } from "./categories";
 import { postDocumentSchema, type PostDocument } from "./post-document";
 import type { PublicImage, PublicVideo } from "./contracts";
@@ -16,6 +17,7 @@ export type CreditStatus =
   "pending" | "accepted" | "rejected" | "withdrawn" | "correction_requested";
 export type RecordStatus = "draft" | "published" | "withdrawn";
 export interface EventRecordSnapshot {
+  participantGuide?: ParticipantGuide | null;
   title: string;
   category: CategorySlug;
   location: string;

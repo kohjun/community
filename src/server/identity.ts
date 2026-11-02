@@ -11,7 +11,7 @@ import {
   loadLocalTestAccount,
   readLocalTestSession,
 } from "./local-test-auth";
-import { allowedLocalTestHost } from "./local-test-access";
+import { allowedLocalTestHost, legacyLocalActorAllowed } from "./local-test-access";
 import { supabaseAuth } from "./supabase-auth";
 export const LOCAL_ACTOR_ID = "00000000-0000-4000-8000-000000000001";
 // Identity is verified by Auth; account restrictions are checked separately in the database.
@@ -30,14 +30,17 @@ export const authenticatedActor = cache(async (): Promise<string | null> => {
     if (!account || !host) return null;
     return readLocalTestSession(token, account, host)?.userId ?? null;
   }
-  return host === "127.0.0.1:3000" || host === "localhost:3000" ? LOCAL_ACTOR_ID : null;
+  return legacyLocalActorAllowed(host) ? LOCAL_ACTOR_ID : null;
 });
-export const currentActor = cache(async (): Promise<string | null> => {
+export const currentIdentity = cache(async () => {
   const actor = await authenticatedActor();
-  if (!actor) return null;
+  if (!actor) return { authenticatedId: null, actor: null };
   const [state] = await getDatabase()
     .select()
     .from(memberSafety)
     .where(eq(memberSafety.userId, actor));
-  return membershipActive(state) ? actor : null;
+  return { authenticatedId: actor, actor: membershipActive(state) ? actor : null };
 });
+export const currentActor = cache(
+  async (): Promise<string | null> => (await currentIdentity()).actor,
+);

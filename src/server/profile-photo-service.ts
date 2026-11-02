@@ -1,3 +1,4 @@
+import { enqueueObjectCleanup } from "./object-cleanup-service";
 import { and, eq, sql } from "drizzle-orm";
 import type { Database } from "../db/connection";
 import {
@@ -68,6 +69,8 @@ export function profilePhotoService(db: Database) {
         .where(eq(profilePhotos.userId, userId));
       if (previous?.objectKey === input.objectKey)
         throw new AppError("CONFLICT", "이미 저장된 프로필 사진이에요.");
+      if (previous)
+        await enqueueObjectCleanup(tx, { kind: "profile", ...previous }, "profile-replaced");
       const now = new Date();
       await tx
         .insert(profilePhotos)
@@ -107,6 +110,8 @@ export function profilePhotoService(db: Database) {
           objectKey: profilePhotos.objectKey,
           storageBackend: profilePhotos.storageBackend,
         });
+      if (previous)
+        await enqueueObjectCleanup(tx, { kind: "profile", ...previous }, "profile-cleared");
       await tx.update(profiles).set({ updatedAt: new Date() }).where(eq(profiles.id, userId));
       return previous ?? null;
     });

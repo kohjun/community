@@ -1,4 +1,5 @@
 "use client";
+import { PlayerTrust } from "./player-trust";
 import Link from "next/link";
 import { useState } from "react";
 import { Users, MapPin, Thermometer, Trophy, History } from "lucide-react";
@@ -107,19 +108,7 @@ export function PlayerProfile({
           </>
         )}
       </section>
-      <section className="player-manner participation-card">
-        <h2>기록이 쌓이는 매너 온도</h2>
-        <p>
-          긍정 평가 {data.summary.positive}개 · 불편 평가 {data.summary.negative}개 · 미참석 기록{" "}
-          {data.summary.noShow}회
-        </p>
-        <progress max={99.9} value={data.summary.mannerTemperature} aria-label="매너 온도" />
-        <p className="player-note">
-          36.5℃에서 시작합니다. 참가 +0.1℃, 긍정 평가 +0.2℃, 불편 평가 −0.5℃, 미참석 −2℃. 같은
-          행사에 실제 참가가 확인된 플레이어의 평가만 집계하며 온도 범위는 0~99.9℃입니다. 참가·평가
-          기록의 참고값이며 신원 확인이나 행사 안전을 보장하지 않아요.
-        </p>
-      </section>
+      <PlayerTrust summary={data.summary} careerVisible={data.careerVisible} isMe={data.isMe} />
       {data.careerVisible && (
         <section className="participation-card">
           <h2>게임에서 맡았던 역할</h2>

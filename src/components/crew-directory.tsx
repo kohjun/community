@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowUpRight, Handshake, MapPin, Plus, Search, Users } from "lucide-react";
@@ -102,7 +103,7 @@ export function CrewDirectory({
         </div>
         <Link
           className={canWrite ? "participation-primary" : "participation-secondary"}
-          href={canWrite ? "/crews/new" : "/login?next=/crews/new"}
+          href={canWrite ? "/crews/new" : loginHref("/crews/new")}
         >
           <Plus size={16} />
           크루 만들기

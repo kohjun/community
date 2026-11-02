@@ -69,11 +69,13 @@ export function CommunityRecruitmentCard({
     : post.eventDate?.trim() || "일정 확인 필요";
   const amount = post.eventAmountKRW;
   const fee =
-    typeof amount === "number" && Number.isFinite(amount) && amount >= 0
-      ? amount === 0
-        ? "무료"
-        : `${eventFeeFormatter.format(amount)}원`
-      : post.eventFee?.trim() || "참가비 확인 필요";
+    post.meetupType === "lightning" && !post.applicationUrl
+      ? "현장 정산"
+      : typeof amount === "number" && Number.isFinite(amount) && amount >= 0
+        ? amount === 0
+          ? "무료"
+          : `${eventFeeFormatter.format(amount)}원`
+        : post.eventFee?.trim() || "참가비 확인 필요";
   const open = (event: MouseEvent<HTMLAnchorElement>) => {
     if (!shouldOpenPostModal(event)) return;
     event.preventDefault();

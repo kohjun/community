@@ -1,17 +1,13 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 import { useAdSenseContentGuard } from "./adsense-provider";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import {
-  BookOpen,
-  Clock3,
-  Plus,
-  Search,
-  Users,
-  ArrowUpRight,
-  SlidersHorizontal,
-} from "lucide-react";
+import { BookOpen, Clock3, Search, Users, ArrowUpRight, SlidersHorizontal } from "lucide-react";
 import { ParticipationShell } from "./participation-shell";
+import { ArchiveStarterKit } from "./archive-starter-kit";
+import { ArchiveHeading } from "./archive-heading";
+import { ArchiveNavigation } from "./workspace-navigation";
 import { appRequest } from "@/lib/api-client";
 import { CATEGORIES } from "@/domain/categories";
 import type { LibraryKind, LibraryPage } from "@/domain/library";
@@ -29,12 +25,6 @@ import {
   LIBRARY_DIFFICULTY_LABELS,
   LIBRARY_ENVIRONMENT_LABELS,
 } from "./library-discovery-metadata";
-
-const LIBRARY_FILTERS: { value: LibraryKind | ""; label: string }[] = [
-  { value: "", label: "전체" },
-  { value: "rulebook", label: "룰북" },
-  { value: "template", label: "이벤트 템플릿" },
-];
 
 export function LibraryList({
   initial,
@@ -130,27 +120,26 @@ export function LibraryList({
 
   return (
     <ParticipationShell advertising={!advertisingBlocked}>
-      <section className="marketplace-hero">
-        <div>
-          <span className="marketplace-kicker">SLIPER PLAY ARCHIVE</span>
-          <h1>아카이브</h1>
-          <p>
-            함께 놀 방법을 한곳에. 게임의 규칙과 진행 가이드를 찾고, 완성된 이벤트 템플릿으로 다음
-            모임을 열어보세요.
-          </p>
+      <ArchiveHeading canWrite={data.canWrite} kind={query.kind} />
+      <ArchiveNavigation
+        active={appliedQuery.kind}
+        filters={query}
+        busy={busy}
+        onKindChange={(kind) => void load({ ...query, kind })}
+      />
+      <ArchiveStarterKit />
+      <section className="maturity-panel">
+        <h2>처음 모임을 진행하시나요?</h2>
+        <p>인원과 준비 난이도로 자료를 고르고, 실제 운영 사례와 이용 조건을 함께 확인해보세요.</p>
+        <div className="maturity-actions">
+          <Link href="/hosting-guide">첫 호스트 가이드·4주 운영 계획</Link>
+          <Link href="/archive?difficulty=easy&maxStaff=0">추가 스태프 없이 준비하기</Link>
+          <Link href="/archive?players=6&maxDurationMinutes=90">6명·90분 이내 자료</Link>
+          <Link href="/archive?used=true">운영 사례가 있는 자료</Link>
         </div>
-        {data.canWrite && (
-          <Link
-            href={query.kind === "template" ? "/archive/new?kind=template" : "/archive/new"}
-            className="participation-primary"
-          >
-            <Plus size={17} />
-            자료 올리기
-          </Link>
-        )}
       </section>
       <div className="marketplace-actions">
-        <Link href="/topics" className="participation-secondary">
+        <Link href="/search#topics" className="participation-secondary">
           취향별 이야기·모임·자료 둘러보기
         </Link>
       </div>
@@ -164,19 +153,6 @@ export function LibraryList({
           </Link>
         </nav>
       )}
-      <div className="marketplace-tabs archive-kind-filters" aria-label="자료 유형">
-        {LIBRARY_FILTERS.map((filter) => (
-          <button
-            key={filter.value}
-            type="button"
-            disabled={busy}
-            aria-pressed={appliedQuery.kind === filter.value}
-            onClick={() => void load({ ...query, kind: filter.value })}
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
       <form className={styles.filterPanel} onSubmit={search} aria-label="아카이브 검색 조건">
         <div className={styles.searchRow}>
           <label className={styles.searchField}>
@@ -277,12 +253,7 @@ export function LibraryList({
         {!data.canWrite && (
           <p className={styles.hint}>
             회원 공개 운영 사례로 찾으려면{" "}
-            <Link
-              href={
-                "/login?returnTo=" +
-                encodeURIComponent("/archive?" + libraryFilterParams({ ...query, used: true }))
-              }
-            >
+            <Link href={loginHref("/archive?" + libraryFilterParams({ ...query, used: true }))}>
               로그인
             </Link>
             해주세요.

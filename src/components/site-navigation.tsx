@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import styles from "./site-navigation.module.css";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import {
@@ -58,7 +59,16 @@ export function SiteNavigation({
         <Link
           key={id}
           href={href}
-          className={active === id ? "active" : undefined}
+          className={
+            [
+              active === id ? "active" : "",
+              id === "home" ? styles.desktopHome : "",
+              id === "games" ? styles.preparing : "",
+            ]
+              .filter(Boolean)
+              .join(" ") || undefined
+          }
+          aria-label={id === "games" ? "웹 게임 (베타)" : undefined}
           aria-current={active === id ? "page" : undefined}
           onClick={(event) => {
             if (
@@ -73,7 +83,12 @@ export function SiteNavigation({
             if (id === "home" || id === "stories") onNavigate?.(id);
           }}
         >
-          {label}
+          {id === "games" && (
+            <span className={styles.badge} aria-hidden="true">
+              베타
+            </span>
+          )}
+          <span className={id === "games" ? styles.preparingLabel : undefined}>{label}</span>
         </Link>
       ))}
     </nav>

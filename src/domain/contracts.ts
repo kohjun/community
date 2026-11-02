@@ -5,6 +5,7 @@ export type AuthProvider = "kakao" | "google";
 export type PublicAuthor =
   | { kind: "anonymous"; displayName: "익명" }
   | { kind: "member"; displayName: string; publicProfileId: string }
+  | { kind: "imported"; displayName: string }
   | { kind: "deleted"; displayName: "탈퇴한 회원" };
 
 export interface PostStats {

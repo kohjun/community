@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   geocodeAddress,
+  reverseGeocodePoint,
+  parseReverseGeocodedAddress,
+  naverPlaceLink,
   markerIcon,
   NaverMapSession,
   naverMapsScriptUrl,
@@ -340,4 +343,126 @@ test("map sessions update selections, remove deleted markers and ignore pick eve
   assert.equal(map.destroyed, 1);
   fake.emit(map, "click", { coord: new fake.LatLng(37.58, 126.94) });
   assert.equal(picks.length, 1);
+});
+
+test("provider auth failure still reaches fallback when SDK teardown throws", async () => {
+  const fake = fakeSDK();
+  let viewports = 0;
+  const session = new NaverMapSession(fake.sdk, {} as HTMLElement, {
+    onSelect: () => assert.fail("disposed map must not select"),
+    onPick: () => assert.fail("disposed map must not pick"),
+    onBoundsChange: () => viewports++,
+  });
+  session.update(
+    [{ id: "place", kind: "place", label: "장소", latitude: 37.5, longitude: 127 }],
+    null,
+    true,
+  );
+  let removed = 0;
+  let detached = 0;
+  let destroyed = 0;
+  fake.sdk.Event.removeListener = () => {
+    removed++;
+    throw new TypeError("Cannot read properties of null (reading 'isArray')");
+  };
+  fake.createdMarkers[0]!.setMap = () => {
+    detached++;
+    throw new TypeError("Provider marker state was destroyed");
+  };
+  session.map.destroy = () => {
+    destroyed++;
+    throw new TypeError("Provider map state was destroyed");
+  };
+  const runtime: NaverRuntime = {};
+  let fallbackReached = false;
+  const unsubscribe = subscribeNaverAuthFailure(() => {
+    session.dispose();
+    fallbackReached = true;
+  }, runtime);
+  assert.doesNotThrow(() => runtime.navermap_authFailure?.());
+  assert.equal(fallbackReached, true);
+  assert.equal(removed, 3);
+  assert.equal(detached, 1);
+  assert.equal(destroyed, 1);
+  assert.doesNotThrow(() => session.dispose());
+  assert.equal(removed, 3);
+  assert.equal(destroyed, 1);
+  fake.emit(fake.createdMarkers[0]!, "click");
+  fake.emit(session.map, "click", { coord: new fake.LatLng(37.5, 127) });
+  await pause(280);
+  assert.equal(viewports, 0);
+  unsubscribe();
+});
+
+const reverseResponse = {
+  v2: {
+    status: { code: 0, name: "ok" },
+    address: {
+      roadAddress: "서울특별시 중구 세종대로 110",
+      jibunAddress: "서울 중구 태평로1가 31",
+    },
+  },
+};
+test("reverse geocoding uses the chosen entrance coordinates, not returned building coordinates", async () => {
+  const point = { latitude: 37.566123, longitude: 126.978456 };
+  const provider: NaverGeocodeService = {
+    ...service(() => {}),
+    reverseGeocode(options, done) {
+      assert.equal(options.coords, "126.978456,37.566123");
+      assert.equal(options.sourcecrs, "EPSG:4326");
+      assert.equal(options.orders, "roadaddr,addr");
+      done(200, reverseResponse);
+    },
+  };
+  const result = await reverseGeocodePoint(point, { service: provider });
+  assert.deepEqual(result, {
+    ...point,
+    address: "서울특별시 중구 세종대로 110",
+    roadAddress: "서울특별시 중구 세종대로 110",
+    jibunAddress: "서울 중구 태평로1가 31",
+  });
+  assert.equal(
+    parseReverseGeocodedAddress(
+      { v2: { status: { code: 3 }, address: reverseResponse.v2.address } },
+      point,
+    ),
+    null,
+  );
+  assert.equal(
+    parseReverseGeocodedAddress({ v2: { status: { code: 0 }, address: {} } }, point),
+    null,
+  );
+  await assert.rejects(
+    reverseGeocodePoint({ latitude: NaN, longitude: 0 }, { service: provider }),
+    /다시 선택/,
+  );
+  await assert.rejects(
+    reverseGeocodePoint(point, { service: service(() => {}) }),
+    /주소를 확인하지 못/,
+  );
+});
+test("reverse geocoding cancellation and timeout never accept a late address", async () => {
+  const point = { latitude: 37.5, longitude: 127 };
+  let complete: ((status: number | string, response: unknown) => void) | undefined;
+  const provider: NaverGeocodeService = {
+    ...service(() => {}),
+    reverseGeocode(_options, done) {
+      complete = done;
+    },
+  };
+  const controller = new AbortController();
+  const pending = reverseGeocodePoint(point, { service: provider, signal: controller.signal });
+  controller.abort();
+  await assert.rejects(pending, { name: "AbortError" });
+  complete?.(200, reverseResponse);
+  await assert.rejects(reverseGeocodePoint(point, { service: provider, timeoutMs: 5 }), /지연/);
+  complete?.(200, reverseResponse);
+});
+test("Naver location links encode labels and keep latitude and longitude in their correct axes", () => {
+  const link = new URL(naverPlaceLink({ latitude: 37.55, longitude: 126.92 }, "공원&lat=0"));
+  assert.equal(link.origin, "https://map.naver.com");
+  assert.equal(link.searchParams.get("lat"), "37.55");
+  assert.equal(link.searchParams.get("lng"), "126.92");
+  assert.equal(link.searchParams.get("pinTitle"), "공원&lat=0");
+  assert.ok(naverPlaceLink(null, "서울 시청").includes(encodeURIComponent("서울 시청")));
 });

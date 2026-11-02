@@ -29,6 +29,7 @@ import { registeredVenueSnapshotVisible, visibleRegisteredVenue } from "./place-
 import { preciseTimestamp } from "./pagination";
 import { enforceRequestLimit } from "./request-limits";
 import { verifiedReviewParticipation } from "./verified-review-policy";
+import { assertContentAllowed } from "./content-policy";
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type QueryDb = Database | Tx;
 function attendanceCount(postId: SQL, qr: boolean | null = null) {
@@ -442,7 +443,10 @@ export function recordService(db: Database) {
         !(await visibleRegisteredVenue(tx as unknown as Database, user, prior.snapshot.venue.id))
       )
         throw new AppError("FORBIDDEN", "공유 장소를 볼 수 없어 장소 운영 팁을 수정할 수 없어요.");
-      if (prior.status === "published") assertPublishable(value);
+      if (prior.status === "published") {
+        assertPublishable(value);
+        assertContentAllowed(value);
+      }
       await validateLinks(tx, user, postId, value.relatedPostIds, value.libraryIds);
       await attachRecordMedia(tx, postId, user, value.bodyDocument);
       await tx.delete(eventRecordLinks).where(eq(eventRecordLinks.recordPostId, postId));
@@ -478,7 +482,17 @@ export function recordService(db: Database) {
     await enforceRequestLimit(db, user, "record_publish", 30);
     await db.transaction(async (tx) => {
       const prior = await lock(tx, user, postId, value.expectedUpdatedAt);
-      if (value.published) assertPublishable(prior);
+      if (value.published) {
+        assertPublishable(prior);
+        assertContentAllowed({
+          purpose: prior.purpose,
+          execution: prior.execution,
+          highlights: prior.highlights,
+          improvements: prior.improvements,
+          venueTips: prior.venueTips,
+          bodyDocument: prior.bodyDocument,
+        });
+      }
       if (value.published && !prior.publishedAt) {
         // A single insert and a recipient key keep repeat publication notifications unique.
         await tx.execute(sql`insert into sliper.inbox_items(recipient_id,dedupe_key,kind,post_id,source_id,actor_id,title,body,url)

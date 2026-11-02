@@ -1,37 +1,42 @@
 "use client";
-
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
-import { LocateFixed, MapPin, Search, X } from "lucide-react";
+import { LocateFixed, MapPin, Search, X, ExternalLink } from "lucide-react";
 import { Button } from "./ui/button";
 import { useLocation } from "@/lib/use-location";
+import { naverPlaceLink } from "@/lib/naver-maps";
+import { meetupVenueLabel } from "@/domain/venue-meetup";
 import type { VenuePoint } from "@/domain/discovery";
 import type { CommunityVenue, EventMapSnapshot } from "@/domain/event-map";
 import { appRequest } from "@/lib/api-client";
+import { NaverLocationPicker } from "./naver-location-picker";
 
 export function EventLocationField({
   value,
+  address = "",
   onChange,
+  onAddressSelected,
   onPlaceSelected,
   disabled = false,
   purpose = "venue",
   allowSharedPlaces = purpose === "venue",
   idPrefix,
+  addressMaxLength = 120,
 }: {
   value: VenuePoint | null;
+  address?: string;
   onChange: (next: VenuePoint | null) => void;
+  onAddressSelected?: (address: string) => void;
   onPlaceSelected?: (place: CommunityVenue) => void;
   disabled?: boolean;
   purpose?: "search" | "venue";
   allowSharedPlaces?: boolean;
   idPrefix?: string;
+  addressMaxLength?: number;
 }) {
-  const generatedId = useId();
-  const id = idPrefix ?? generatedId;
-  const [latitude, setLatitude] = useState(value ? String(value.latitude) : "");
-  const [longitude, setLongitude] = useState(value ? String(value.longitude) : "");
-  const [manual, setManual] = useState(false);
-  const [validationError, setValidationError] = useState("");
+  const generatedId = useId(),
+    id = idPrefix ?? generatedId;
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [placeOpen, setPlaceOpen] = useState(false);
   const [placeQuery, setPlaceQuery] = useState("");
   const [placeResults, setPlaceResults] = useState<CommunityVenue[] | null>(null);
@@ -41,47 +46,30 @@ export function EventLocationField({
   const [selectedPlace, setSelectedPlace] = useState<CommunityVenue | null>(null);
   const placeRequest = useRef<AbortController | null>(null);
   const location = useLocation();
-  const mounted = useRef(true);
-  const selectionVersion = useRef(0);
+  const mounted = useRef(true),
+    selectionVersion = useRef(0);
   const { cancelLocation } = location;
-  function invalidateLocation() {
-    selectionVersion.current += 1;
-    cancelLocation();
-  }
-  function unlinkPlace() {
-    if (value?.communityVenueId) onChange({ latitude: value.latitude, longitude: value.longitude });
-  }
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
-      selectionVersion.current += 1;
+      selectionVersion.current++;
       placeRequest.current?.abort();
     };
   }, []);
   useEffect(() => {
-    selectionVersion.current += 1;
+    selectionVersion.current++;
     cancelLocation();
-    setLatitude(value ? String(value.latitude) : "");
-    setLongitude(value ? String(value.longitude) : "");
-    setValidationError("");
     setSelectedPlace((before) => (before?.id === value?.communityVenueId ? before : null));
-  }, [
-    value?.latitude,
-    value?.longitude,
-    value?.communityVenueId,
-    value?.communityVenueVersion,
-    cancelLocation,
-  ]);
+  }, [value?.latitude, value?.longitude, value?.communityVenueId, cancelLocation]);
   useEffect(() => {
     if (disabled) {
-      selectionVersion.current += 1;
+      selectionVersion.current++;
       cancelLocation();
       placeRequest.current?.abort();
       setPlaceBusy(false);
     }
   }, [disabled, cancelLocation]);
-
   async function searchPlaces() {
     if (disabled) return;
     placeRequest.current?.abort();
@@ -102,49 +90,127 @@ export function EventLocationField({
       setPlaceResults(result.venues.slice(0, 8));
       setPlacesTruncated(result.truncated || result.venues.length > 8);
     } catch (cause) {
-      if (!mounted.current || controller.signal.aborted) return;
-      setPlaceError(cause instanceof Error ? cause.message : "공유 장소를 찾지 못했어요.");
+      if (mounted.current && !controller.signal.aborted)
+        setPlaceError(cause instanceof Error ? cause.message : "공유 장소를 찾지 못했어요.");
     } finally {
       if (mounted.current && !controller.signal.aborted) setPlaceBusy(false);
     }
   }
   function choosePlace(place: CommunityVenue) {
-    invalidateLocation();
-    setManual(false);
+    selectionVersion.current++;
+    cancelLocation();
+    placeRequest.current?.abort();
+    setPlaceBusy(false);
+    setPickerOpen(false);
     setSelectedPlace(place);
     setPlaceOpen(false);
-    setValidationError("");
     onChange({
       latitude: place.latitude,
       longitude: place.longitude,
       communityVenueId: place.id,
       communityVenueVersion: place.version,
+      address: meetupVenueLabel(place),
     });
     onPlaceSelected?.(place);
   }
-  function applyManual() {
-    invalidateLocation();
-    const lat = Number(latitude),
-      lng = Number(longitude);
-    if (
-      !latitude.trim() ||
-      !longitude.trim() ||
-      !Number.isFinite(lat) ||
-      !Number.isFinite(lng) ||
-      lat < -90 ||
-      lat > 90 ||
-      lng < -180 ||
-      lng > 180
-    ) {
-      setValidationError("위도는 -90~90, 경도는 -180~180 범위로 모두 입력해주세요.");
-      return;
-    }
-    setValidationError("");
-    onChange({ latitude: lat, longitude: lng });
-  }
-
+  const displayAddress = address || value?.address || selectedPlace?.address || "";
   return (
     <div className="event-location-field">
+      <div className="location-field-actions">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={disabled}
+          aria-expanded={pickerOpen}
+          aria-controls={`${id}-map-picker`}
+          onClick={() => {
+            selectionVersion.current++;
+            cancelLocation();
+            setPickerOpen((before) => !before);
+            setPlaceOpen(false);
+          }}
+        >
+          <Search size={16} />
+          {value ? "주소·지도 확인 / 변경" : "주소·지도에서 선택"}
+        </Button>
+        {purpose === "search" && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={disabled || location.status === "loading"}
+            onClick={async () => {
+              const version = ++selectionVersion.current;
+              const next = await location.requestLocation();
+              if (next && mounted.current && selectionVersion.current === version) {
+                onChange(next);
+                setPickerOpen(false);
+              }
+            }}
+          >
+            <LocateFixed size={16} />
+            {location.status === "loading" ? "위치 확인 중…" : "내 주변에서 찾기"}
+          </Button>
+        )}
+        {value && (
+          <button
+            type="button"
+            className="location-clear"
+            disabled={disabled}
+            aria-label="설정한 위치 지우기"
+            onClick={() => {
+              selectionVersion.current++;
+              cancelLocation();
+              setPickerOpen(false);
+              onChange(null);
+              onAddressSelected?.("");
+            }}
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+      {value && !value.communityVenueId && (
+        <div className="location-address-selected" role="status">
+          <MapPin size={17} />
+          <div>
+            <strong>
+              {displayAddress ||
+                (purpose === "search" ? "내 주변 검색 위치가 설정됐어요" : "등록된 지도 위치")}
+            </strong>
+            {!displayAddress && purpose === "venue" && (
+              <small>주소·지도 확인을 눌러 정확한 주소를 선택해주세요.</small>
+            )}
+          </div>
+          <a
+            href={naverPlaceLink(value, displayAddress || "모임 장소")}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="선택한 장소를 네이버 지도에서 보기"
+          >
+            <ExternalLink size={16} />
+          </a>
+        </div>
+      )}
+      {!value && address && <p className="location-field-note">기존 장소 안내: {address}</p>}
+      {pickerOpen && (
+        <div id={`${id}-map-picker`} className="location-map-picker">
+          <NaverLocationPicker
+            value={value}
+            address={displayAddress}
+            disabled={disabled}
+            maxLength={addressMaxLength}
+            onCancel={() => setPickerOpen(false)}
+            onSelect={(next) => {
+              selectionVersion.current++;
+              cancelLocation();
+              setSelectedPlace(null);
+              onChange(next);
+              onAddressSelected?.(next.address);
+              setPickerOpen(false);
+            }}
+          />
+        </div>
+      )}
       {allowSharedPlaces && (
         <div className="location-place-picker">
           <button
@@ -235,117 +301,22 @@ export function EventLocationField({
           <MapPin size={15} />
           <span>
             <strong>{selectedPlace?.name ?? "공유 장소 연결됨"}</strong>
-            {selectedPlace && <small>{selectedPlace.address}</small>}
+            {(selectedPlace?.address || displayAddress) && (
+              <small>{selectedPlace?.address || displayAddress}</small>
+            )}
           </span>
           <Link href={"/places/" + value.communityVenueId}>행사 기록</Link>
         </div>
       )}
-      <div className="location-field-actions">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={disabled || location.status === "loading"}
-          onClick={async () => {
-            const version = ++selectionVersion.current;
-            const next = await location.requestLocation();
-            if (next && mounted.current && selectionVersion.current === version) onChange(next);
-          }}
-        >
-          <LocateFixed size={16} />
-          {location.status === "loading" ? "위치 확인 중…" : "현재 위치 사용"}
-        </Button>
-        <button
-          type="button"
-          className="location-manual-toggle"
-          disabled={disabled}
-          aria-expanded={manual}
-          aria-controls={`${id}-manual`}
-          onClick={() => {
-            invalidateLocation();
-            if (!manual) unlinkPlace();
-            setManual((current) => !current);
-          }}
-        >
-          좌표 직접 입력
-        </button>
-        {value && (
-          <button
-            type="button"
-            className="location-clear"
-            disabled={disabled}
-            aria-label="설정한 위치 지우기"
-            onClick={() => {
-              invalidateLocation();
-              onChange(null);
-            }}
-          >
-            <X size={16} />
-          </button>
-        )}
-      </div>
-      {value && (
-        <p className="location-selected" role="status">
-          <MapPin size={15} />
-          {value.latitude.toFixed(4)}, {value.longitude.toFixed(4)}
-          <span>{value.communityVenueId ? "공유 장소 좌표" : "좌표 설정됨"}</span>
-        </p>
-      )}
+
       <p className="location-field-note">
         {purpose === "search"
-          ? "버튼을 누를 때만 위치를 확인해요. 검색 위치는 프로필에 저장하지 않아요. 거리 검색에는 공개 행사장 좌표만 사용해요."
-          : allowSharedPlaces
-            ? "공유 장소를 선택하거나 행사장 좌표를 직접 지정해주세요. 공유 장소를 사용한 완료 행사는 장소의 행사 기록에 연결돼요. 현재 위치는 행사장일 때만 사용해주세요."
-            : "모임 장소의 좌표를 지정해주세요. 참가자가 거리로 찾을 수 있는 공개 행사장 위치예요. 현재 위치가 행사장일 때만 사용해주세요."}
+          ? "내 주변 위치는 검색에만 사용해요. 다른 지역은 주소나 지도에서 선택할 수 있어요."
+          : "모임이 열리는 주소를 검색하고 지도에서 확인해주세요. 공유 장소를 선택하면 완료 행사의 장소 기록도 연결돼요."}
       </p>
-      {manual && (
-        <div id={`${id}-manual`} className="location-manual-fields">
-          <label htmlFor={`${id}-latitude`}>
-            위도
-            <input
-              id={`${id}-latitude`}
-              type="number"
-              min={-90}
-              max={90}
-              step="any"
-              inputMode="decimal"
-              value={latitude}
-              disabled={disabled}
-              placeholder="예: 37.5665"
-              onChange={(e) => {
-                invalidateLocation();
-                unlinkPlace();
-                setLatitude(e.target.value);
-              }}
-            />
-          </label>
-          <label htmlFor={`${id}-longitude`}>
-            경도
-            <input
-              id={`${id}-longitude`}
-              type="number"
-              min={-180}
-              max={180}
-              step="any"
-              inputMode="decimal"
-              value={longitude}
-              disabled={disabled}
-              placeholder="예: 126.9780"
-              onChange={(e) => {
-                invalidateLocation();
-                unlinkPlace();
-                setLongitude(e.target.value);
-              }}
-            />
-          </label>
-          <Button type="button" variant="outline" disabled={disabled} onClick={applyManual}>
-            좌표 적용
-          </Button>
-          <small>지도 서비스에서 행사장 위도·경도를 확인해 입력할 수 있어요.</small>
-        </div>
-      )}
-      {(validationError || location.error) && (
+      {purpose === "search" && location.error && (
         <p className="form-error" role="alert">
-          {validationError || location.error}
+          {location.error}
         </p>
       )}
     </div>

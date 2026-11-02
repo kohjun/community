@@ -1,0 +1,30 @@
+import { MBTI_SITUATIONS, type Mbti } from "./mbti-game";
+export type IntroAttempt = { round: number; guesses: Mbti[]; correct: number; incorrect: number };
+export type IntroState = {
+  maxRounds: number;
+  stage: "lobby" | "acting" | "guessing" | "review" | "result" | "aborted";
+  round: number;
+  turn: number;
+  turnStartedAt: number | null;
+  registered: Record<string, Mbti>;
+  roster: { id: string; nickname: string; mbti: Mbti }[];
+  attempts: Record<string, IntroAttempt[]>;
+  winner: string | null;
+};
+export type IntroView = {
+  maxRounds: number;
+  stage: IntroState["stage"];
+  round: number;
+  turn: number;
+  speakerId: string | null;
+  turnStartedAt: number | null;
+  serverNow: number;
+  myMbti: Mbti | null;
+  roster: { id: string; nickname: string }[];
+  submittedCount: number;
+  hasSubmitted: boolean;
+  history: IntroAttempt[];
+  winner: string | null;
+  answers: { id: string; nickname: string; mbti: Mbti }[] | null;
+};
+export const INTRO_PROMPTS = MBTI_SITUATIONS;

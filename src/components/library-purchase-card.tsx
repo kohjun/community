@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 
 import Link from "next/link";
 import { type FormEvent, useId } from "react";
@@ -207,7 +208,7 @@ export function LibraryPurchaseCard({
               </p>
               <Link
                 className="library-purchase-button is-primary"
-                href={`/login?returnTo=${encodeURIComponent(`/archive/${entry.id}`)}`}
+                href={loginHref(`/archive/${entry.id}`)}
               >
                 {localTestPurchase ? "로그인하고 테스트 구매하기" : "로그인 후 구매 확인 요청"}
                 <ArrowRight size={16} aria-hidden="true" />

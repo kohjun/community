@@ -411,7 +411,7 @@ export function AnnouncementRoom({ initial }: { initial: RoomView }) {
         {!room ? (
           <section className="participation-card participation-empty">
             <h2>공지방 참여가 종료되었어요</h2>
-            <Link href="/participation" className="participation-primary">
+            <Link href="/mypage?tab=events" className="participation-primary">
               내 신청 내역 확인
             </Link>
           </section>

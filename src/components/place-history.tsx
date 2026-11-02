@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -15,7 +16,7 @@ import { CATEGORIES, type CategorySlug } from "@/domain/categories";
 import type { PlaceHistoryPage, PlaceHistoryQuery } from "@/domain/place-history";
 import { appRequest, RequestError } from "@/lib/api-client";
 import { ParticipationShell } from "./participation-shell";
-import { RecordCard, RecordPagination, recordDate } from "./event-records";
+import { RecordCard, RecordPagination, recordDate } from "./record-list";
 
 export function PlaceHistoryLogin({ placeId }: { placeId: string }) {
   return (
@@ -24,10 +25,7 @@ export function PlaceHistoryLogin({ placeId }: { placeId: string }) {
         <MapPin size={30} />
         <h1>이 장소에서 쌓인 경험을 만나보세요</h1>
         <p>로그인하면 회원에게 공개된 완료 행사와 장소 운영 팁을 볼 수 있어요.</p>
-        <Link
-          className="participation-primary"
-          href={"/login?returnTo=" + encodeURIComponent("/places/" + placeId)}
-        >
+        <Link className="participation-primary" href={loginHref("/places/" + placeId)}>
           로그인하고 장소 기록 보기
         </Link>
         <Link className="record-backlink" href="/map">

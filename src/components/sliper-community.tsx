@@ -1,4 +1,6 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
+import { useRouter } from "next/navigation";
 import { useAdSenseContentGuard } from "./adsense-provider";
 import type { FeedQuery } from "@/domain/community";
 import { communityLocation } from "@/domain/community-location";
@@ -9,14 +11,12 @@ import { notifyPushOnboardingMoment } from "@/lib/push-onboarding-events";
 import { useEffect, useRef, useState } from "react";
 import {
   BookOpen,
-  Zap,
   UserRound,
   FlaskConical,
   Handshake,
   ArrowUpRight,
   Bookmark,
   Check,
-  ChevronDown,
   ChevronRight,
   Clapperboard,
   Compass,
@@ -43,10 +43,13 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PostDetailContent } from "./post-detail-content";
 import dynamic from "next/dynamic";
-import { LatestEventRecords } from "./record-discovery";
+import { HomeArchive } from "./home-archive";
+import { homeRecruitments } from "@/domain/home-discovery";
 import { FeaturedCarousel, HotStories } from "./home-stage";
 import { AdSlot } from "./ad-slot";
 import { SiteNavigation } from "./site-navigation";
+import { CommunitySort } from "./community-sort";
+import type { GeoCoordinates } from "@/lib/use-location";
 import { NotificationBell } from "./notification-bell";
 import {
   DEFAULT_DISCOVERY_FILTERS,
@@ -60,6 +63,7 @@ import { CommunityPostRow } from "./community-post-row";
 import { CommunityRecruitmentCard } from "./community-recruitment-card";
 import { CommunityPagination } from "./community-pagination";
 import { TestAccountControls } from "./test-account-controls";
+import { OperatorContact } from "./operator-contact";
 import { PolicyLinks } from "./policy-links";
 import { BOARD_TOPICS, BOARD_DESCRIPTIONS } from "@/domain/boards";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -116,10 +120,11 @@ function CategoryMenu({
         type="button"
         className={cn(category === "all" && "active")}
         aria-pressed={category === "all"}
+        data-category="all"
         onClick={() => onSelect("all")}
       >
         {showAllIcon && <Grid2X2 size={17} strokeWidth={1.8} />}
-        전체
+        <span>전체</span>
       </button>
       {CATEGORIES.map((item) => {
         const Icon = icons[item.slug];
@@ -129,10 +134,11 @@ function CategoryMenu({
             key={item.slug}
             className={cn(category === item.slug && "active")}
             aria-pressed={category === item.slug}
+            data-category={item.slug}
             onClick={() => onSelect(item.slug)}
           >
             <Icon size={17} strokeWidth={1.8} />
-            {item.name}
+            <span>{item.name}</span>
           </button>
         );
       })}
@@ -151,6 +157,16 @@ export function SliperCommunity({
   initialQuery?: FeedQuery;
   initialComposeTopic?: TopicSlug;
 }) {
+  const router = useRouter();
+  function startWriting() {
+    if (!store.canWrite) {
+      router.push(
+        loginHref(window.location.pathname + window.location.search + window.location.hash),
+      );
+      return;
+    }
+    setWriting(true);
+  }
   const [view, setView] = useState<View>(
     initialQuery.view && initialQuery.view !== "home" ? initialQuery.view : initialView,
   );
@@ -171,7 +187,7 @@ export function SliperCommunity({
   );
   const [discovery, setDiscovery] = useState<EventDiscoveryFilters>(DEFAULT_DISCOVERY_FILTERS);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
-  const [pendingNearest, setPendingNearest] = useState(false);
+  const [sortCoordinates, setSortCoordinates] = useState<GeoCoordinates | null>(null);
   const [query, setQuery] = useState(initialQuery.search ?? "");
   const [discussionType, setDiscussionType] = useState<FeedQuery["discussionType"]>(
     initialQuery.discussionType,
@@ -210,8 +226,8 @@ export function SliperCommunity({
       rankingAt: sort === "popular" && period !== "all" ? rankingAt : undefined,
       eventOnly: discovery.eventOnly || undefined,
       meetupType: discovery.meetupType === "all" ? undefined : discovery.meetupType,
-      latitude: discovery.coordinates?.latitude,
-      longitude: discovery.coordinates?.longitude,
+      latitude: (sort === "nearest" ? sortCoordinates : discovery.coordinates)?.latitude,
+      longitude: (sort === "nearest" ? sortCoordinates : discovery.coordinates)?.longitude,
       radiusKm: discovery.radiusKm ?? undefined,
       fromDate: discovery.fromDate || undefined,
       toDate: discovery.toDate || undefined,
@@ -219,9 +235,27 @@ export function SliperCommunity({
       maxPriceKRW: discovery.maxPriceKRW ?? undefined,
       availableOnly: discovery.availableOnly || undefined,
     },
-    { onRankingAnchor: setRankingAt },
+    {
+      onRankingAnchor: setRankingAt,
+      initialQuery: {
+        ...initialQuery,
+        rankingAt: initialState.rankingAt ?? initialQuery.rankingAt,
+      },
+    },
   );
   const feedRef = useRef<HTMLElement>(null);
+  const [feedVisible, setFeedVisible] = useState(false);
+  useEffect(() => {
+    const element = feedRef.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setFeedVisible(!!entry?.isIntersecting),
+      { rootMargin: "0px 0px -90px 0px" },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     const restore = () => {
       const state = communityLocation(
@@ -305,15 +339,17 @@ export function SliperCommunity({
     setTag("");
     setView(view === "stories" ? "stories" : "home");
     setKind(
-      view === "stories"
-        ? kind === "모집"
-          ? "모집"
-          : "이야기"
-        : discovery.eventOnly
-          ? "모집"
-          : "전체",
+      sort === "nearest" && sortCoordinates
+        ? "모집"
+        : view === "stories"
+          ? kind === "모집"
+            ? "모집"
+            : "이야기"
+          : discovery.eventOnly
+            ? "모집"
+            : "전체",
     );
-    setSort((current) => (current === "nearest" && discovery.coordinates ? "nearest" : "latest"));
+    setSort((current) => (current === "nearest" && sortCoordinates ? "nearest" : "latest"));
     setQuery("");
     setSheet(null);
   }
@@ -328,8 +364,7 @@ export function SliperCommunity({
       setFocus("all");
       setDiscussionType(undefined);
     }
-    if (!next.coordinates && sort === "nearest") setSort("latest");
-    if (!next.eventOnly)
+    if (!next.eventOnly && sort !== "nearest")
       setKind(view === "stories" ? (kind === "모집" ? "모집" : "이야기") : "전체");
   }
   function navigate(value: View) {
@@ -337,7 +372,6 @@ export function SliperCommunity({
     setFocus("all");
     setDiscussionType(undefined);
     setDiscovery({ ...DEFAULT_DISCOVERY_FILTERS });
-    setPendingNearest(false);
     setTopic("");
     setTag("");
     setCategory("all");
@@ -364,7 +398,7 @@ export function SliperCommunity({
 
   const heading =
     view === "stories"
-      ? "우리들의 이야기"
+      ? "전체 이야기"
       : view === "bookmarks"
         ? "다음에 또 보고 싶은 이야기"
         : view === "mine"
@@ -375,11 +409,11 @@ export function SliperCommunity({
               ? `${label(category)}, 함께 즐겨요`
               : query
                 ? `‘${query}’ 검색 결과`
-                : discoveryActive
-                  ? sort === "nearest"
-                    ? "우리 동네, 가까운 즐거움"
-                    : "내 취향에 맞는 이벤트"
-                  : "오늘, 뭐 하고 놀까요?";
+                : sort === "nearest"
+                  ? "내 주변 가까운 모임"
+                  : discoveryActive
+                    ? "내 취향에 맞는 이벤트"
+                    : "오늘, 뭐 하고 놀까요?";
 
   return (
     <>
@@ -388,22 +422,18 @@ export function SliperCommunity({
       </a>
       <header className="site-header site-header--community">
         <div className="header-inner">
-          <Link className="brand" href="/" aria-label="Sliper 홈" onClick={() => navigate("home")}>
+          <Link className="brand" href="/" aria-label="Sliper 홈">
             <img src="/images/sliper-logo.png" alt="" />
             <span>
               sliper<span className="brand-dot">.</span>
             </span>
           </Link>
           <span className="brand-slogan">슬쩍 나와서 리얼하게 노는 퍼블릭 모임</span>
-          <SiteNavigation
-            activeSection={view === "stories" ? "stories" : "home"}
-            onNavigate={navigate}
-          />
+          <SiteNavigation activeSection={view === "stories" ? "stories" : "home"} />
           <div className="header-discovery-search">
             <EventDiscoveryButton
               active={discoveryActive}
               onClick={() => {
-                setPendingNearest(false);
                 setDiscoveryOpen(true);
               }}
             />
@@ -412,6 +442,8 @@ export function SliperCommunity({
               role="search"
               onSubmit={(event) => {
                 event.preventDefault();
+                if (window.matchMedia("(max-width:720px)").matches)
+                  event.currentTarget.querySelector("input")?.blur();
                 feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
             >
@@ -424,9 +456,7 @@ export function SliperCommunity({
                   setQuery(event.target.value);
                   if (view !== "stories") setView("home");
                 }}
-                placeholder={
-                  view === "stories" ? "어떤 이야기가 궁금한가요?" : "어떤 즐거움을 찾고 있나요?"
-                }
+                placeholder={view === "stories" ? "이야기 검색" : "모임·이야기 검색"}
               />
               <Link
                 className="header-unified-search-link"
@@ -447,7 +477,7 @@ export function SliperCommunity({
             <NotificationBell />
             <Link
               className="profile-button"
-              href="/participation"
+              href="/mypage?tab=events"
               aria-label="내 참가 신청과 공지방"
             >
               <MessageCircle size={20} />
@@ -492,43 +522,6 @@ export function SliperCommunity({
             </p>
           </div>
           <AdSlot onCategory={chooseCategory} disabled={advertisingBlocked} />
-          {isHome && (
-            <nav
-              className="home-discover home-discover-expanded home-starts"
-              aria-label="슬리퍼 시작하기"
-            >
-              <Link href="/?kind=모집">
-                <span className="discover-icon lightning-discover-icon">
-                  <Zap size={24} />
-                </span>
-                <div>
-                  <strong>모임 찾기</strong>
-                  <p>예능 이벤트부터 가벼운 번개까지</p>
-                </div>
-                <ChevronRight size={17} />
-              </Link>
-              <Link href="/stories">
-                <span className="discover-icon">
-                  <MessageCircle size={24} />
-                </span>
-                <div>
-                  <strong>이야기 나누기</strong>
-                  <p>같은 취향의 사람들과 나누는 대화</p>
-                </div>
-                <ChevronRight size={17} />
-              </Link>
-              <Link href="/archive">
-                <span className="discover-icon">
-                  <BookOpen size={24} />
-                </span>
-                <div>
-                  <strong>기획 자료 찾기</strong>
-                  <p>룰북과 템플릿으로 다음 행사 준비</p>
-                </div>
-                <ChevronRight size={17} />
-              </Link>
-            </nav>
-          )}
           {category in BOARD_DESCRIPTIONS && (
             <p className="board-intro">
               {BOARD_DESCRIPTIONS[category as keyof typeof BOARD_DESCRIPTIONS]}
@@ -539,13 +532,13 @@ export function SliperCommunity({
             onSelect={chooseCategory}
             className="mobile-categories"
             label="빠른 카테고리"
+            showAllIcon
           />
 
           {isHome && (
             <>
               <FeaturedCarousel
-                posts={store.upcoming}
-                upcoming
+                posts={homeRecruitments(store.upcoming, store.featured)}
                 onOpen={openPost}
                 onSave={savePost}
                 bookmarked={store.bookmarked}
@@ -556,8 +549,16 @@ export function SliperCommunity({
                   setView("home");
                 }}
               />
-              <HotStories posts={store.hot} onOpen={openPost} onAll={() => navigate("popular")} />
-              <LatestEventRecords enabled={store.canWrite} />
+              <HotStories
+                posts={store.hot}
+                onOpen={openPost}
+                onAll={(selected) => {
+                  navigate("popular");
+                  setPeriod(selected);
+                  setRankingAt(undefined);
+                }}
+              />
+              <HomeArchive />
             </>
           )}
 
@@ -566,7 +567,7 @@ export function SliperCommunity({
               <div>
                 <h2 id="feed-title">
                   {view === "stories" && category === "all" && !query
-                    ? "자유게시판"
+                    ? "전체 이야기"
                     : view === "bookmarks"
                       ? "내 북마크"
                       : view === "mine"
@@ -579,19 +580,13 @@ export function SliperCommunity({
                               ? "검색된 이야기"
                               : discoveryActive
                                 ? "찾은 이벤트"
-                                : "우리들의 이야기"}
+                                : "전체 이야기"}
                   <span className="result-count">
                     {(store.pagination?.totalItems ?? filtered.length).toLocaleString("ko-KR")}
                   </span>
                 </h2>
               </div>
-              <Button
-                className="write-button"
-                disabled={!store.canWrite || store.busy}
-                onClick={() => {
-                  setWriting(true);
-                }}
-              >
+              <Button className="write-button" disabled={store.busy} onClick={startWriting}>
                 <Pencil size={16} />
                 글쓰기
               </Button>
@@ -622,7 +617,6 @@ export function SliperCommunity({
               onChange={updateDiscovery}
               onReset={resetDiscovery}
               onEdit={() => {
-                setPendingNearest(false);
                 setDiscoveryOpen(true);
               }}
             />
@@ -641,9 +635,9 @@ export function SliperCommunity({
                       }
                       if (view === "stories" && value !== "이야기" && value !== "모집")
                         setView("home");
+                      if (value !== "모집" && sort === "nearest") setSort("latest");
                       if (value !== "모집" && discoveryActive) {
                         setDiscovery({ ...DEFAULT_DISCOVERY_FILTERS });
-                        if (sort === "nearest") setSort("latest");
                       }
                     }}
                   >
@@ -651,35 +645,23 @@ export function SliperCommunity({
                   </button>
                 ))}
               </div>
-              <label className="sort-select">
-                <select
-                  aria-label="게시글 정렬"
-                  value={sort}
-                  onChange={(event) => {
-                    const next = event.target.value as "latest" | "popular" | "nearest";
-                    if (next === "nearest" && !discovery.coordinates) {
-                      setPendingNearest(true);
-                      setDiscoveryOpen(true);
-                      return;
-                    }
-                    setSort(next);
-                    if (next === "popular") setRankingAt(undefined);
-                    if (view === "popular") setView("home");
-                    if (next === "nearest") {
-                      setView((current) => (current === "stories" ? "stories" : "home"));
-                      setDiscovery((current) => ({ ...current, eventOnly: true }));
-                      setKind("모집");
-                      setFocus("all");
-                      setDiscussionType(undefined);
-                    }
-                  }}
-                >
-                  <option value="latest">최신순</option>
-                  <option value="popular">인기순</option>
-                  <option value="nearest">거리 가까운순</option>
-                </select>
-                <ChevronDown size={14} />
-              </label>
+              <CommunitySort
+                value={sort}
+                coordinates={sortCoordinates}
+                contextKey={`${view}|${category}|${kind}|${query}|${focus}|${discussionType ?? ""}|${topic}|${tag}`}
+                onChange={(next, coordinates) => {
+                  if (next === "nearest" && coordinates) {
+                    setSortCoordinates(coordinates);
+                    setKind("모집");
+                    setFocus("all");
+                    setDiscussionType(undefined);
+                    setView((current) => (current === "stories" ? "stories" : "home"));
+                  }
+                  setSort(next);
+                  if (next === "popular") setRankingAt(undefined);
+                  if (view === "popular") setView("home");
+                }}
+              />
             </div>
             {(kind === "이야기" || kind === "전체") && (
               <div className="discussion-controls">
@@ -757,7 +739,7 @@ export function SliperCommunity({
                       href={
                         store.canWrite
                           ? "/notifications#interests"
-                          : "/login?returnTo=/stories%3Ffocus%3Dinterests"
+                          : loginHref("/stories?focus=interests")
                       }
                     >
                       {store.canWrite ? "관심사 설정" : "로그인하고 관심사 고르기"}
@@ -772,6 +754,7 @@ export function SliperCommunity({
                   [
                     ["today", "오늘"],
                     ["week", "이번 주"],
+                    ["month", "이번 달"],
                     ["all", "전체"],
                   ] as const
                 ).map(([value, label]) => (
@@ -799,8 +782,11 @@ export function SliperCommunity({
                 <p>
                   {period === "all"
                     ? "전체 기간에 받은 좋아요 순"
-                    : (period === "today" ? "한국 시간 오늘 0시" : "한국 시간 이번 주 월요일 0시") +
-                      "부터 기준 시각까지 받은 좋아요 순"}
+                    : (period === "today"
+                        ? "한국 시간 오늘 0시"
+                        : period === "month"
+                          ? "한국 시간 이번 달 1일 0시"
+                          : "한국 시간 이번 주 월요일 0시") + "부터 기준 시각까지 받은 좋아요 순"}
                   {period !== "all" && rankingAt
                     ? " · " +
                       new Date(rankingAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) +
@@ -994,43 +980,20 @@ export function SliperCommunity({
             </p>
           </div>
           <footer className="sidebar-footer">
-            <PolicyLinks />© 2026 Sliper · 함께 만드는 즐거움
+            <PolicyLinks />
+            <OperatorContact compact />© 2026 Sliper · 함께 만드는 즐거움
           </footer>
         </aside>
       </div>
 
-      <div className="mobile-preview">
-        {store.mode === "development"
-          ? "로컬 개발 · 변경 사항은 DB에 저장"
-          : "Sliper · 우리의 예능 커뮤니티"}
-      </div>
-      <nav className="bottom-nav" aria-label="모바일 메뉴">
-        <button
-          className={cn(view === "home" && !sheet && "active")}
-          onClick={() => navigate("home")}
-        >
-          <Home size={22} />홈
-        </button>
-        <button onClick={() => setSheet("categories")}>
-          <Grid2X2 size={22} />
-          카테고리
-        </button>
-        <NotificationBell mobile />
-        <Link href="/mypage">
-          <UserRound size={22} />
-          마이
-        </Link>
-      </nav>
       <Button
-        className="mobile-write"
-        aria-label="새 글 쓰기"
-        disabled={!store.canWrite || store.busy}
-        onClick={() => {
-          setWriting(true);
-        }}
+        className={cn("mobile-compose", !feedVisible && "is-away")}
+        aria-label={store.canWrite ? "새 글 쓰기" : "로그인하고 글쓰기"}
+        disabled={store.busy}
+        onClick={startWriting}
       >
-        <Pencil size={18} />
-        글쓰기
+        <Pencil size={19} />
+        <span>글쓰기</span>
       </Button>
 
       <Dialog
@@ -1087,13 +1050,9 @@ export function SliperCommunity({
 
       <EventDiscoveryDialog
         open={discoveryOpen}
-        onOpenChange={(open) => {
-          setDiscoveryOpen(open);
-          if (!open) setPendingNearest(false);
-        }}
+        onOpenChange={setDiscoveryOpen}
         value={discovery}
         category={category}
-        requireLocation={pendingNearest || sort === "nearest"}
         onApply={(next, nextCategory) => {
           setDiscovery(next);
           setCategory(nextCategory);
@@ -1101,7 +1060,6 @@ export function SliperCommunity({
           setKind("모집");
           setTopic("");
           setTag("");
-          if (pendingNearest) setSort("nearest");
           feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
         }}
       />

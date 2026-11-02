@@ -66,9 +66,13 @@ export function EventDiscoveryButton({
       className={`event-discovery-trigger${active ? " active" : ""}`}
       onClick={onClick}
       aria-haspopup="dialog"
+      aria-label="취향 이벤트 찾기"
     >
       <SlidersHorizontal size={16} />
-      <span>취향 이벤트 찾기</span>
+      <span className="event-discovery-full-label">취향 이벤트 찾기</span>
+      <span className="event-discovery-short-label" aria-hidden="true">
+        취향
+      </span>
       {active && <i aria-label="필터 적용됨" />}
     </button>
   );
@@ -103,7 +107,7 @@ export function EventDiscoveryDialog({
   function submit(event: FormEvent) {
     event.preventDefault();
     if ((requireLocation || draft.radiusKm !== null) && !draft.coordinates) {
-      setError("거리 검색을 하려면 현재 위치를 사용하거나 위도·경도를 입력해 적용해주세요.");
+      setError("거리 검색을 하려면 내 주변 위치를 사용하거나 주소·지도에서 위치를 선택해주세요.");
       return;
     }
     if (draft.fromDate && draft.toDate && draft.fromDate > draft.toDate) {
@@ -250,14 +254,14 @@ export function EventDiscoveryDialog({
             <p className="discovery-note">한국 시간의 행사 시작 날짜를 기준으로 찾아요.</p>
           </section>
           <section className="discovery-section">
-            <h3>참가비와 모집 상태</h3>
+            <h3>사전 참가비와 모집 상태</h3>
             <div className="discovery-quick-options">
               <button
                 type="button"
                 className={draft.minPriceKRW === 0 && draft.maxPriceKRW === 0 ? "selected" : ""}
                 onClick={() => update({ minPriceKRW: 0, maxPriceKRW: 0 })}
               >
-                무료만
+                사전 결제 없음
               </button>
               <button
                 type="button"
@@ -268,7 +272,7 @@ export function EventDiscoveryDialog({
             </div>
             <div className="discovery-two-columns">
               <label className="discovery-field">
-                최소 참가비 (원)
+                최소 사전 참가비 (원)
                 <input
                   type="number"
                   min={0}
@@ -282,7 +286,7 @@ export function EventDiscoveryDialog({
                 />
               </label>
               <label className="discovery-field">
-                최대 참가비 (원)
+                최대 사전 참가비 (원)
                 <input
                   type="number"
                   min={0}
@@ -367,7 +371,7 @@ export function EventDiscoveryChips({
     chips.push({
       label:
         value.minPriceKRW === 0 && value.maxPriceKRW === 0
-          ? "무료"
+          ? "사전 결제 없음"
           : `${value.minPriceKRW?.toLocaleString("ko-KR") ?? "0"} ~ ${value.maxPriceKRW?.toLocaleString("ko-KR") ?? "제한 없음"}원`,
       remove: { minPriceKRW: null, maxPriceKRW: null },
     });

@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
@@ -30,8 +31,7 @@ import type { CommunityVenue, EventMapSnapshot, MapEvent } from "@/domain/event-
 import { appRequest, RequestError } from "@/lib/api-client";
 import { useLocation } from "@/lib/use-location";
 import {
-  geocodeAddress,
-  type GeocodedAddress,
+  naverPlaceLink,
   type MapBounds,
   type MapPin as LocationPin,
   type MapPoint,
@@ -95,9 +95,6 @@ function removeVenue(snapshot: EventMapSnapshot, id: string): EventMapSnapshot {
     ),
   };
 }
-function mapLink(name: string, address: string) {
-  return "https://map.naver.com/p/search/" + encodeURIComponent(name + " " + address);
-}
 function publicWebsite(value: string | null) {
   if (!value) return null;
   try {
@@ -160,24 +157,18 @@ export function EventMapCommunity({
   const [formOpen, setFormOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [editing, setEditing] = useState<CommunityVenue | null>(null);
-  const [picking, setPicking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
-  const [addressLoading, setAddressLoading] = useState(false);
-  const [addressError, setAddressError] = useState("");
-  const [addressResults, setAddressResults] = useState<GeocodedAddress[]>([]);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [reload, setReload] = useState(0);
   const [detailReload, setDetailReload] = useState(0);
   const mounted = useRef(false);
   const loadSequence = useRef(0);
   const detailSequence = useRef(0);
-  const addressSequence = useRef(0);
   const mutationSequence = useRef(0);
   const locationSequence = useRef(0);
   const loadingRequest = useRef<AbortController | null>(null);
   const detailRequest = useRef<AbortController | null>(null);
-  const addressRequest = useRef<AbortController | null>(null);
   const mutationRequest = useRef<AbortController | null>(null);
   const mutationBusy = useRef(false);
   const formHeading = useRef<HTMLHeadingElement>(null);
@@ -193,12 +184,10 @@ export function EventMapCommunity({
       mounted.current = false;
       ++loadSequence.current;
       ++detailSequence.current;
-      ++addressSequence.current;
       ++mutationSequence.current;
       ++locationSequence.current;
       loadingRequest.current?.abort();
       detailRequest.current?.abort();
-      addressRequest.current?.abort();
       mutationRequest.current?.abort();
     };
   }, []);
@@ -270,9 +259,6 @@ export function EventMapCommunity({
     return () => controller.abort();
   }, [selectedId, detailReload]);
 
-  useEffect(() => {
-    if (picking) mapElement.current?.scrollIntoView({ block: "center", behavior: "instant" });
-  }, [picking]);
   const venueId = selectedId?.startsWith("place:") ? selectedId.slice(6) : null;
   const selectedVenue = venueId
     ? detail?.id === venueId
@@ -282,14 +268,14 @@ export function EventMapCommunity({
   const selectedEvent = selectedId?.startsWith("event:")
     ? snapshot.events.find((event) => event.id === selectedId.slice(6))
     : null;
-  const showDetail = Boolean(selectedVenue || selectedEvent || detailError) && !picking;
+  const showDetail = Boolean(selectedVenue || selectedEvent || detailError);
   useEffect(() => {
-    if (!showDetail || picking || formOpen || deleteOpen) return;
+    if (!showDetail || formOpen || deleteOpen) return;
     const mobile = window.matchMedia("(max-width: 720px)").matches;
     if (mobile && mobileView !== "map") return;
     const frame = requestAnimationFrame(() => focusPanel(detailElement.current, mobile));
     return () => cancelAnimationFrame(frame);
-  }, [showDetail, selectedId, mobileView, picking, formOpen, deleteOpen]);
+  }, [showDetail, selectedId, mobileView, formOpen, deleteOpen]);
   const pins = useMemo<LocationPin[]>(
     () => [
       ...snapshot.venues.map((venue) => ({
@@ -337,7 +323,7 @@ export function EventMapCommunity({
     [],
   );
   function select(id: string, point?: MapPoint) {
-    if (picking || mutationBusy.current) return;
+    if (mutationBusy.current) return;
     ++locationSequence.current;
     cancelLocation();
     setSelectedId(id);
@@ -347,18 +333,9 @@ export function EventMapCommunity({
       setFocusPoint({ ...point });
     }
   }
-  function invalidateAddress() {
-    ++addressSequence.current;
-    addressRequest.current?.abort();
-    setAddressLoading(false);
-    setAddressError("");
-    setAddressResults([]);
-  }
   function begin(venue?: CommunityVenue) {
     if (mutationBusy.current) return;
-    invalidateAddress();
     setFormError("");
-    setPicking(false);
     setEditing(venue ?? null);
     setDraft(
       venue
@@ -379,32 +356,6 @@ export function EventMapCommunity({
     );
     setFormOpen(true);
   }
-  async function searchAddress() {
-    const address = draft.address.trim();
-    if (!address || addressLoading) return;
-    invalidateAddress();
-    const token = ++addressSequence.current;
-    const controller = new AbortController();
-    addressRequest.current = controller;
-    setAddressLoading(true);
-    try {
-      const values = await geocodeAddress(address, { signal: controller.signal });
-      if (!mounted.current || token !== addressSequence.current || controller.signal.aborted)
-        return;
-      setAddressResults(values);
-      if (!values.length)
-        setAddressError(
-          "일치하는 주소가 없어요. 도로명·지번 주소로 검색하거나 지도 위치를 직접 선택해주세요.",
-        );
-    } catch (error) {
-      if (mounted.current && token === addressSequence.current && !controller.signal.aborted)
-        setAddressError(
-          failureMessage(error, "주소를 찾지 못했어요. 좌표를 직접 입력할 수 있어요."),
-        );
-    } finally {
-      if (mounted.current && token === addressSequence.current) setAddressLoading(false);
-    }
-  }
   function refresh() {
     ++loadSequence.current;
     loadingRequest.current?.abort();
@@ -414,7 +365,7 @@ export function EventMapCommunity({
     event.preventDefault();
     if (mutationBusy.current) return;
     if (!draft.point) {
-      setFormError("주소 검색 결과를 선택하거나 지도 위치·좌표를 설정해주세요.");
+      setFormError("주소·지도에서 모임 장소를 선택해주세요.");
       return;
     }
     const tags = [
@@ -451,7 +402,6 @@ export function EventMapCommunity({
     setLoading(false);
     setSubmitting(true);
     setFormError("");
-    invalidateAddress();
     ++detailSequence.current;
     detailRequest.current?.abort();
     try {
@@ -592,7 +542,7 @@ export function EventMapCommunity({
               <Plus size={17} /> 장소 등록
             </button>
           ) : (
-            <Link className="emap-primary" href="/login?returnTo=%2Fmap">
+            <Link className="emap-primary" href={loginHref("/map")}>
               <Plus size={17} /> 장소 등록
             </Link>
           )}
@@ -668,7 +618,7 @@ export function EventMapCommunity({
                 className={freeOnly ? "is-active" : ""}
                 onClick={() => setFreeOnly((value) => !value)}
               >
-                {freeOnly && <Check size={13} />} 무료만
+                {freeOnly && <Check size={13} />} 무료·사전 결제 없음
               </button>
             </div>
             {(loadError || snapshot.truncated) && (
@@ -702,7 +652,6 @@ export function EventMapCommunity({
               className={mobileView === "list" ? "is-active" : ""}
               aria-pressed={mobileView === "list"}
               aria-controls="emap-list-panel"
-              disabled={picking}
               onClick={() => setMobileView("list")}
             >
               <List size={17} /> 목록 보기
@@ -758,7 +707,9 @@ export function EventMapCommunity({
                   <span className="emap-result-address">{event.location}</span>
                   <span className="emap-result-meta">
                     <span>
-                      {event.amountKRW ? `${event.amountKRW.toLocaleString("ko-KR")}원` : "무료"}
+                      {event.amountKRW
+                        ? `${event.amountKRW.toLocaleString("ko-KR")}원`
+                        : "사전 결제 없음"}
                     </span>
                     <span className={!event.open ? "emap-muted" : ""}>
                       {event.open ? "모집 중" : "모집 마감"}
@@ -794,46 +745,22 @@ export function EventMapCommunity({
                 onSelect={(id) => select(id)}
                 onBoundsChange={onBoundsChange}
                 focusPoint={focusPoint}
-                picking={picking}
-                onPick={(point) => {
-                  if (!picking || mutationBusy.current) return;
-                  ++locationSequence.current;
-                  cancelLocation();
-                  invalidateAddress();
-                  setDraft((previous) => ({ ...previous, point }));
-                  setPicking(false);
-                  setFormOpen(true);
-                }}
+                picking={false}
+                onPick={() => {}}
               />
-              {!picking && (
-                <button
-                  className="emap-locate"
-                  aria-label="현재 위치 주변으로 지도 이동"
-                  title="현재 위치 주변으로 지도 이동"
-                  onClick={() => void locate()}
-                  disabled={location.status === "loading" || !clientId}
-                >
-                  {location.status === "loading" ? (
-                    <LoaderCircle size={19} className="emap-spin" />
-                  ) : (
-                    <LocateFixed size={19} />
-                  )}
-                </button>
-              )}
-              {picking && (
-                <div className="emap-picking" role="status">
-                  <MapPin size={17} />
-                  <span>장소가 있는 지점을 눌러주세요</span>
-                  <button
-                    onClick={() => {
-                      setPicking(false);
-                      setFormOpen(true);
-                    }}
-                  >
-                    취소
-                  </button>
-                </div>
-              )}
+              <button
+                className="emap-locate"
+                aria-label="현재 위치 주변으로 지도 이동"
+                title="현재 위치 주변으로 지도 이동"
+                onClick={() => void locate()}
+                disabled={location.status === "loading" || !clientId}
+              >
+                {location.status === "loading" ? (
+                  <LoaderCircle size={19} className="emap-spin" />
+                ) : (
+                  <LocateFixed size={19} />
+                )}
+              </button>
               <div className="emap-legend" aria-label="지도 마커 범례">
                 <span>
                   <i />
@@ -901,7 +828,7 @@ export function EventMapCommunity({
                   <p className="emap-detail-address">
                     {selectedVenue.address}
                     <a
-                      href={mapLink(selectedVenue.name, selectedVenue.address)}
+                      href={naverPlaceLink(selectedVenue, selectedVenue.name)}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="네이버 지도에서 장소 확인"
@@ -993,7 +920,7 @@ export function EventMapCommunity({
                         추천 {selectedVenue.recommendations}
                       </button>
                     ) : (
-                      <Link className="emap-secondary" href="/login?returnTo=%2Fmap">
+                      <Link className="emap-secondary" href={loginHref("/map")}>
                         <Heart size={16} /> 추천 {selectedVenue.recommendations}
                       </Link>
                     )}
@@ -1024,7 +951,6 @@ export function EventMapCommunity({
         open={formOpen}
         onOpenChange={(next) => {
           if (submitting) return;
-          if (!next) invalidateAddress();
           setFormOpen(next);
         }}
       >
@@ -1067,106 +993,22 @@ export function EventMapCommunity({
                   }
                 />
               </label>
-              <label>
-                주소 <span>필수</span>
-                <div className="emap-address-input">
-                  <input
-                    value={draft.address}
-                    required
-                    minLength={5}
-                    maxLength={200}
-                    placeholder="도로명 또는 지번 주소"
-                    onChange={(event) => {
-                      invalidateAddress();
-                      setDraft((previous) => ({
-                        ...previous,
-                        address: event.target.value,
-                        point: null,
-                      }));
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => void searchAddress()}
-                    disabled={!clientId || !draft.address.trim() || addressLoading}
-                  >
-                    {addressLoading ? (
-                      <LoaderCircle size={16} className="emap-spin" />
-                    ) : (
-                      <Search size={16} />
-                    )}{" "}
-                    주소 찾기
-                  </button>
-                </div>
-              </label>
-              {addressError && (
-                <p className="emap-error" role="alert">
-                  {addressError}
-                </p>
-              )}
-              {!!addressResults.length && (
-                <div className="emap-address-results" aria-label="주소 검색 결과">
-                  {addressResults.map((result, index) => (
-                    <button
-                      key={`${result.latitude}:${result.longitude}:${index}`}
-                      type="button"
-                      onClick={() => {
-                        invalidateAddress();
-                        setDraft((previous) => ({
-                          ...previous,
-                          address: result.address,
-                          point: { latitude: result.latitude, longitude: result.longitude },
-                        }));
-                      }}
-                    >
-                      <MapPin size={15} />
-                      <span>
-                        <strong>{result.roadAddress || result.address}</strong>
-                        {result.jibunAddress && result.jibunAddress !== result.roadAddress && (
-                          <small>{result.jibunAddress}</small>
-                        )}
-                      </span>
-                      <Check size={15} />
-                    </button>
-                  ))}
-                </div>
-              )}
               <div className="emap-form-location">
-                <div>
-                  <strong>
-                    지도 위치 <span>필수</span>
-                  </strong>
-                  <button
-                    type="button"
-                    disabled={!clientId}
-                    onClick={() => {
-                      invalidateAddress();
-                      ++locationSequence.current;
-                      cancelLocation();
-                      setMobileView("map");
-                      setPicking(true);
-                      setFormOpen(false);
-                      if (draft.point) setFocusPoint({ ...draft.point });
-                    }}
-                  >
-                    <MapPin size={14} /> 지도에서 선택
-                  </button>
-                </div>
+                <strong>
+                  장소 주소 <span>필수</span>
+                </strong>
                 <EventLocationField
                   value={draft.point}
-                  onChange={(point) => {
-                    invalidateAddress();
-                    setDraft((previous) => ({ ...previous, point }));
-                  }}
+                  address={draft.address}
+                  onChange={(point) => setDraft((previous) => ({ ...previous, point }))}
+                  onAddressSelected={(address) =>
+                    setDraft((previous) => ({ ...previous, address }))
+                  }
                   disabled={submitting}
                   allowSharedPlaces={false}
+                  addressMaxLength={200}
                   idPrefix="emap-venue"
                 />
-                {!clientId && (
-                  <p className="emap-muted">
-                    지도를 준비하는 동안에도 좌표 직접 입력으로 장소를 등록할 수 있어요.
-                  </p>
-                )}
               </div>
               <div className="emap-form-grid">
                 <label>
@@ -1360,7 +1202,7 @@ function MapEventDetail({ event }: { event: MapEvent }) {
       <h2>{event.title}</h2>
       <p className="emap-detail-address">
         {event.location}
-        <a href={mapLink(event.title, event.location)} target="_blank" rel="noopener noreferrer">
+        <a href={naverPlaceLink(event, event.location)} target="_blank" rel="noopener noreferrer">
           네이버 지도 <ArrowUpRight size={13} />
         </a>
       </p>
@@ -1374,7 +1216,7 @@ function MapEventDetail({ event }: { event: MapEvent }) {
           정원 {event.capacity}명
         </span>
         <span>
-          {event.amountKRW ? `${event.amountKRW.toLocaleString("ko-KR")}원` : "무료 참가"}
+          {event.amountKRW ? `${event.amountKRW.toLocaleString("ko-KR")}원` : "사전 결제 없음"}
         </span>
       </div>
       <div className="emap-detail-actions">

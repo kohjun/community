@@ -1,7 +1,8 @@
+import { publicPageMetadata } from "@/domain/search-visibility";
+import { communityQueries } from "@/server/community-queries";
 import { redirect } from "next/navigation";
 import { communityLocation } from "@/domain/community-location";
 import { topicForSlug } from "@/domain/topics";
-import type { Metadata } from "next";
 import { SliperCommunity } from "@/components/sliper-community";
 import { getDatabase } from "@/db/client";
 import { communityService } from "@/server/community-service";
@@ -9,10 +10,6 @@ import { currentActor } from "@/server/identity";
 import { authConfiguration } from "@/server/auth-config";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "이야기 · 자유게시판 — Sliper",
-  description: "예능과 일상의 이야기를 편하게 나누는 슬리퍼 자유게시판",
-};
 export default async function Page({
   searchParams,
 }: {
@@ -39,7 +36,7 @@ export default async function Page({
   }
   const service = communityService(getDatabase());
   const [feed, notifications] = await Promise.all([
-    service.feed(actor, initialQuery),
+    communityQueries(getDatabase()).feed(actor, initialQuery),
     service.inbox(actor),
   ]);
   return (
@@ -58,4 +55,18 @@ export default async function Page({
       }}
     />
   );
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const personal = Object.keys(params).some(
+    (key) =>
+      ["mine", "bookmarks"].includes(String(params.view)) ||
+      ["compose", "write", "post"].includes(key),
+  );
+  return publicPageMetadata("/stories", personal);
 }

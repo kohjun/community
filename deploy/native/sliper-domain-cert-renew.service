@@ -1,0 +1,12 @@
+[Unit]
+Description=Renew only the Sliper domain certificate
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+UMask=0077
+PrivateTmp=true
+NoNewPrivileges=true
+TimeoutStartSec=300
+ExecStart=/usr/bin/certbot renew --cert-name sliper.kr --config-dir /var/lib/sliper-domain-certbot/config --work-dir /var/lib/sliper-domain-certbot/work --logs-dir /var/lib/sliper-domain-certbot/logs --quiet --deploy-hook /etc/sliper-domain/reload-nginx.sh

@@ -1,6 +1,7 @@
+import { publicPageMetadata } from "@/domain/search-visibility";
+import { communityQueries } from "@/server/community-queries";
 import { LightningCommunity } from "@/components/lightning-community";
 import { getDatabase } from "@/db/client";
-import { communityService } from "@/server/community-service";
 import { eventMapService } from "@/server/event-map-service";
 import { AppError } from "@/server/errors";
 import { currentActor } from "@/server/identity";
@@ -26,7 +27,7 @@ export default async function Page({
     typeof query.search === "string" && query.search.trim().length <= 100
       ? query.search.trim()
       : "";
-  const initial = await communityService(getDatabase()).feed(actor, {
+  const initial = await communityQueries(getDatabase()).feed(actor, {
     eventOnly: true,
     meetupType: "lightning",
     ...(initialCategory ? { activityCategory: initialCategory } : {}),
@@ -62,4 +63,8 @@ export default async function Page({
       initialSearch={initialSearch}
     />
   );
+}
+
+export function generateMetadata() {
+  return publicPageMetadata("/lightning");
 }

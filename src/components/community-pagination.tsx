@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { CommunityFeed } from "@/domain/community";
 
@@ -12,6 +13,7 @@ export function CommunityPagination({
   disabled: boolean;
   onChange: (page: number) => void;
 }) {
+  const fieldId = useId();
   const { page, totalPages, totalItems } = pagination;
   const visiblePages = [
     ...new Set([
@@ -54,6 +56,38 @@ export function CommunityPagination({
             </span>
           ))}
         </div>
+        <form
+          className="community-mobile-page-jump"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (disabled) return;
+            const value = Number(new FormData(event.currentTarget).get("page"));
+            if (Number.isInteger(value) && value >= 1 && value <= totalPages) {
+              event.currentTarget.querySelector("input")?.blur();
+              onChange(value);
+            }
+          }}
+        >
+          <label className="sr-only" htmlFor={fieldId}>
+            이동할 페이지
+          </label>
+          <input
+            key={page}
+            id={fieldId}
+            name="page"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={totalPages}
+            defaultValue={page}
+            disabled={disabled}
+            required
+          />
+          <span>/ {totalPages.toLocaleString("ko-KR")}</span>
+          <button disabled={disabled} type="submit">
+            이동
+          </button>
+        </form>
         <button
           type="button"
           className="community-page-direction"

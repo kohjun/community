@@ -1,6 +1,6 @@
 "use client";
+import { LoginLink } from "./login-link";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Bell, BellOff, Check, Smartphone, ChevronDown, ArrowRight } from "lucide-react";
 import { appRequest, RequestError } from "@/lib/api-client";
@@ -317,11 +317,7 @@ export function PushSettings() {
             {error}
           </p>
         )}
-        {loggedOut && (
-          <Link href="/login" className="push-settings-login">
-            로그인하고 설정하기 →
-          </Link>
-        )}
+        {loggedOut && <LoginLink className="push-settings-login">로그인하고 설정하기 →</LoginLink>}
         {message && (
           <p className="push-settings-message" role="status">
             {message}

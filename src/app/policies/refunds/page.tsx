@@ -1,3 +1,4 @@
+import { publicPageMetadata } from "@/domain/search-visibility";
 import Link from "next/link";
 import { ParticipationShell } from "@/components/participation-shell";
 export default function Page() {
@@ -46,4 +47,8 @@ export default function Page() {
       </div>
     </ParticipationShell>
   );
+}
+
+export function generateMetadata() {
+  return publicPageMetadata("/policies/refunds");
 }

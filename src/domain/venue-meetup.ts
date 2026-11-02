@@ -17,6 +17,6 @@ export function meetupVenuePreset(venue: CommunityVenue): MeetupVenuePreset | nu
   const { id, name, address, latitude, longitude, categorySlug, version } = venue;
   return { id, name, address, latitude, longitude, categorySlug, version };
 }
-export function meetupVenueLabel(venue: MeetupVenuePreset): string {
+export function meetupVenueLabel(venue: Pick<MeetupVenuePreset, "name" | "address">): string {
   return [venue.name.trim(), venue.address.trim()].filter(Boolean).join(" · ").slice(0, 120);
 }

@@ -336,7 +336,9 @@ test("inbox and delivery redact previously queued text after a post becomes a sp
     {
       subject: "mailto:test@example.com",
       publicKey,
-      privateKey: ecdh.getPrivateKey().toString("base64url"),
+      privateKey: Buffer.from(ecdh.getPrivateKey("hex").padStart(64, "0"), "hex").toString(
+        "base64url",
+      ),
     },
     async (_sub, delivery) => {
       sent.push(JSON.stringify({ title: delivery.title, body: delivery.body }));

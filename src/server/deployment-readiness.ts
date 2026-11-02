@@ -1,3 +1,5 @@
+import { readSiteOperations } from "../domain/site-operations";
+import { searchOrigin } from "../domain/search-visibility";
 import {
   isAdSenseClientId,
   isAdSenseSlotId,
@@ -7,6 +9,8 @@ import { authConfiguration } from "./auth-config";
 import { imageStorageConfiguration } from "./image-storage-config";
 import { parsePushConfiguration } from "./push-configuration";
 import { parseRedisConfiguration, isPrivateRedisHost } from "./redis-configuration";
+
+import { roomRealtimeConfiguration } from "./room-realtime-config";
 
 type Environment = Record<string, string | undefined>;
 export interface DeploymentCheck {
@@ -172,34 +176,45 @@ export function deploymentReadiness(env: Environment): DeploymentCheck[] {
     "조회수 방문자 서명 키가 설정되어 있습니다.",
     "VISITOR_HASH_SECRET에 모든 서버가 공유하는 최소 32자 난수를 설정하세요.",
   );
-  const roomRedis = parseRedisConfiguration(env.REDIS_URL);
-  if (!present(env.REDIS_URL)) {
-    rows.push({
-      id: "room-realtime",
-      status: "warn",
-      message: "REDIS_URL이 없습니다. 공지방 메시지는 DB에 저장되며 5초 조회 방식으로 갱신됩니다.",
-    });
-  } else if (!roomRedis) {
+  let roomConfig;
+  try {
+    roomConfig = roomRealtimeConfiguration(env);
+  } catch {
+    /* Report only a safe classification. */
+  }
+  if (!roomConfig) {
     rows.push({
       id: "room-realtime",
       status: "fail",
-      message: "REDIS_URL에 유효한 호스트가 있는 redis:// 또는 rediss:// 주소를 설정하세요.",
+      message:
+        "공지방 갱신 설정을 확인하세요. Supabase 서버 키와 프로젝트 URL, 또는 유효한 Redis 주소가 필요합니다. 클라우드 전용 모드에서는 Redis를 사용할 수 없습니다.",
     });
-  } else if (roomRedis.protocol === "rediss:") {
+  } else if (roomConfig.provider === "supabase") {
     rows.push({
       id: "room-realtime",
       status: "pass",
       message:
-        "공지방 Redis 주소 형식과 TLS 설정이 유효합니다. 실제 연결과 여러 서버 간 수신을 별도 검증하세요.",
+        "Supabase 비공개 Broadcast 설정 형식이 유효합니다. 실제 연결·서버 간 수신·비회원 차단은 cloud:check로 별도 검증하세요. 메시지 원본은 PostgreSQL입니다.",
+    });
+  } else if (roomConfig.provider === "polling") {
+    rows.push({
+      id: "room-realtime",
+      status: "warn",
+      message:
+        "실시간 신호가 미설정입니다. 공지방 메시지는 DB에 저장되며 5초 조회 방식으로 갱신됩니다.",
     });
   } else {
+    const roomRedis = parseRedisConfiguration(roomConfig.url)!;
+    const tls = roomRedis.protocol === "rediss:";
     const privateHost = isPrivateRedisHost(roomRedis.hostname);
     rows.push({
       id: "room-realtime",
-      status: privateHost || env.NODE_ENV === "development" ? "warn" : "fail",
-      message: privateHost
-        ? "로컬·내부 호스트 형식의 Redis 평문 주소입니다. 운영에서는 사설망 접근 통제 또는 rediss:// TLS를 확인하세요."
-        : "공개 Redis 평문 주소입니다. 운영에서는 사설망 Redis 주소 또는 rediss:// TLS를 사용하세요.",
+      status: tls ? "pass" : privateHost || env.NODE_ENV === "development" ? "warn" : "fail",
+      message: tls
+        ? "공지방 Redis 주소 형식과 TLS 설정이 유효합니다. 실제 연결과 여러 서버 간 수신을 별도 검증하세요."
+        : privateHost
+          ? "로컬·내부 호스트 형식의 Redis 평문 주소입니다. 운영에서는 사설망 접근 통제 또는 rediss:// TLS를 확인하세요."
+          : "공개 Redis 평문 주소입니다. 운영에서는 사설망 Redis 주소 또는 rediss:// TLS를 사용하세요.",
     });
   }
 
@@ -222,7 +237,8 @@ export function deploymentReadiness(env: Environment): DeploymentCheck[] {
     "알려진 비밀키용 공개 환경변수가 발견되지 않았습니다.",
     "NEXT_PUBLIC_ 환경변수에서 서버 비밀키·DB/Redis 주소·비밀번호를 제거하고 노출된 키는 교체하세요.",
   );
-  const storage = env.MEDIA_STORAGE_BACKEND ?? "local";
+  const storage =
+    env.MEDIA_STORAGE_BACKEND ?? (env.SLIPER_CLOUD_ONLY === "true" ? "supabase" : "local");
   if (storage === "supabase") {
     let storageValid = false;
     try {
@@ -311,6 +327,34 @@ export function deploymentReadiness(env: Environment): DeploymentCheck[] {
     "PUSH_WORKER_MODE=external로 설정하고 지속 실행하는 별도 알림 Worker를 준비하세요.",
   );
   rows.push(advertisingReadiness(env));
+  const operations = readSiteOperations(env);
+  rows.push({
+    id: "operator-contact",
+    status: "pass",
+    message:
+      "공개 운영자명과 비로그인 이메일 문의 경로가 있습니다. 실제 수신과 응대 담당은 별도 확인하세요.",
+  });
+  rows.push({
+    id: "business-disclosure",
+    status: operations.businessComplete ? "pass" : "warn",
+    message: operations.businessComplete
+      ? "사업자 고지 항목이 입력되어 있습니다. 신고/등록의 유효성은 별도 확인하세요."
+      : "사업자 정보 준비 전입니다. 유료 거래와 사업자 고지의 운영 조건을 확정하세요.",
+  });
+  rows.push({
+    id: "privacy-review",
+    status: operations.privacyReviewed ? "pass" : "warn",
+    message: operations.privacyReviewed
+      ? "개인정보 방침 검토 완료 표시가 있습니다. 실제 처리·파기·위탁 계약과 일치하는지 유지 점검하세요."
+      : "보유·파기 기간과 클라우드 수탁/국외 처리 조건의 최종 검토가 필요합니다. 정책 화면 제공만으로 검토 완료를 뜻하지 않습니다.",
+  });
+  rows.push({
+    id: "search-discovery",
+    status: searchOrigin({ ...env, NODE_ENV: "production" }) ? "pass" : "warn",
+    message: searchOrigin({ ...env, NODE_ENV: "production" })
+      ? "공개 안내·목록의 검색 노출과 사이트맵 설정이 활성화됩니다. 개인·행사 기록·구매 본문은 제외됩니다."
+      : "검색 노출은 꺼져 있습니다. 공개 HTTPS 주소에서 SLIPER_SEARCH_INDEXING_ENABLED=true로 준비할 수 있습니다.",
+  });
   rows.push({
     id: "operational-verification",
     status: "warn",

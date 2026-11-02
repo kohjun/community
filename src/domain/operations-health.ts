@@ -1,5 +1,5 @@
 export interface HealthQueue {
-  key: "inbox" | "push" | "video";
+  key: "inbox" | "push" | "video" | "cleanup";
   label: string;
   waiting: number;
   processing: number;
@@ -20,6 +20,7 @@ export interface OperationsHealth {
   };
   configuration: {
     mediaStorage: "local" | "supabase" | "invalid";
+    roomProvider: "supabase" | "redis" | "polling" | "invalid";
     roomUpdates: "configured" | "disabled" | "invalid";
     push: "configured" | "disabled" | "invalid";
     pushWorker: "embedded" | "external" | "invalid";

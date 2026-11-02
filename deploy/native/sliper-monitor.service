@@ -1,0 +1,35 @@
+[Unit]
+Description=Sliper minimal loopback operational health endpoint
+After=network-online.target sliper-monitor-probe.service
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=exec
+User=sliper-monitor
+Group=sliper-monitor
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 -B /opt/sliper/ops/sliper-monitor.py serve
+Restart=on-failure
+RestartSec=5s
+UMask=0077
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/var/lib/sliper-monitor
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+CapabilityBoundingSet=
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryMax=128M
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -38,6 +38,7 @@ import { enforceRequestLimit } from "./request-limits";
 import { awardActivity } from "./activity";
 import { assertEventRunning, isEventCancelled } from "./event-lifecycle-service";
 import { canWriteVerifiedReview, verifiedReviewParticipation } from "./verified-review-policy";
+import { assertContentAllowed } from "./content-policy";
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 const hash = (code: string) => createHash("sha256").update(code).digest("hex");
 export function eventOperationsService(db: Database, clock = () => new Date()) {
@@ -440,6 +441,7 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
         .select({ entryId: templateProvenance.entryId })
         .from(templateProvenance)
         .where(eq(templateProvenance.postId, postId));
+      assertContentAllowed(value);
       const [created] = await tx
         .insert(posts)
         .values({
@@ -522,6 +524,7 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
           ownerId: post.authorId,
           completedAt,
           snapshot: {
+            participantGuide: settings.participantGuide,
             title: post.title,
             category: post.categorySlug,
             location: post.location ?? "",

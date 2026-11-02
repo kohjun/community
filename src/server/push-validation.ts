@@ -45,6 +45,7 @@ export function safePushPath(path: string) {
     /^\/(rooms|events)\/[0-9a-f-]{36}$/i.test(path) ||
     path === "/mypage" ||
     path === "/participation" ||
+    path === "/discover/saved" ||
     path === "/notifications"
   );
 }

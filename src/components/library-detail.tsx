@@ -1,4 +1,5 @@
 "use client";
+import { LibraryPreparation } from "./library-preparation";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
@@ -276,6 +277,14 @@ export function LibraryDetail({
           테스트 구매가 완료되어 가이드가 열렸어요. 실제 결제는 발생하지 않았어요.{" "}
           <Link href={`/archive/purchases/${testReceiptId}`}>구매 내역 보기</Link>
         </p>
+      )}
+      {entry.payload && (
+        <LibraryPreparation
+          key={entry.id + ":" + entry.updatedAt}
+          payload={entry.payload}
+          title={entry.title}
+          version={entry.publishedVersion}
+        />
       )}
       {entry.payload && (
         <LibraryPlaybook key={entry.updatedAt} payload={entry.payload} summary={entry.summary} />

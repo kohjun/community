@@ -1,4 +1,6 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
+import { TopicStarter } from "./topic-starter";
 import { useAdSenseContentGuard } from "./adsense-provider";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -95,7 +97,9 @@ function PostRow({ post }: { post: TopicPostSummary }) {
         )}
         {post.eventAmountKRW !== null && (
           <span>
-            {post.eventAmountKRW ? post.eventAmountKRW.toLocaleString("ko-KR") + "원" : "무료"}
+            {post.eventAmountKRW
+              ? post.eventAmountKRW.toLocaleString("ko-KR") + "원"
+              : "사전 결제 없음"}
           </span>
         )}
         <span>
@@ -145,7 +149,7 @@ export function TopicDetailView({
   const current = sections.find((section) => section.id === active)!;
   return (
     <ParticipationShell advertising={!advertisingBlocked}>
-      <Link className="topics-back" href="/topics">
+      <Link className="topics-back" href="/search#topics">
         <ArrowLeft size={15} />
         주제 탐색
       </Link>
@@ -156,6 +160,7 @@ export function TopicDetailView({
           <p>{data.topic.description}</p>
         </div>
       </section>
+      <TopicStarter topic={data.topic} />
       <nav className="topics-topic-nav" aria-label="탐색 주제">
         {TOPICS.map((topic) => (
           <Link
@@ -193,12 +198,7 @@ export function TopicDetailView({
         <p className="topics-guide">
           로그인하면 구독한 분야와 호스트의 글을 모아볼 수 있어요. 지금은 이 주제의 전체 글을
           보여드려요.{" "}
-          <Link
-            href={
-              "/login?returnTo=" +
-              encodeURIComponent(topicUrl(data.topic.slug, { focus: "interests" }, active))
-            }
-          >
+          <Link href={loginHref(topicUrl(data.topic.slug, { focus: "interests" }, active))}>
             로그인
           </Link>
         </p>

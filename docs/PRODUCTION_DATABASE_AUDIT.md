@@ -20,7 +20,7 @@ package 명령 끝의 `--` 구분자는 유지해야 합니다. Node가 자체 `
 
 ## 확인하는 것
 
-- `REPEATABLE READ READ ONLY` 트랜잭션의 실제 상태와 `pg_stat_ssl`의 현재 DB 백엔드 세션 암호화
+- `REPEATABLE READ READ ONLY` 트랜잭션의 실제 상태, 연결된 드라이버의 실효 필수 TLS 모드와 `pg_stat_ssl`의 DB 백엔드 암호화를 각각 확인
 - 현재 역할 및 그 역할이 속한 역할의 superuser·CREATEDB·CREATEROLE·복제 권한
 - 현재 역할이 `sliper` 스키마·테이블·함수의 소유자이거나 소유자 역할의 구성원인지 여부
 - 실행 역할의 스키마 USAGE, 스키마 CREATE 제한, 모든 앱 테이블의 SELECT/INSERT/UPDATE/DELETE와 함수 EXECUTE
@@ -39,7 +39,7 @@ package 명령 끝의 `--` 구분자는 유지해야 합니다. Node가 자체 `
 
 실제 연결·카탈로그 조회는 하지만 앱 행을 조회하거나 INSERT/UPDATE/DELETE로 권한을 시험하지 않습니다. 마이그레이션·seed·역할 생성·권한 변경·정리·백업·Worker 시작·OAuth·Storage 요청도 하지 않습니다. 연결5초·문장8초·잠금2초·전체30초 한도를 사용하며 오류 원문은 숨깁니다. 읽지 못한 원장은 savepoint로 실패를 격리합니다.
 
-사설/루프백/내부 주소는 `scope=local-diagnostic`, 공개 원격 주소는 `remote-database-readonly`, 설정이 없거나 해석할 수 없으면 `unconfigured`입니다. 로컬 진단은 운영 Supabase 검증 완료로 계산하지 않습니다. 원격은 URL의 TLS 설정뿐 아니라 현재 DB 세션의 TLS 관측도 필요합니다. `pg_stat_ssl`은 pooler 뒤 DB 세션의 관측이며 클라이언트→pooler 구간과 서비스 HTTPS까지 입증하지 않습니다.
+사설/루프백/내부 주소는 `scope=local-diagnostic`, 공개 원격 주소는 `remote-database-readonly`, 설정이 없거나 해석할 수 없으면 `unconfigured`입니다. 로컬 진단은 운영 Supabase 검증 완료로 계산하지 않습니다. 원격 CLI는 URL 문자열만으로 통과시키지 않습니다. 실제 쿼리를 완료한 Postgres.js 연결의 실효 옵션이 require/verify-full/verify-ca/true처럼 TLS를 강제하는지 확인합니다. prefer/allow/비활성·임의 객체는 근거로 인정하지 않습니다. 필수 TLS로 쿼리를 완료하면 클라이언트→접속 지점 구간은 PASS이며, `pg_stat_ssl`에서 별도의 DB 백엔드 암호화를 관측하지 못하면 `backend-transport` WARN을 남깁니다. pooler의 내부 연결이 로컬 소켓일 수도 있으므로 이를 클라이언트 평문 접속으로 단정하지 않습니다. 필수 TLS와 백엔드 TLS 어느 것도 확인하지 못한 원격 검사는 계속 FAIL입니다. 인증서 신원 검증과 서비스 HTTPS까지 입증하지 않습니다.
 
 모든 결과의 `releaseApproval`은 `not-performed`입니다. 이 도구가 통과해도 실제 두 회원의 OAuth·프로필 생성·상호 수정 차단, private Storage 저장/재생, 결제·환불, 실기기 푸시·QR, 부하·원격 복원·베타 검증은 별도로 남습니다. 모든 열·인덱스·트리거·함수 본문에 대한 전체 스키마 동등성 감사나 함수 코드 보안 감사를 대체하지 않습니다.
 
@@ -60,3 +60,9 @@ package 명령 끝의 `--` 구분자는 유지해야 합니다. Node가 자체 `
 `deploy:db-check`의 원장 항목은 계속 **FAIL**입니다. 네이티브 회귀 검사는 독립적인 원장·파일 비교와 도구의 판정이 같은지를 검증하므로, 차이를 정확히 검출하면 테스트 자체는 통과합니다. 테스트 통과를 DB 출시 준비 통과로 계산하지 않습니다.
 
 새 Supabase 환경에는 현재 발행된 전체 journal을 순서대로 적용하고 실제 실행 역할로 다시 검증해야 합니다. 기존 DB를 수리하려면 암호화 백업을 보존한 뒤 별도의 깨끗한 스키마 DB로 데이터를 이관하는 절차·정합 검사·기능 회귀·복구와 전환 계획이 필요합니다. 기존 원장을 임의 갱신하거나 과거 마이그레이션을 현재 데이터에 다시 실행하는 방식은 사용하지 않습니다.
+
+## 2026-10-16 Supabase 실행 역할 검사
+
+실제 별도 실행 역할로 PASS12·WARN1·FAIL0을 확인했습니다. 앱80개 테이블의 RLS·DML·함수 권한, 소유자 분리와 브라우저 접근 차단, 전체67개 마이그레이션 해시·순서·시각이 일치합니다. WARN은 pooler 이후 백엔드 TLS 미관측입니다. 기존 로컬 DB의2개 원장 차이는 보존했으며 새 클라우드 결과로 고치지 않았습니다.
+
+관련 회귀16개와 타입 검사를 통과했습니다. 평문 원격·권한 누출·원장 불일치는 계속 실패하도록 검증했습니다. 실제 OAuth·회원 인가·Worker·운영 복원과 출시는 별도입니다.

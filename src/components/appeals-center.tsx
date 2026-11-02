@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -172,7 +173,7 @@ export function AppealsUnavailable({
         <p>{message}</p>
         <Link
           className="appeals-button"
-          href={login ? "/login?returnTo=/settings/appeals" : "/settings/account"}
+          href={login ? loginHref("/settings/appeals") : "/settings/account"}
         >
           {login ? "로그인하고 확인하기" : "계정·안전 설정으로"}
         </Link>

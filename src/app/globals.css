@@ -578,24 +578,39 @@ img {
 }
 .sort-select {
   position: relative;
-  display: flex;
+  display: inline-flex;
+  flex: none;
   align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 6px;
+  border-radius: 6px;
   font-size: 12px;
   color: #63748b;
-  padding-bottom: 10px;
-}
-.sort-select select {
-  appearance: none;
-  padding-right: 21px;
-  background: transparent;
-  outline-offset: 2px;
+  white-space: nowrap;
   cursor: pointer;
 }
-.sort-select svg {
+.sort-select:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.sort-select select {
   position: absolute;
-  right: 0;
-  top: 5px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  appearance: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+.sort-select-label,
+.sort-select svg {
   pointer-events: none;
+}
+.sort-select svg {
+  flex: none;
 }
 .post-row {
   position: relative;
@@ -908,7 +923,7 @@ img {
   color: #63748b;
   font-size: 11px;
 }
-.service-footer a {
+.service-footer > a {
   font-weight: 800;
   font-size: 21px;
   color: #63748b;

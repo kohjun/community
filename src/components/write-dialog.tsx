@@ -1,6 +1,7 @@
 "use client";
 import { DISCUSSION_TYPES, DISCUSSION_LABELS, type DiscussionType } from "@/domain/discussions";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { Pencil, X, Plus, Check, CalendarDays, Vote, MapPin, Link2, FileText } from "lucide-react";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
@@ -13,12 +14,15 @@ import { postDocumentToMarkdown, type PostDocument } from "@/domain/post-documen
 import { CATEGORIES, type CategorySlug } from "@/domain/categories";
 import { BOARD_TOPICS } from "@/domain/boards";
 import { createPostSchema, type CreatePostInput } from "@/domain/validation";
+import { evaluateContentPolicy } from "@/domain/content-policy";
+import { contentPolicyFields, ContentPolicyInputError } from "@/domain/content-policy-fields";
 import type { CommunityPost } from "@/domain/community";
 import type { PublicImage, PublicVideo } from "@/domain/contracts";
 import { cn } from "@/lib/utils";
 import { prepareImageForUpload } from "@/lib/image-precompression";
 import { topicForSlug, topicsForTags, type TopicSlug } from "@/domain/topics";
 import { TopicTagPicker } from "./topic-connections";
+import { mayCloseWriteDialog } from "@/domain/write-close";
 export function WriteDialog({
   open,
   onOpenChange,
@@ -96,10 +100,48 @@ export function WriteDialog({
     [error, setError] = useState(""),
     [pending, setPending] = useState(false);
   const pendingRef = useRef(false);
+  const editableDraft = {
+    category,
+    kind,
+    discussionType,
+    spoiler,
+    spoilerTitle,
+    spoilerSummary,
+    title,
+    body,
+    bodyDocument,
+    anonymous,
+    mode,
+    url,
+    location,
+    date,
+    fee,
+    contact,
+    venue,
+    topic,
+    tags,
+    question,
+    options,
+    imageIds: images.map((image) => image.id),
+    videoIds: videos.map((video) => video.id),
+  };
+  const initialDraft = useRef(editableDraft),
+    editorInitialized = useRef(false);
+  const dirty = JSON.stringify(editableDraft) !== JSON.stringify(initialDraft.current);
+  useEffect(() => {
+    if (!open || (!dirty && !pending && !uploadPending)) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [open, dirty, pending, uploadPending]);
   const topics =
     category in BOARD_TOPICS ? BOARD_TOPICS[category as keyof typeof BOARD_TOPICS] : [];
   const lockedPoll = !!post?.poll?.total;
   const lightning = post?.meetupType === "lightning";
+  const directLightning = lightning && !post?.applicationUrl;
   const verified = !!post?.verifiedParticipation;
   const selectedTags = tags
     .split(",")
@@ -166,6 +208,20 @@ export function WriteDialog({
       setError(parsed.error.issues[0]?.message ?? "필수 정보를 확인해주세요.");
       return;
     }
+    try {
+      const policy = evaluateContentPolicy(contentPolicyFields(parsed.data));
+      if (!policy.allowed) {
+        setError(policy.message);
+        return;
+      }
+    } catch (cause) {
+      setError(
+        cause instanceof ContentPolicyInputError
+          ? cause.message
+          : "내용을 확인하지 못했어요. 입력한 내용은 유지됩니다. 잠시 후 다시 시도해주세요.",
+      );
+      return;
+    }
     pendingRef.current = true;
     setPending(true);
     setError("");
@@ -196,7 +252,17 @@ export function WriteDialog({
     <Dialog
       open={open}
       onOpenChange={(value) => {
-        if (!pendingRef.current && !uploadPendingRef.current) onOpenChange(value);
+        if (pendingRef.current || uploadPendingRef.current) return;
+        if (
+          !value &&
+          !mayCloseWriteDialog(dirty, false, () =>
+            window.confirm(
+              "저장하지 않은 내용이 있어요. 닫으면 입력한 내용과 첨부 선택이 사라져요. 내용을 버리고 닫을까요?",
+            ),
+          )
+        )
+          return;
+        onOpenChange(value);
       }}
     >
       <DialogContent className="write-dialog organized-editor">
@@ -381,7 +447,7 @@ export function WriteDialog({
                 </h3>
                 <p className="participation-muted">
                   {lightning
-                    ? "번개는 2–12명, 개설 후 7일 이내 일정이에요. 참가비·정확한 일정·정원은 내 행사 관리에서 변경해주세요."
+                    ? "번개는 2–12명, 개설 후 7일 이내 일정이에요. 정확한 일정과 정원은 내 행사 관리에서 변경해주세요."
                     : "등록 후 내 행사 관리에서 행사장 위치·정확한 일정·참가비를 설정하면 거리와 취향 검색에 표시돼요. 간단한 모임은 번개에서 빠르게 열 수 있어요."}
                 </p>
                 <div className="segmented-control">
@@ -397,6 +463,7 @@ export function WriteDialog({
                   <button
                     type="button"
                     aria-pressed={mode === "external"}
+                    disabled={directLightning}
                     className={cn(mode === "external" && "active")}
                     onClick={() => setMode("external")}
                   >
@@ -423,24 +490,6 @@ export function WriteDialog({
                 )}
                 <div className="form-grid">
                   <label className="field-label">
-                    장소 {mode === "direct" && <span className="required-label">필수</span>}
-                    <input
-                      required={mode === "direct"}
-                      value={location}
-                      onChange={(event) => {
-                        setLocation(event.target.value);
-                        setVenueChanged(true);
-                        setVenue((before) =>
-                          before
-                            ? { latitude: before.latitude, longitude: before.longitude }
-                            : null,
-                        );
-                      }}
-                      maxLength={120}
-                      placeholder="서울 성수 · 상세 장소"
-                    />
-                  </label>
-                  <label className="field-label">
                     일정과 시간 {mode === "direct" && <span className="required-label">필수</span>}
                     <input
                       required={mode === "direct"}
@@ -454,7 +503,7 @@ export function WriteDialog({
                     참가 비용 {mode === "direct" && <span className="required-label">필수</span>}
                     <input
                       required={mode === "direct"}
-                      value={fee}
+                      value={directLightning ? "현장 정산 · 사전 결제 없음" : fee}
                       readOnly={lightning}
                       onChange={(event) => setFee(event.target.value)}
                       maxLength={120}
@@ -473,6 +522,8 @@ export function WriteDialog({
                 </div>
                 <EventLocationField
                   value={venue}
+                  address={location}
+                  onAddressSelected={setLocation}
                   onChange={(next) => {
                     setVenueChanged(true);
                     setVenue(next);
@@ -484,7 +535,7 @@ export function WriteDialog({
                 />
                 <p className="form-note">
                   {lightning
-                    ? "직접 참가는 무료예요. 외부 신청으로 변경한 뒤 내 행사 관리에서 실제 외부 참가비를 설정할 수 있어요. 참가 내역이 있으면 신청 방식을 바꿀 수 없어요."
+                    ? "사이트에서 직접 신청하는 번개는 담당자 승인 후 참가가 확정돼요. 사전 결제 없이 비용은 현장에서 함께 정산하며, 외부 결제 모집으로 변경할 수 없어요."
                     : mode === "external"
                       ? "등록 후 내 행사 관리에서 금액·정원·승인 방식을 설정하세요. 외부 플랫폼에서 신청과 결제를 완료한 참가자를 확인하고 공지방에 초대할 수 있어요."
                       : "등록 후 내 행사 관리에서 참가 금액과 정원을 설정하면 사이트 내 신청을 받을 수 있어요."}{" "}
@@ -615,8 +666,20 @@ export function WriteDialog({
                   disabled={pending || uploadPending}
                   upload={uploadPreparedImage}
                   onChange={(document, nextImages, nextVideos) => {
+                    const markdown = postDocumentToMarkdown(document);
+                    // The editor canonicalizes legacy content on creation; this is the clean baseline.
+                    if (!editorInitialized.current) {
+                      editorInitialized.current = true;
+                      initialDraft.current = {
+                        ...initialDraft.current,
+                        body: markdown,
+                        bodyDocument: document,
+                        imageIds: nextImages.map((image) => image.id),
+                        videoIds: nextVideos.map((video) => video.id),
+                      };
+                    }
                     setBodyDocument(document);
-                    setBody(postDocumentToMarkdown(document));
+                    setBody(markdown);
                     setImages(nextImages);
                     setVideos(nextVideos);
                   }}
@@ -630,7 +693,12 @@ export function WriteDialog({
             </section>
             <div className="publish-check">
               <Check size={16} />
-              <p>개인정보를 공개하지 않고 서로의 취향을 존중해주세요.</p>
+              <p>
+                욕설·차별·음란 콘텐츠와 개인정보 노출을 금지해요.{" "}
+                <Link href="/policies/community" target="_blank" rel="noopener noreferrer">
+                  이용규칙
+                </Link>
+              </p>
             </div>
             <div className="write-form-footer">
               <label>

@@ -32,7 +32,7 @@ export function communityLocation(
           ? "이야기"
           : undefined,
     sort: sort === "popular" || (!sort && view === "popular") ? "popular" : "latest",
-    period: period === "week" || period === "all" ? period : "today",
+    period: period === "week" || period === "month" || period === "all" ? period : "today",
     ...(at &&
     /^\d{4}-\d{2}-\d{2}T/.test(at) &&
     Number.isFinite(Date.parse(at)) &&

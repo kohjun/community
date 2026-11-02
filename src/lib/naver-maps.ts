@@ -44,6 +44,10 @@ export interface NaverMarkerInstance {
 export type NaverListener = object;
 export interface NaverGeocodeService {
   Status: { OK: string | number };
+  reverseGeocode?(
+    options: { coords: string; sourcecrs: string; orders: string },
+    callback: (status: string | number, response: unknown) => void,
+  ): void;
   geocode(
     options: { query: string },
     callback: (status: string | number, response: unknown) => void,
@@ -222,6 +226,75 @@ export function geocodeAddress(
   });
 }
 
+/** Keep the clicked point: a reverse-geocode result must never move the entrance pin. */
+export function parseReverseGeocodedAddress(
+  response: unknown,
+  point: MapPoint,
+): GeocodedAddress | null {
+  if (!isMapPoint(point)) return null;
+  const v2 = record(record(response)?.v2);
+  if (record(v2?.status)?.code !== 0) return null;
+  const address = record(v2?.address);
+  const roadAddress = addressText(address?.roadAddress);
+  const jibunAddress = addressText(address?.jibunAddress);
+  if (!roadAddress && !jibunAddress) return null;
+  return { ...point, address: roadAddress || jibunAddress, roadAddress, jibunAddress };
+}
+export function reverseGeocodePoint(
+  point: MapPoint,
+  options: { signal?: AbortSignal; service?: NaverGeocodeService; timeoutMs?: number } = {},
+): Promise<GeocodedAddress> {
+  if (!isMapPoint(point)) return Promise.reject(new Error("지도에서 장소를 다시 선택해주세요."));
+  const service = options.service ?? getNaverMapsSDK()?.Service;
+  if (!service?.reverseGeocode)
+    return Promise.reject(
+      new Error("이 지점의 주소를 확인하지 못했어요. 도로명 주소로 검색해주세요."),
+    );
+  if (options.signal?.aborted)
+    return Promise.reject(new DOMException("주소 확인을 취소했습니다.", "AbortError"));
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (result: GeocodedAddress | Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      options.signal?.removeEventListener("abort", abort);
+      if (result instanceof Error) reject(result);
+      else resolve(result);
+    };
+    const abort = () => finish(new DOMException("주소 확인을 취소했습니다.", "AbortError"));
+    const timer = setTimeout(
+      () => finish(new Error("주소 확인이 지연되고 있어요. 다시 선택하거나 주소로 검색해주세요.")),
+      options.timeoutMs ?? 10000,
+    );
+    options.signal?.addEventListener("abort", abort, { once: true });
+    try {
+      service.reverseGeocode!(
+        {
+          coords: `${point.longitude},${point.latitude}`,
+          sourcecrs: "EPSG:4326",
+          orders: "roadaddr,addr",
+        },
+        (status, response) => {
+          const result =
+            status === service.Status.OK ? parseReverseGeocodedAddress(response, point) : null;
+          finish(
+            result ??
+              new Error("선택한 지점의 주소를 확인하지 못했어요. 도로명 주소로 검색해주세요."),
+          );
+        },
+      );
+    } catch {
+      finish(new Error("주소 확인에 연결하지 못했어요. 주소로 다시 검색해주세요."));
+    }
+  });
+}
+export function naverPlaceLink(point: MapPoint | null | undefined, label = "모임 장소") {
+  if (!point || !isMapPoint(point))
+    return "https://map.naver.com/p/search/" + encodeURIComponent(label);
+  return `https://map.naver.com/index.nhn?${new URLSearchParams({ lng: String(point.longitude), lat: String(point.latitude), pinTitle: label, pinType: "site", c: `${point.longitude},${point.latitude},16,0,0,0,dh` })}`;
+}
+
 type AuthBroker = {
   original: (() => void) | undefined;
   callbacks: Set<() => void>;
@@ -398,12 +471,22 @@ export class NaverMapSession {
     if (this.disposed) return;
     this.disposed = true;
     clearTimeout(this.boundsTimer);
-    for (const listener of this.listeners) this.sdk.Event.removeListener(listener);
-    for (const owned of this.markers.values()) {
-      this.sdk.Event.removeListener(owned.listener);
-      owned.marker.setMap(null);
-    }
+    const listeners = this.listeners.splice(0);
+    const markers = [...this.markers.values()];
     this.markers.clear();
-    this.map.destroy();
+    const release = (work: () => void) => {
+      try {
+        work();
+      } catch {
+        // Auth failure can destroy SDK internals before our cleanup runs.
+        // Finish releasing the other resources so the page can show its fallback.
+      }
+    };
+    for (const listener of listeners) release(() => this.sdk.Event.removeListener(listener));
+    for (const owned of markers) {
+      release(() => this.sdk.Event.removeListener(owned.listener));
+      release(() => owned.marker.setMap(null));
+    }
+    release(() => this.map.destroy());
   }
 }

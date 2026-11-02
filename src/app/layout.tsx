@@ -1,7 +1,15 @@
-import type { Metadata } from "next";
+import { AdSenseHeadScript } from "@/components/adsense-head-script";
+import { SiteOperationsProvider } from "@/components/site-operations-provider";
+import { readSiteOperations } from "@/domain/site-operations";
+import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
+import { MobileNavigation } from "@/components/mobile-navigation";
 import { getAdvertisingConfiguration } from "@/server/advertising-config";
 import localFont from "next/font/local";
 import "./globals.css";
+import "./community-maturity.css";
+import "./community-growth.css";
+import "./home-discovery.css";
 import "./community-expansion.css";
 import "./participation.css";
 import "./modern-marketplace.css";
@@ -41,7 +49,16 @@ import { PushOnboardingProvider } from "@/components/push-onboarding";
 import { SiteAdvertising } from "@/components/site-advertising";
 import { ActivityDayTracker } from "@/components/activity-day-tracker";
 import "./community-improvements.css";
+import "./mobile-experience.css";
 import { NotificationProvider } from "@/components/notification-bell";
+import { SessionProvider } from "@/components/session-provider";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+};
 
 const pretendard = localFont({
   src: "../../public/fonts/PretendardVariable.woff2",
@@ -72,15 +89,26 @@ export function generateMetadata(): Metadata {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const advertising = getAdvertisingConfiguration();
   return (
     <html lang="ko" className={pretendard.variable} data-scroll-behavior="smooth">
+      <head>
+        <AdSenseHeadScript config={advertising} />
+      </head>
       <body>
-        <PushOnboardingProvider>
-          <NotificationProvider>
-            <ActivityDayTracker />
-            <SiteAdvertising>{children}</SiteAdvertising>
-          </NotificationProvider>
-        </PushOnboardingProvider>
+        <SiteOperationsProvider value={readSiteOperations(process.env)}>
+          <SessionProvider>
+            <PushOnboardingProvider>
+              <NotificationProvider>
+                <ActivityDayTracker />
+                <SiteAdvertising>{children}</SiteAdvertising>
+                <Suspense fallback={null}>
+                  <MobileNavigation />
+                </Suspense>
+              </NotificationProvider>
+            </PushOnboardingProvider>
+          </SessionProvider>
+        </SiteOperationsProvider>
       </body>
     </html>
   );

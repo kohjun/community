@@ -11,6 +11,8 @@ import { uuidSchema } from "../domain/validation";
 import { AppError } from "./errors";
 import { registeredVenueVisible } from "./place-policy";
 import { requireRecordMember } from "./record-policy";
+import { meetupVenueLabel } from "../domain/venue-meetup";
+import { assertContentAllowed } from "./content-policy";
 
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Connection = Database | Transaction;
@@ -73,7 +75,7 @@ export async function bindEventVenue(
 ): Promise<VenueCoordinates> {
   // Use the same lock order as event completion: post, settings, then the shared source row.
   const [post] = await tx
-    .select({ id: posts.id, kind: posts.kind, status: posts.status })
+    .select({ id: posts.id, kind: posts.kind, status: posts.status, location: posts.location })
     .from(posts)
     .where(eq(posts.id, uuidSchema.parse(postId)))
     .for("update");
@@ -154,7 +156,16 @@ export async function bindEventVenue(
       point = { venueLatitude: venue.latitude, venueLongitude: venue.longitude };
     }
   }
+  const nextAddress =
+    input?.address === undefined
+      ? undefined
+      : input.communityVenueId
+        ? meetupVenueLabel(snapshot ?? existing!.snapshot)
+        : input.address;
+  if (nextAddress !== undefined) assertContentAllowed({ location: nextAddress });
+  const addressChanged = nextAddress !== undefined && nextAddress !== post.location;
   const changed =
+    addressChanged ||
     point.venueLatitude !== previous.venueLatitude ||
     point.venueLongitude !== previous.venueLongitude ||
     (existing?.venueId ?? null) !== (snapshot?.id ?? (preserve ? existing!.venueId : null)) ||
@@ -170,6 +181,11 @@ export async function bindEventVenue(
     if (application)
       throw new AppError("CONFLICT", "참가 내역이 있는 행사의 장소와 위치는 변경할 수 없어요.");
   }
+  if (addressChanged)
+    await tx
+      .update(posts)
+      .set({ location: nextAddress!, updatedAt: sql`statement_timestamp()` })
+      .where(eq(posts.id, postId));
   if (preserve) return point;
   if (snapshot)
     await tx

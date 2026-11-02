@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Users, MapPin, ArrowUpRight, Thermometer } from "lucide-react";
@@ -92,7 +93,7 @@ export function PlayerDirectory({
         </div>
         <Link
           className="participation-primary"
-          href={data.myPublicId ? `/players/${data.myPublicId}` : "/login"}
+          href={data.myPublicId ? `/players/${data.myPublicId}` : loginHref("/players")}
         >
           <Users size={17} />내 플레이어 프로필
         </Link>

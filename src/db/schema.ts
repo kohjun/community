@@ -1,3 +1,4 @@
+import type { ParticipantGuide } from "../domain/participant-guide";
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -144,6 +145,8 @@ export const posts = sliper
         .notNull()
         .references(() => categories.slug, { onDelete: "restrict" }),
       authorId: uuid("author_id").references(() => profiles.id, { onDelete: "set null" }),
+      // Historical attribution has no login identity or editing permissions.
+      importedAuthorName: varchar("imported_author_name", { length: 24 }),
       isAnonymous: boolean("is_anonymous").notNull().default(false),
       title: varchar("title", { length: 120 }).notNull(),
       kind: postKindEnum("kind").notNull().default("이야기"),
@@ -172,6 +175,10 @@ export const posts = sliper
       deletedAt: timestamp("deleted_at", { withTimezone: true }),
     },
     (t) => [
+      check(
+        "posts_imported_author",
+        sql`${t.importedAuthorName} is null or (${t.authorId} is null and not ${t.isAnonymous} and char_length(btrim(${t.importedAuthorName})) between 2 and 24)`,
+      ),
       check(
         "posts_discussion_type",
         sql`${t.discussionType} is null or (${t.kind}='이야기' and ${t.discussionType} in ('free','question','tip','analysis'))`,
@@ -226,6 +233,8 @@ export const comments = sliper
         .references(() => posts.id, { onDelete: "cascade" }),
       parentId: uuid("parent_id"),
       authorId: uuid("author_id").references(() => profiles.id, { onDelete: "set null" }),
+      // Historical attribution has no login identity or editing permissions.
+      importedAuthorName: varchar("imported_author_name", { length: 24 }),
       isAnonymous: boolean("is_anonymous").notNull().default(false),
       bodyMarkdown: text("body_markdown").notNull(),
       status: contentStatusEnum("status").notNull().default("published"),
@@ -234,6 +243,10 @@ export const comments = sliper
       deletedAt: timestamp("deleted_at", { withTimezone: true }),
     },
     (t) => [
+      check(
+        "comments_imported_author",
+        sql`${t.importedAuthorName} is null or (${t.authorId} is null and not ${t.isAnonymous} and char_length(btrim(${t.importedAuthorName})) between 2 and 24)`,
+      ),
       unique("comments_id_post_unique").on(t.id, t.postId),
       foreignKey({
         name: "comments_parent_same_post_fk",
@@ -318,6 +331,9 @@ export const mediaAssets = sliper
       id: uuid("id").primaryKey().defaultRandom(),
       uploaderId: uuid("uploader_id").references(() => profiles.id, { onDelete: "set null" }),
       postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
+      reunionOriginPostId: uuid("reunion_origin_post_id").references(() => posts.id, {
+        onDelete: "restrict",
+      }),
       recordOriginPostId: uuid("record_origin_post_id").references(() => eventRecords.postId, {
         onDelete: "restrict",
       }),
@@ -340,12 +356,16 @@ export const mediaAssets = sliper
     (t) => [
       unique("media_assets_post_order_unique").on(t.postId, t.sortOrder),
       unique("media_assets_record_order_unique").on(t.recordPostId, t.sortOrder),
+      check(
+        "media_reunion_parent",
+        sql`${t.reunionOriginPostId} is null or (${t.postId} is null and ${t.recordPostId} is null and ${t.recordOriginPostId} is null)`,
+      ),
       check("media_single_parent", sql`num_nonnulls(${t.postId}, ${t.recordPostId}) <= 1`),
       index("media_assets_uploader_idx").on(t.uploaderId),
       index("media_unattached_retention_idx")
         .on(t.unattachedSince, t.id)
         .where(
-          sql`${t.postId} is null and ${t.recordPostId} is null and ${t.recordOriginPostId} is null`,
+          sql`${t.postId} is null and ${t.recordPostId} is null and ${t.recordOriginPostId} is null and ${t.reunionOriginPostId} is null`,
         ),
       check("media_assets_size_range", sql`${t.byteSize} between 1 and 10485760`),
       check("media_assets_storage_backend", sql`${t.storageBackend} in ('local','supabase')`),
@@ -517,6 +537,7 @@ export const eventSettings = sliper
         >()
         .notNull()
         .default(sql`'[]'::jsonb`),
+      participantGuide: jsonb("participant_guide").$type<ParticipantGuide>(),
       meetupType: varchar("meetup_type", { length: 16 }).notNull().default("event"),
       activityCategory: varchar("activity_category", { length: 32 }).$type<LightningCategorySlug>(),
       venueLatitude: doublePrecision("venue_latitude"),
@@ -542,6 +563,10 @@ export const eventSettings = sliper
       index("event_lightning_category_idx")
         .on(t.activityCategory, t.postId)
         .where(sql`${t.meetupType} = 'lightning'`),
+      check(
+        "event_participant_guide",
+        sql`${t.participantGuide} is null or coalesce((jsonb_typeof(${t.participantGuide}) = 'object' and ${t.participantGuide}->>'version' = '1' and octet_length(${t.participantGuide}::text) <= 8192), false)`,
+      ),
       check("event_meetup_type", sql`${t.meetupType} in ('event','lightning')`),
       check(
         "event_activity_category",

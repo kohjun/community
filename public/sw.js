@@ -20,6 +20,7 @@ function safeNotificationUrl(value) {
       url.pathname === "/mypage" ||
       url.pathname === "/participation" ||
       url.pathname === "/notifications" ||
+      url.pathname === "/discover/saved" ||
       url.pathname === "/management" ||
       EVENT_PATH.test(url.pathname) ||
       ROOM_PATH.test(url.pathname) ||

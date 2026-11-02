@@ -42,6 +42,7 @@ function post(overrides: Partial<PostRecord> = {}): PostRecord {
     id: POST_ID,
     categorySlug: "party",
     authorId: AUTHOR_ID,
+    importedAuthorName: null,
     isAnonymous: true,
     title: "주말 예능 파티",
     bodyMarkdown: "함께할 사람을 찾아요.",
@@ -75,6 +76,7 @@ function comment(overrides: Partial<CommentRecord> = {}): CommentRecord {
     postId: POST_ID,
     parentId: null,
     authorId: AUTHOR_ID,
+    importedAuthorName: null,
     isAnonymous: true,
     bodyMarkdown: "저도 참여할게요.",
     status: "published",
@@ -392,4 +394,36 @@ test("visitor hash generation rejects invalid identifiers and insufficient secre
   assert.throws(() => hashVisitor(AUTHOR_ID, POST_ID, ""), /at least 32/);
   assert.throws(() => hashVisitor(AUTHOR_ID, POST_ID, "x".repeat(31)), /at least 32/);
   assert.match(hashVisitor(AUTHOR_ID, POST_ID, "x".repeat(32)), /^[0-9a-f]{64}$/);
+});
+
+test("imported attribution never grants ownership or exposes anonymous authors", () => {
+  const source = post({ authorId: null, isAnonymous: false, importedAuthorName: "기존 작성자" });
+  const dto = presentPostSummary(source, context);
+  assert.deepEqual(dto.author, { kind: "imported", displayName: "기존 작성자 · 이전 작성자" });
+  assert.equal(dto.isMine, false);
+  assert.equal("publicProfileId" in dto.author, false);
+  const anonymous = presentPostSummary({ ...source, isAnonymous: true }, context);
+  assert.deepEqual(anonymous.author, { kind: "anonymous", displayName: "익명" });
+  const reply = presentComment(
+    comment({ authorId: null, isAnonymous: false, importedAuthorName: "기존 댓글 작성자" }),
+    null,
+    AUTHOR_ID,
+  );
+  assert.equal(reply.isMine, false);
+  assert.equal(reply.author?.kind, "imported");
+  assert.equal(
+    presentComment(
+      comment({
+        authorId: null,
+        isAnonymous: false,
+        importedAuthorName: "기존 댓글 작성자",
+        status: "deleted",
+        deletedAt: DATE,
+      }),
+      null,
+      AUTHOR_ID,
+    ).author,
+    null,
+  );
+  assert.equal(JSON.stringify(anonymous).includes("기존 작성자"), false);
 });

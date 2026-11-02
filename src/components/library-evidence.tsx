@@ -1,4 +1,5 @@
 "use client";
+import { loginHref } from "@/domain/login-return";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BookOpenCheck, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
@@ -76,10 +77,7 @@ export function LibraryEvidencePanel({
       </p>
       {open &&
         (!authenticated ? (
-          <Link
-            className="record-backlink"
-            href={`/login?returnTo=${encodeURIComponent(`/archive/${entryId}`)}`}
-          >
+          <Link className="record-backlink" href={loginHref(`/archive/${entryId}`)}>
             로그인하고 운영 사례 보기
             <ArrowRight size={14} />
           </Link>
