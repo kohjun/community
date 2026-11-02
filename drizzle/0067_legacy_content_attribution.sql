@@ -1,0 +1,4 @@
+ALTER TABLE "sliper"."comments" ADD COLUMN "imported_author_name" varchar(24);--> statement-breakpoint
+ALTER TABLE "sliper"."posts" ADD COLUMN "imported_author_name" varchar(24);--> statement-breakpoint
+ALTER TABLE "sliper"."comments" ADD CONSTRAINT "comments_imported_author" CHECK ("sliper"."comments"."imported_author_name" is null or ("sliper"."comments"."author_id" is null and not "sliper"."comments"."is_anonymous" and char_length(btrim("sliper"."comments"."imported_author_name")) between 2 and 24));--> statement-breakpoint
+ALTER TABLE "sliper"."posts" ADD CONSTRAINT "posts_imported_author" CHECK ("sliper"."posts"."imported_author_name" is null or ("sliper"."posts"."author_id" is null and not "sliper"."posts"."is_anonymous" and char_length(btrim("sliper"."posts"."imported_author_name")) between 2 and 24));

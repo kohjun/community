@@ -1,0 +1,1 @@
+ALTER TABLE "sliper"."game_rooms" ADD COLUMN "mbti_intro" jsonb;

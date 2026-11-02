@@ -1,0 +1,2 @@
+ALTER TABLE "sliper"."event_waitlist" ADD COLUMN "next_scan_at" timestamp with time zone DEFAULT now() NOT NULL;--> statement-breakpoint
+CREATE INDEX "waitlist_scan_idx" ON "sliper"."event_waitlist" USING btree ("next_scan_at","post_id");

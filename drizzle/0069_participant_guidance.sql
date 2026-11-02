@@ -1,0 +1,2 @@
+ALTER TABLE "sliper"."event_settings" ADD COLUMN "participant_guide" jsonb;--> statement-breakpoint
+ALTER TABLE "sliper"."event_settings" ADD CONSTRAINT "event_participant_guide" CHECK ("sliper"."event_settings"."participant_guide" is null or coalesce((jsonb_typeof("sliper"."event_settings"."participant_guide") = 'object' and "sliper"."event_settings"."participant_guide"->>'version' = '1' and octet_length("sliper"."event_settings"."participant_guide"::text) <= 8192), false));

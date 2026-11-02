@@ -470,6 +470,90 @@
       "when": 1792120526631,
       "tag": "0066_event_private_contacts",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1792164803575,
+      "tag": "0067_legacy_content_attribution",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1792283584347,
+      "tag": "0068_lightning_manual_approval",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1792319454217,
+      "tag": "0069_participant_guidance",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1792849578898,
+      "tag": "0070_community_growth",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1792849831728,
+      "tag": "0071_growth_scan_fairness",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1792849842505,
+      "tag": "0072_growth_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1792930937879,
+      "tag": "0073_object_cleanup_outbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1793331555075,
+      "tag": "0074_game_room_lobby",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1793364704293,
+      "tag": "0075_mbti_game",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1793367832972,
+      "tag": "0076_mbti_intro",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1793376240406,
+      "tag": "0077_auction_game",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1793542098231,
+      "tag": "0078_toast_game",
+      "breakpoints": true
     }
   ]
 }
