@@ -1,44 +1,18 @@
 "use client";
 import Link from "next/link";
-import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { CommunityPost } from "@/domain/community";
-import { CATEGORIES } from "@/domain/categories";
-import { postPath } from "@/domain/post-sharing";
-import { shouldOpenPostModal } from "@/lib/post-sharing";
-
-const scenes = [
-  { name: "race", label: "미션 레이스", alt: "한강 공원에서 바통을 넘기며 달리는 참가자들" },
-  { name: "mystery", label: "추리 게임", alt: "테이블에 둘러앉아 단서 카드를 맞춰보는 사람들" },
-  { name: "party", label: "취향 파티", alt: "루프탑에서 카드를 들고 웃으며 대화하는 사람들" },
-] as const;
-
-function Scene({ name, label, alt, eager }: (typeof scenes)[number] & { eager?: boolean }) {
-  return (
-    <figure className={"sl-hero__scene sl-hero__scene--" + name}>
-      <img
-        src={`/images/home/${name}-1200.webp`}
-        srcSet={`/images/home/${name}-640.webp 640w, /images/home/${name}-1200.webp 1200w`}
-        sizes="(max-width: 720px) 45vw, 560px"
-        alt={alt}
-        width={1200}
-        height={750}
-        loading={eager ? "eager" : "lazy"}
-        {...(eager ? { fetchPriority: "high" as const } : {})}
-      />
-      <figcaption>{label}</figcaption>
-    </figure>
-  );
-}
+import { HeroCarousel } from "./hero-carousel";
 
 export function HomeHero({
   recruitCount,
-  nextEvent,
+  recruitments,
   onBrowse,
   onHost,
   onOpen,
 }: {
   recruitCount: number;
-  nextEvent: CommunityPost | undefined;
+  recruitments: CommunityPost[];
   onBrowse: () => void;
   onHost: () => void;
   onOpen: (post: CommunityPost) => void;
@@ -88,42 +62,7 @@ export function HomeHero({
         </Link>
       </div>
       <div className="sl-hero__visual">
-        <div className="sl-hero__scenes">
-          {scenes.map((scene, index) => (
-            <Scene key={scene.name} {...scene} eager={index === 0} />
-          ))}
-        </div>
-        {nextEvent && (
-          <a
-            className="sl-hero__next"
-            href={postPath(nextEvent.id)}
-            onClick={(event) => {
-              if (!shouldOpenPostModal(event)) return;
-              event.preventDefault();
-              onOpen(nextEvent);
-            }}
-          >
-            <span className="sl-hero__next-label">
-              {nextEvent.sample ? "모임 예시" : "곧 열리는 모임"} ·{" "}
-              {CATEGORIES.find((c) => c.slug === nextEvent.category)?.name}
-            </span>
-            <strong>{nextEvent.title}</strong>
-            <span className="sl-hero__next-meta">
-              {nextEvent.eventDate && (
-                <span>
-                  <CalendarDays size={13} aria-hidden="true" />
-                  {nextEvent.eventDate}
-                </span>
-              )}
-              {nextEvent.location && (
-                <span>
-                  <MapPin size={13} aria-hidden="true" />
-                  {nextEvent.location}
-                </span>
-              )}
-            </span>
-          </a>
-        )}
+        <HeroCarousel posts={recruitments} onOpen={onOpen} />
       </div>
     </section>
   );
