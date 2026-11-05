@@ -549,7 +549,7 @@ export function SliperCommunity({
         {isHome && view === "home" ? (
           <HomeHero
             recruitCount={recruitCount}
-            nextEvent={openRecruitments[0] ?? recruitments[0]}
+            recruitments={recruitments}
             onBrowse={browseRecruitments}
             onHost={startHosting}
             onOpen={openPost}
