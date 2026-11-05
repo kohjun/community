@@ -1,12 +1,8 @@
-import { OperatorContact } from "./operator-contact";
 import { LoginLink } from "./login-link";
-import Link from "next/link";
-import { TestAccountControls } from "./test-account-controls";
-import { SiteNavigation } from "./site-navigation";
 import { AdSlot } from "./ad-slot";
-import { PolicyLinks } from "./policy-links";
-import { NotificationBell } from "./notification-bell";
-import { Megaphone, MessageCircle, Search, UserRound } from "lucide-react";
+import { SiteHeader } from "./site-header";
+import { SiteFooter } from "./site-footer";
+import { Megaphone } from "lucide-react";
 export function ParticipationShell({
   children,
   advertising = true,
@@ -19,57 +15,13 @@ export function ParticipationShell({
       <a className="skip-link" href="#participation-content">
         본문으로 바로가기
       </a>
-      <header className="site-header service-header">
-        <div className="header-inner">
-          <Link className="brand" href="/" aria-label="Sliper 홈">
-            <img src="/images/sliper-logo.png" alt="" />
-            <span>
-              sliper<span className="brand-dot">.</span>
-            </span>
-          </Link>
-          <span className="brand-slogan">슬쩍 나와서 리얼하게 노는 퍼블릭 모임</span>
-          <SiteNavigation />
-          <div className="header-actions">
-            <Link
-              className="profile-button"
-              href="/search"
-              aria-label="통합 검색과 주제 탐색"
-              title="통합 검색과 주제 탐색"
-            >
-              <Search size={20} />
-            </Link>
-            <NotificationBell />
-            <Link
-              className="profile-button"
-              href="/mypage?tab=events"
-              aria-label="내 행사와 공지방"
-            >
-              <MessageCircle size={20} />
-            </Link>
-            <Link className="profile-button" href="/mypage" aria-label="마이페이지">
-              <UserRound size={20} />
-            </Link>
-            <TestAccountControls fallbackLogin />
-          </div>
-          <nav className="service-quick-nav" aria-label="나의 활동">
-            <Link href="/mypage?tab=events">참가 현황 · 공지방</Link>
-            <Link href="/discover/saved">조건별 모집 알림</Link>
-            <Link href="/ideas">이런 모임 열어주세요</Link>
-            <NotificationBell label="알림함" />
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
       <main className="participation-page" id="participation-content">
-        {advertising && <AdSlot compact />}
         {children}
+        {/* Below the content so each page opens with its own title, not a banner. */}
+        {advertising && <AdSlot compact />}
       </main>
-      <footer className="service-footer">
-        <Link href="/">sliper.</Link>
-        <span>슬쩍 나와서 리얼하게 노는 퍼블릭 모임</span>
-        <small>© 2026 Sliper</small>
-        <PolicyLinks />
-        <OperatorContact compact />
-      </footer>
+      <SiteFooter />
     </>
   );
 }

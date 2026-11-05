@@ -50,6 +50,7 @@ import { SiteAdvertising } from "@/components/site-advertising";
 import { ActivityDayTracker } from "@/components/activity-day-tracker";
 import "./community-improvements.css";
 import "./mobile-experience.css";
+import "./site-refresh.css";
 import { NotificationProvider } from "@/components/notification-bell";
 import { SessionProvider } from "@/components/session-provider";
 

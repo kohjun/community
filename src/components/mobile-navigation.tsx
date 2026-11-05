@@ -15,18 +15,38 @@ import {
   MapPin,
   Heart,
   Gamepad2,
+  CalendarDays,
+  Handshake,
+  Lightbulb,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import { NotificationBell } from "./notification-bell";
-import { CATEGORIES } from "@/domain/categories";
 import { mobileNavigationHidden, mobileSection } from "@/domain/mobile-navigation";
-const links = [
-  { href: "/games", label: "웹 게임", text: "링크로 모여 함께하는 게임", icon: Gamepad2 },
-  { href: "/lightning", label: "번개 모임", text: "가볍고 빠른 만남", icon: Zap },
-  { href: "/stories", label: "이야기", text: "취향을 나누는 게시판", icon: MessageCircle },
-  { href: "/archive", label: "아카이브", text: "룰북·템플릿·행사 기록", icon: BookOpen },
-  { href: "/map", label: "이벤트 맵", text: "주변의 모임과 장소", icon: MapPin },
-  { href: "/ideas", label: "모임 제안", text: "이런 모임 열어주세요", icon: Heart },
+const groups = [
+  {
+    title: "모임 찾기",
+    links: [
+      { href: "/?kind=모집", label: "모집 중인 모임", icon: CalendarDays },
+      { href: "/lightning", label: "번개 모임", icon: Zap },
+      { href: "/map", label: "이벤트 맵", icon: MapPin },
+      { href: "/games", label: "웹 게임", icon: Gamepad2 },
+    ],
+  },
+  {
+    title: "커뮤니티",
+    links: [
+      { href: "/stories", label: "이야기", icon: MessageCircle },
+      { href: "/players", label: "플레이어·크루", icon: Handshake },
+      { href: "/ideas", label: "모임 제안", icon: Heart },
+    ],
+  },
+  {
+    title: "모임 열기",
+    links: [
+      { href: "/archive", label: "룰북·템플릿 아카이브", icon: BookOpen },
+      { href: "/hosting-guide", label: "호스트 가이드", icon: Lightbulb },
+    ],
+  },
 ];
 export function MobileNavigation() {
   const path = usePathname() ?? "/",
@@ -66,57 +86,37 @@ export function MobileNavigation() {
         </Link>
       </nav>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="mobile-explore-sheet">
+        <DialogContent className="mobile-explore-sheet sl-explore">
           <div className="mobile-sheet-handle" aria-hidden="true" />
           <header>
-            <DialogTitle>어떤 즐거움을 찾나요?</DialogTitle>
-            <DialogDescription>취향에 맞는 모임부터 이야기와 기획 자료까지.</DialogDescription>
+            <DialogTitle>둘러보기</DialogTitle>
+            <DialogDescription>찾는 곳을 골라보세요.</DialogDescription>
           </header>
           <div className="mobile-explore-scroll">
-            <Link className="mobile-explore-search" href="/search" onClick={() => setOpen(false)}>
-              <Search size={19} />
-              <span>이야기·모임·자료 통합 검색</span>
-              <ChevronRight size={17} />
+            <Link className="sl-explore__search" href="/search" onClick={() => setOpen(false)}>
+              <Search size={18} />
+              <span>모임·이야기·자료 통합 검색</span>
             </Link>
-            <div className="mobile-explore-grid">
-              {links.map(({ href, label, text, icon: Icon }) => (
-                <Link href={href} key={href} onClick={() => setOpen(false)}>
-                  <span className="mobile-explore-icon">
-                    <Icon size={21} />
-                  </span>
-                  <span>
-                    <strong>{label}</strong>
-                    <small>{text}</small>
-                  </span>
-                  <ChevronRight size={16} />
-                </Link>
-              ))}
-            </div>
-            <section className="mobile-explore-categories">
-              <h3>취향별로 둘러보기</h3>
-              <div>
-                {CATEGORIES.map((c) => (
-                  <Link key={c.slug} href={"/?category=" + c.slug} onClick={() => setOpen(false)}>
-                    {c.name}
+            {groups.map((group) => (
+              <section className="sl-explore__group" key={group.title}>
+                <h3>{group.title}</h3>
+                {group.links.map(({ href, label, icon: Icon }) => (
+                  <Link href={href} key={href} onClick={() => setOpen(false)}>
+                    <Icon size={18} aria-hidden="true" />
+                    <span>{label}</span>
+                    <ChevronRight size={16} aria-hidden="true" />
                   </Link>
                 ))}
-              </div>
-            </section>
-            <section className="mobile-explore-shortcuts">
-              <h3>내가 찾던 모임을 놓치지 않게</h3>
-              <Link href="/discover/saved" onClick={() => setOpen(false)}>
-                조건 저장·모집 알림
-                <ChevronRight size={16} />
-              </Link>
+              </section>
+            ))}
+            <div className="sl-explore__shortcuts">
               <Link href="/mypage?tab=events" onClick={() => setOpen(false)}>
                 내 행사·공지방
-                <ChevronRight size={16} />
               </Link>
-              <Link href="/players" onClick={() => setOpen(false)}>
-                플레이어·크루 찾기
-                <ChevronRight size={16} />
+              <Link href="/discover/saved" onClick={() => setOpen(false)}>
+                조건 저장·모집 알림
               </Link>
-            </section>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

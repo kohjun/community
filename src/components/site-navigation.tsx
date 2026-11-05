@@ -1,14 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import styles from "./site-navigation.module.css";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   SITE_NAVIGATION,
   activeNavigationSection,
   type CommunityNavigationSection,
 } from "@/domain/navigation";
+
+const EXTRA_LINKS = [
+  { href: "/ideas", label: "모임 제안하기" },
+  { href: "/hosting-guide", label: "호스트 가이드" },
+  { href: "/help", label: "이용 안내" },
+] as const;
 
 export function SiteNavigation({
   activeSection,
@@ -19,55 +25,37 @@ export function SiteNavigation({
 }) {
   const pathname = usePathname();
   const active = activeNavigationSection(pathname, activeSection);
-  const navRef = useRef<HTMLElement>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+  // The brand mark already links home, so the header skips a separate 홈 item.
+  const primary = SITE_NAVIGATION.filter((item) => item.primary && item.id !== "home");
+  const secondary = SITE_NAVIGATION.filter((item) => !item.primary);
+  const secondaryActive = secondary.some((item) => item.id === active);
 
+  useEffect(() => setMoreOpen(false), [pathname]);
   useEffect(() => {
-    const nav = navRef.current;
-    const selected = nav?.querySelector<HTMLAnchorElement>('[aria-current="page"]');
-    if (!nav || !selected) return;
-    const revealSelection = () => {
-      const viewport = nav.getBoundingClientRect();
-      const item = selected.getBoundingClientRect();
-      const delta =
-        item.left < viewport.left
-          ? item.left - viewport.left - 8
-          : item.right > viewport.right
-            ? item.right - viewport.right + 8
-            : 0;
-      if (delta) {
-        nav.scrollLeft = Math.max(
-          0,
-          Math.min(nav.scrollLeft + delta, nav.scrollWidth - nav.clientWidth),
-        );
-      }
+    if (!moreOpen) return;
+    const close = (event: PointerEvent) => {
+      if (!moreRef.current?.contains(event.target as Node)) setMoreOpen(false);
     };
-    revealSelection();
-    const observer =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(revealSelection);
-    observer?.observe(nav);
-    observer?.observe(selected);
-    window.addEventListener("resize", revealSelection);
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
     return () => {
-      observer?.disconnect();
-      window.removeEventListener("resize", revealSelection);
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", escape);
     };
-  }, [active, pathname]);
+  }, [moreOpen]);
 
   return (
-    <nav ref={navRef} className="top-nav" aria-label="주 메뉴">
-      {SITE_NAVIGATION.map(({ id, label, href }) => (
+    <nav className="sl-nav" aria-label="주 메뉴">
+      {primary.map(({ id, label, href }) => (
         <Link
           key={id}
           href={href}
-          className={
-            [
-              active === id ? "active" : "",
-              id === "home" ? styles.desktopHome : "",
-              id === "games" ? styles.preparing : "",
-            ]
-              .filter(Boolean)
-              .join(" ") || undefined
-          }
+          className="sl-nav__link"
           aria-label={id === "games" ? "웹 게임 (베타)" : undefined}
           aria-current={active === id ? "page" : undefined}
           onClick={(event) => {
@@ -80,17 +68,45 @@ export function SiteNavigation({
               event.altKey
             )
               return;
-            if (id === "home" || id === "stories") onNavigate?.(id);
+            if (id === "stories") onNavigate?.(id);
           }}
         >
+          {label}
           {id === "games" && (
-            <span className={styles.badge} aria-hidden="true">
-              베타
+            <span className="sl-nav__badge" aria-hidden="true">
+              BETA
             </span>
           )}
-          <span className={id === "games" ? styles.preparingLabel : undefined}>{label}</span>
         </Link>
       ))}
+      <div className="sl-nav__more" ref={moreRef}>
+        <button
+          type="button"
+          className="sl-nav__link"
+          aria-expanded={moreOpen}
+          aria-haspopup="true"
+          data-active={secondaryActive || undefined}
+          onClick={() => setMoreOpen((open) => !open)}
+        >
+          더보기
+          <ChevronDown size={15} aria-hidden="true" />
+        </button>
+        {moreOpen && (
+          <div className="sl-nav__menu">
+            {secondary.map(({ id, label, href }) => (
+              <Link key={id} href={href} aria-current={active === id ? "page" : undefined}>
+                {label}
+              </Link>
+            ))}
+            <hr />
+            {EXTRA_LINKS.map(({ href, label }) => (
+              <Link key={href} href={href}>
+                {label}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </nav>
   );
 }
