@@ -1,14 +1,13 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, UserCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import type { CommunitySnapshot, CommunityDetail } from "@/domain/community";
 import { useCommunity } from "@/lib/use-community";
 import { PostDetailContent } from "./post-detail-content";
 import { AdSlot } from "./ad-slot";
-import { SiteNavigation } from "./site-navigation";
-import { NotificationBell } from "./notification-bell";
-import { TestAccountControls } from "./test-account-controls";
+import { SiteHeader } from "./site-header";
+import { SiteFooter } from "./site-footer";
 import { Button } from "./ui/button";
 
 export function PostDetailPage({
@@ -26,24 +25,7 @@ export function PostDetailPage({
       <a className="skip-link" href="#post-content">
         본문으로 바로가기
       </a>
-      <header className="site-header">
-        <div className="header-inner post-page-header">
-          <Link className="brand" href="/" aria-label="Sliper 홈">
-            <img src="/images/sliper-logo.png" alt="" />
-            <span>
-              sliper<span className="brand-dot">.</span>
-            </span>
-          </Link>
-          <SiteNavigation />
-          <div className="header-actions">
-            <NotificationBell />
-            <Link className="profile-button" href="/mypage" aria-label="내 정보">
-              <UserCircle size={21} />
-            </Link>
-            <TestAccountControls fallbackLogin />
-          </div>
-        </div>
-      </header>
+      <SiteHeader />
       <main className="post-detail-page" id="post-content">
         <div className="post-page-breadcrumb">
           <Link href={initialDetail.post.kind === "모집" ? "/" : "/stories"}>
@@ -51,7 +33,6 @@ export function PostDetailPage({
           </Link>
           <span>Sliper 커뮤니티</span>
         </div>
-        <AdSlot compact />
         {unavailable ? (
           <section className="post-page-empty">
             <h1>이 글은 더 이상 볼 수 없어요.</h1>
@@ -87,7 +68,9 @@ export function PostDetailPage({
             {store.error}
           </p>
         )}
+        <AdSlot compact />
       </main>
+      <SiteFooter />
     </>
   );
 }

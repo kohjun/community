@@ -1,6 +1,7 @@
 "use client";
 import { loginHref } from "@/domain/login-return";
 import { useRouter } from "next/navigation";
+import { flushSync } from "react-dom";
 import { useAdSenseContentGuard } from "./adsense-provider";
 import type { FeedQuery } from "@/domain/community";
 import { communityLocation } from "@/domain/community-location";
@@ -8,26 +9,21 @@ import { topicForSlug, type TopicSlug } from "@/domain/topics";
 import type { PopularPeriod } from "@/domain/community-time";
 import { notifyPushOnboardingMoment } from "@/lib/push-onboarding-events";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
+  ArrowRight,
   BookOpen,
-  UserRound,
   FlaskConical,
   Handshake,
-  ArrowUpRight,
   Bookmark,
   Check,
-  ChevronRight,
-  Clapperboard,
   Compass,
   CookingPot,
   Flag,
-  Flame,
   Grid2X2,
   Heart,
   Home,
   List,
-  MessageCircle,
   Music2,
   PartyPopper,
   Pencil,
@@ -35,7 +31,6 @@ import {
   Search,
   Shield,
   Trophy,
-  Users,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -45,12 +40,14 @@ import { PostDetailContent } from "./post-detail-content";
 import dynamic from "next/dynamic";
 import { HomeArchive } from "./home-archive";
 import { homeRecruitments } from "@/domain/home-discovery";
-import { FeaturedCarousel, HotStories } from "./home-stage";
+import { HotStories, RecruitStrip } from "./home-stage";
+import { HomeHero } from "./home-hero";
+import { SiteHeader } from "./site-header";
+import { SiteFooter } from "./site-footer";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { AdSlot } from "./ad-slot";
-import { SiteNavigation } from "./site-navigation";
 import { CommunitySort } from "./community-sort";
 import type { GeoCoordinates } from "@/lib/use-location";
-import { NotificationBell } from "./notification-bell";
 import {
   DEFAULT_DISCOVERY_FILTERS,
   EventDiscoveryButton,
@@ -62,9 +59,6 @@ import {
 import { CommunityPostRow } from "./community-post-row";
 import { CommunityRecruitmentCard } from "./community-recruitment-card";
 import { CommunityPagination } from "./community-pagination";
-import { TestAccountControls } from "./test-account-controls";
-import { OperatorContact } from "./operator-contact";
-import { PolicyLinks } from "./policy-links";
 import { BOARD_TOPICS, BOARD_DESCRIPTIONS } from "@/domain/boards";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { CATEGORIES, type CategorySlug } from "@/domain/categories";
@@ -199,6 +193,10 @@ export function SliperCommunity({
   const [sheet, setSheet] = useState<Sheet>(null);
   const [composeTopic, setComposeTopic] = useState(initialComposeTopic ?? null);
   const [writing, setWriting] = useState(!!initialComposeTopic && initialState.canWrite);
+  const [composeKind, setComposeKind] = useState<"모집" | null>(null);
+  const [searchOpen, setSearchOpen] = useState(!!initialQuery.search);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const wide = useMediaQuery("(min-width: 1080px)");
   useEffect(() => {
     if (!initialComposeTopic) return;
     const url = new URL(window.location.href);
@@ -207,7 +205,10 @@ export function SliperCommunity({
   }, [initialComposeTopic]);
   function changeWriting(open: boolean) {
     setWriting(open);
-    if (!open) setComposeTopic(null);
+    if (!open) {
+      setComposeTopic(null);
+      setComposeKind(null);
+    }
   }
   const [toast, setToast] = useState("");
   const store = useCommunity(
@@ -398,47 +399,122 @@ export function SliperCommunity({
 
   const heading =
     view === "stories"
-      ? "전체 이야기"
+      ? "이야기"
       : view === "bookmarks"
-        ? "다음에 또 보고 싶은 이야기"
+        ? "다시 보고 싶은 글"
         : view === "mine"
-          ? "나의 슬리퍼"
+          ? "내가 쓴 글"
           : view === "popular"
-            ? "지금, 가장 뜨거운 이야기"
+            ? "지금 가장 반응 좋은 이야기"
             : category !== "all"
-              ? `${label(category)}, 함께 즐겨요`
+              ? `${label(category)} 모임과 이야기`
               : query
                 ? `‘${query}’ 검색 결과`
                 : sort === "nearest"
                   ? "내 주변 가까운 모임"
                   : discoveryActive
-                    ? "내 취향에 맞는 이벤트"
-                    : "오늘, 뭐 하고 놀까요?";
+                    ? "내 취향에 맞는 모임"
+                    : kind === "모집"
+                      ? "모집 중인 모임"
+                      : "커뮤니티";
+  const subheading =
+    view === "stories"
+      ? "모임 후기부터 기획 노하우, 질문까지 편하게 나눠요."
+      : view === "bookmarks"
+        ? "북마크한 모임과 이야기를 한곳에 모았어요."
+        : view === "mine"
+          ? "내가 남긴 글을 확인하고 관리하세요."
+          : category in BOARD_DESCRIPTIONS
+            ? BOARD_DESCRIPTIONS[category as keyof typeof BOARD_DESCRIPTIONS]
+            : kind === "모집"
+              ? "여러 호스트가 연 모임을 일정과 장소로 비교하고 바로 신청하세요."
+              : "모집글, 후기, 투표가 한 피드에 올라와요.";
+  const feedTitle =
+    view === "bookmarks"
+      ? "북마크"
+      : view === "mine"
+        ? "내가 쓴 글"
+        : query
+          ? "검색된 글"
+          : kind === "모집"
+            ? "모집글"
+            : kind === "이야기"
+              ? "이야기"
+              : kind === "투표"
+                ? "투표"
+                : "최근 올라온 글";
+  const recruitments = homeRecruitments(store.upcoming, store.featured);
+  const openRecruitments = recruitments.filter(
+    (post) => post.eventAvailable && !post.sample && !post.eventCancelledAt,
+  );
+  // The upcoming highlight query is capped at 8, so larger counts are shown as a floor.
+  const recruitCount = openRecruitments.length;
+  const showRail = wide !== false;
+  const showFeedModules = isHome && wide === false;
+  function browseRecruitments() {
+    chooseCategory("all");
+    setKind("모집");
+    setView("home");
+    feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function startHosting() {
+    setComposeKind("모집");
+    startWriting();
+  }
+  function feedModule(index: number) {
+    if (index === 2 && isHome)
+      return (
+        <RecruitStrip
+          posts={recruitments}
+          onOpen={openPost}
+          onSave={savePost}
+          bookmarked={store.bookmarked}
+          busy={store.busy}
+          canWrite={store.canWrite}
+          onAll={browseRecruitments}
+        />
+      );
+    if (index === 5) return <AdSlot onCategory={chooseCategory} disabled={advertisingBlocked} />;
+    if (index === 8 && showFeedModules)
+      return (
+        <HotStories
+          posts={store.hot}
+          onOpen={openPost}
+          onAll={(selected) => {
+            navigate("popular");
+            setPeriod(selected);
+            setRankingAt(undefined);
+          }}
+        />
+      );
+    if (index === 12 && showFeedModules) return <HomeArchive />;
+    return null;
+  }
 
   return (
     <>
       <a className="skip-link" href="#main-content">
         본문으로 바로가기
       </a>
-      <header className="site-header site-header--community">
-        <div className="header-inner">
-          <Link className="brand" href="/" aria-label="Sliper 홈">
-            <img src="/images/sliper-logo.png" alt="" />
-            <span>
-              sliper<span className="brand-dot">.</span>
-            </span>
-          </Link>
-          <span className="brand-slogan">슬쩍 나와서 리얼하게 노는 퍼블릭 모임</span>
-          <SiteNavigation activeSection={view === "stories" ? "stories" : "home"} />
-          <div className="header-discovery-search">
-            <EventDiscoveryButton
-              active={discoveryActive}
+      <SiteHeader
+        activeSection={view === "stories" ? "stories" : "home"}
+        search={
+          <>
+            <button
+              type="button"
+              className="sl-icon-button sl-search-toggle"
+              aria-label={searchOpen ? "검색 닫기" : "검색 열기"}
+              aria-expanded={searchOpen}
               onClick={() => {
-                setDiscoveryOpen(true);
+                // Commit before focusing so mobile browsers open the keyboard within the tap.
+                flushSync(() => setSearchOpen(!searchOpen));
+                if (!searchOpen) searchInput.current?.focus();
               }}
-            />
+            >
+              {searchOpen ? <X size={20} /> : <Search size={20} />}
+            </button>
             <form
-              className="header-search"
+              className={cn("sl-search", searchOpen && "is-open")}
               role="search"
               onSubmit={(event) => {
                 event.preventDefault();
@@ -447,8 +523,9 @@ export function SliperCommunity({
                 feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
             >
-              <Search size={19} />
+              <Search size={17} aria-hidden="true" />
               <input
+                ref={searchInput}
                 aria-label="커뮤니티 검색"
                 maxLength={100}
                 value={query}
@@ -458,173 +535,86 @@ export function SliperCommunity({
                 }}
                 placeholder={view === "stories" ? "이야기 검색" : "모임·이야기 검색"}
               />
-              <Link
-                className="header-unified-search-link"
-                href={query.trim() ? `/search?q=${encodeURIComponent(query.trim())}` : "/search"}
-                aria-label="이야기·모집·룰북·템플릿 통합 검색"
-                title="룰북과 템플릿까지 함께 검색"
-              >
-                통합
-              </Link>
               {query && (
                 <button type="button" onClick={() => setQuery("")} aria-label="검색 지우기">
-                  <X size={16} />
+                  <X size={15} />
                 </button>
               )}
             </form>
-          </div>
-          <div className="header-actions">
-            <NotificationBell />
-            <Link
-              className="profile-button"
-              href="/mypage?tab=events"
-              aria-label="내 참가 신청과 공지방"
-            >
-              <MessageCircle size={20} />
-            </Link>
-            <Link className="profile-button" href="/mypage" aria-label="마이페이지">
-              <UserRound size={20} />
-            </Link>
-            <TestAccountControls fallbackLogin />
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
-      <div className="page-layout page-layout--categories">
-        <aside className="community-category-sidebar" aria-labelledby="community-category-heading">
-          <div className="community-category-sticky">
-            <h2 id="community-category-heading">카테고리</h2>
-            <CategoryMenu
-              category={category}
-              onSelect={chooseCategory}
-              className="community-category-nav"
-              label="게시판 카테고리"
-              showAllIcon
-            />
-          </div>
-        </aside>
-        <main id="main-content" className="main-content">
-          <div className="welcome-block">
-            <div className="welcome-eyebrow">
-              <span className="eyebrow-line" />
-              취향으로 만나는 우리 동네 예능
-              <span className="preview-pill">{store.canWrite ? "로컬 개발" : "둘러보기"}</span>
-            </div>
-            <h1>{heading}</h1>
-            <p>
-              {view === "stories"
-                ? "예능 이야기부터 일상의 소소한 순간까지, 편하게 나눠요."
-                : view === "bookmarks"
-                  ? "마음에 들었던 콘텐츠를 한곳에 모았어요."
-                  : view === "mine"
-                    ? "내가 남긴 이야기를 확인하세요."
-                    : "취향 맞는 사람들과 만드는 우리만의 예능"}
-            </p>
-          </div>
-          <AdSlot onCategory={chooseCategory} disabled={advertisingBlocked} />
-          {category in BOARD_DESCRIPTIONS && (
-            <p className="board-intro">
-              {BOARD_DESCRIPTIONS[category as keyof typeof BOARD_DESCRIPTIONS]}
-            </p>
-          )}
-          <CategoryMenu
-            category={category}
-            onSelect={chooseCategory}
-            className="mobile-categories"
-            label="빠른 카테고리"
-            showAllIcon
+      <div className="sl-page">
+        {isHome && view === "home" ? (
+          <HomeHero
+            recruitCount={recruitCount}
+            nextEvent={openRecruitments[0] ?? recruitments[0]}
+            onBrowse={browseRecruitments}
+            onHost={startHosting}
+            onOpen={openPost}
           />
+        ) : (
+          <div className="sl-page-head">
+            <h1>{heading}</h1>
+            <p>{subheading}</p>
+          </div>
+        )}
 
-          {isHome && (
-            <>
-              <FeaturedCarousel
-                posts={homeRecruitments(store.upcoming, store.featured)}
-                onOpen={openPost}
-                onSave={savePost}
-                bookmarked={store.bookmarked}
-                busy={store.busy}
-                canWrite={store.canWrite}
-                onAll={() => {
-                  setKind("모집");
-                  setView("home");
-                }}
-              />
-              <HotStories
-                posts={store.hot}
-                onOpen={openPost}
-                onAll={(selected) => {
-                  navigate("popular");
-                  setPeriod(selected);
-                  setRankingAt(undefined);
-                }}
-              />
-              <HomeArchive />
-            </>
-          )}
-
-          <section className="feed-section" ref={feedRef} aria-labelledby="feed-title">
-            <div className="section-heading feed-heading">
-              <div>
+        <div className={cn("sl-layout", showRail && "has-rail")}>
+          <main id="main-content" className="sl-feed">
+            <section ref={feedRef} className="sl-feed__section" aria-labelledby="feed-title">
+              <div className="sl-feed__head">
                 <h2 id="feed-title">
-                  {view === "stories" && category === "all" && !query
-                    ? "전체 이야기"
-                    : view === "bookmarks"
-                      ? "내 북마크"
-                      : view === "mine"
-                        ? "내가 쓴 글"
-                        : category !== "all"
-                          ? `${label(category)} 이야기`
-                          : view === "popular"
-                            ? "인기 이야기"
-                            : query
-                              ? "검색된 이야기"
-                              : discoveryActive
-                                ? "찾은 이벤트"
-                                : "전체 이야기"}
-                  <span className="result-count">
+                  {feedTitle}
+                  <span className="sl-count">
                     {(store.pagination?.totalItems ?? filtered.length).toLocaleString("ko-KR")}
                   </span>
                 </h2>
-              </div>
-              <Button className="write-button" disabled={store.busy} onClick={startWriting}>
-                <Pencil size={16} />
-                글쓰기
-              </Button>
-            </div>
-            {category in BOARD_TOPICS && (
-              <div className="topic-filter" aria-label="세부 주제">
-                <button className={!topic ? "active" : ""} onClick={() => setTopic("")}>
-                  모든 주제
-                </button>
-                {BOARD_TOPICS[category as keyof typeof BOARD_TOPICS].map((value) => (
+                <div className="sl-feed__tools">
+                  <EventDiscoveryButton
+                    active={discoveryActive}
+                    onClick={() => {
+                      setDiscoveryOpen(true);
+                    }}
+                  />
+                  <CommunitySort
+                    value={sort}
+                    coordinates={sortCoordinates}
+                    contextKey={`${view}|${category}|${kind}|${query}|${focus}|${discussionType ?? ""}|${topic}|${tag}`}
+                    onChange={(next, coordinates) => {
+                      if (next === "nearest" && coordinates) {
+                        setSortCoordinates(coordinates);
+                        setKind("모집");
+                        setFocus("all");
+                        setDiscussionType(undefined);
+                        setView((current) => (current === "stories" ? "stories" : "home"));
+                      }
+                      setSort(next);
+                      if (next === "popular") setRankingAt(undefined);
+                      if (view === "popular") setView("home");
+                    }}
+                  />
                   <button
-                    key={value}
-                    className={topic === value ? "active" : ""}
-                    onClick={() => setTopic(value)}
+                    type="button"
+                    className="sl-button sl-button--primary sl-feed__write"
+                    disabled={store.busy}
+                    onClick={() => {
+                      setComposeKind(null);
+                      startWriting();
+                    }}
                   >
-                    {value}
+                    <Pencil size={15} aria-hidden="true" />
+                    글쓰기
                   </button>
-                ))}
+                </div>
               </div>
-            )}
-            {tag && (
-              <button className="active-tag-filter" onClick={() => setTag("")}>
-                #{tag} <X size={13} />
-              </button>
-            )}
-            <EventDiscoveryChips
-              value={discovery}
-              onChange={updateDiscovery}
-              onReset={resetDiscovery}
-              onEdit={() => {
-                setDiscoveryOpen(true);
-              }}
-            />
-            <div className="feed-controls">
-              <div className="feed-tabs" aria-label="글 유형">
+
+              <div className="sl-tabs" role="group" aria-label="글 유형">
                 {kinds.map((value) => (
                   <button
                     key={value}
+                    type="button"
                     aria-pressed={kind === value}
                     className={cn(kind === value && "active")}
                     onClick={() => {
@@ -644,53 +634,81 @@ export function SliperCommunity({
                     {value}
                   </button>
                 ))}
+                {kind === "모집" && (
+                  <div className="sl-layout-switch" role="group" aria-label="모집글 보기 방식">
+                    <button
+                      type="button"
+                      aria-pressed={recruitmentLayout === "list"}
+                      aria-label="목록형"
+                      title="목록형"
+                      onClick={() => changeRecruitmentLayout("list")}
+                    >
+                      <List size={16} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={recruitmentLayout === "card"}
+                      aria-label="카드형"
+                      title="카드형"
+                      onClick={() => changeRecruitmentLayout("card")}
+                    >
+                      <Grid2X2 size={16} aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
               </div>
-              <CommunitySort
-                value={sort}
-                coordinates={sortCoordinates}
-                contextKey={`${view}|${category}|${kind}|${query}|${focus}|${discussionType ?? ""}|${topic}|${tag}`}
-                onChange={(next, coordinates) => {
-                  if (next === "nearest" && coordinates) {
-                    setSortCoordinates(coordinates);
-                    setKind("모집");
-                    setFocus("all");
-                    setDiscussionType(undefined);
-                    setView((current) => (current === "stories" ? "stories" : "home"));
-                  }
-                  setSort(next);
-                  if (next === "popular") setRankingAt(undefined);
-                  if (view === "popular") setView("home");
-                }}
+
+              <CategoryMenu
+                category={category}
+                onSelect={chooseCategory}
+                className="sl-chips"
+                label="카테고리"
               />
-            </div>
-            {(kind === "이야기" || kind === "전체") && (
-              <div className="discussion-controls">
-                <div className="discussion-navigation" role="group" aria-label="이야기 탐색">
+
+              {category in BOARD_TOPICS && (
+                <div className="sl-subfilter" aria-label="세부 주제">
+                  <button className={!topic ? "active" : ""} onClick={() => setTopic("")}>
+                    모든 주제
+                  </button>
+                  {BOARD_TOPICS[category as keyof typeof BOARD_TOPICS].map((value) => (
+                    <button
+                      key={value}
+                      className={topic === value ? "active" : ""}
+                      onClick={() => setTopic(value)}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {kind === "이야기" && (
+                <div className="sl-subfilter" role="group" aria-label="이야기 탐색">
                   <button
-                    aria-pressed={focus === "all" && sort === "latest"}
+                    aria-pressed={focus === "all" && !discussionType}
                     onClick={() => {
                       setFocus("all");
-                      setSort("latest");
+                      setDiscussionType(undefined);
                     }}
                   >
-                    최신 이야기
+                    모든 이야기
                   </button>
-                  <button
-                    aria-pressed={focus === "all" && sort === "popular"}
-                    onClick={() => {
-                      setFocus("all");
-                      setSort("popular");
-                      setRankingAt(undefined);
-                    }}
-                  >
-                    기간 인기
-                  </button>
+                  {DISCUSSION_TYPES.map((value) => (
+                    <button
+                      key={value}
+                      aria-pressed={discussionType === value && focus !== "unanswered"}
+                      onClick={() => {
+                        setDiscussionType(value);
+                        if (focus === "unanswered") setFocus("all");
+                      }}
+                    >
+                      {DISCUSSION_LABELS[value]}
+                    </button>
+                  ))}
                   <button
                     aria-pressed={focus === "unanswered"}
                     onClick={() => {
                       setFocus("unanswered");
                       setDiscussionType("question");
-                      setKind("이야기");
                       setSort("latest");
                     }}
                   >
@@ -706,291 +724,238 @@ export function SliperCommunity({
                     관심 글
                   </button>
                 </div>
-                <div className="discussion-types" role="group" aria-label="이야기 말머리">
-                  <button
-                    aria-pressed={!discussionType}
-                    onClick={() => {
-                      setDiscussionType(undefined);
-                      if (focus === "unanswered") setFocus("all");
-                    }}
+              )}
+              {focus === "interests" && (
+                <p className="sl-feed__note">
+                  {store.interestFeed === "personalized"
+                    ? "구독한 카테고리와 호스트의 글을 모았어요."
+                    : "아직 맞춤 관심 글이 없어 일반 글을 보여드려요."}{" "}
+                  <Link
+                    href={
+                      store.canWrite
+                        ? "/notifications#interests"
+                        : loginHref("/stories?focus=interests")
+                    }
                   >
-                    모든 이야기
-                  </button>
-                  {DISCUSSION_TYPES.map((value) => (
-                    <button
-                      key={value}
-                      aria-pressed={discussionType === value}
-                      onClick={() => {
-                        setDiscussionType(value);
-                        setKind("이야기");
-                        if (value !== "question" && focus === "unanswered") setFocus("all");
-                      }}
-                    >
-                      {DISCUSSION_LABELS[value]}
-                    </button>
-                  ))}
-                </div>
-                {focus === "interests" && (
-                  <p className="interest-feed-guide">
-                    {store.interestFeed === "personalized"
-                      ? "구독한 카테고리와 호스트의 글을 모았어요."
-                      : "아직 맞춤 관심 글이 없어 일반 글을 보여드려요."}{" "}
-                    <Link
-                      href={
-                        store.canWrite
-                          ? "/notifications#interests"
-                          : loginHref("/stories?focus=interests")
-                      }
-                    >
-                      {store.canWrite ? "관심사 설정" : "로그인하고 관심사 고르기"}
-                    </Link>
-                  </p>
-                )}
-              </div>
-            )}
-            {sort === "popular" && (
-              <div className="popular-period" role="group" aria-label="인기 집계 기간">
-                {(
-                  [
-                    ["today", "오늘"],
-                    ["week", "이번 주"],
-                    ["month", "이번 달"],
-                    ["all", "전체"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <button
-                    type="button"
-                    key={value}
-                    aria-pressed={period === value}
-                    onClick={() => {
-                      setPeriod(value);
-                      setRankingAt(undefined);
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (period === "all" || rankingAt === undefined) store.retryFeed();
-                    else setRankingAt(undefined);
-                  }}
-                >
-                  지금 기준으로 새로 보기
+                    {store.canWrite ? "관심사 설정" : "로그인하고 관심사 고르기"}
+                  </Link>
+                </p>
+              )}
+              {tag && (
+                <button className="sl-active-tag" onClick={() => setTag("")}>
+                  #{tag} <X size={13} />
                 </button>
-                <p>
-                  {period === "all"
-                    ? "전체 기간에 받은 좋아요 순"
-                    : (period === "today"
-                        ? "한국 시간 오늘 0시"
-                        : period === "month"
-                          ? "한국 시간 이번 달 1일 0시"
-                          : "한국 시간 이번 주 월요일 0시") + "부터 기준 시각까지 받은 좋아요 순"}
-                  {period !== "all" && rankingAt
-                    ? " · " +
-                      new Date(rankingAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) +
-                      " 기준"
-                    : ""}
-                </p>
-              </div>
-            )}
-            {kind === "모집" && (
-              <div className="recruitment-layout-header">
-                <span>모집글 보기</span>
-                <div className="recruitment-view-switch" role="group" aria-label="모집글 보기 방식">
-                  <button
-                    className="recruitment-view-option"
-                    type="button"
-                    aria-pressed={recruitmentLayout === "list"}
-                    onClick={() => changeRecruitmentLayout("list")}
-                  >
-                    <List size={15} aria-hidden="true" />
-                    목록형
-                  </button>
-                  <button
-                    className="recruitment-view-option"
-                    type="button"
-                    aria-pressed={recruitmentLayout === "card"}
-                    onClick={() => changeRecruitmentLayout("card")}
-                  >
-                    <Grid2X2 size={15} aria-hidden="true" />
-                    카드형
-                  </button>
-                </div>
-              </div>
-            )}
-            {store.feedError && (
-              <div className="community-feed-error" role="alert">
-                <p>{store.feedError}</p>
-                <Button
-                  variant="outline"
-                  disabled={store.loading || store.busy}
-                  onClick={store.retryFeed}
-                >
-                  다시 불러오기
-                </Button>
-              </div>
-            )}
-            {store.loading && (
-              <p className="feed-status" role="status">
-                이야기를 불러오는 중이에요.
-              </p>
-            )}
-            {filtered.length ? (
-              <div className={recruitmentCards ? "recruitment-card-grid" : "post-list"}>
-                {filtered.map((post) => (
-                  <PostPreview
-                    key={post.id}
-                    post={post}
-                    busy={store.busy}
-                    canWrite={store.canWrite}
-                    onOpen={() => openPost(post)}
-                    onLike={() => store.toggleLike(post.id)}
-                    onSave={() => savePost(post.id)}
-                    onTag={setTag}
-                  />
-                ))}
-              </div>
-            ) : store.loading || store.feedError ? null : (
-              <div className="empty-state">
-                <Search size={30} />
-                <h3>
-                  {view === "bookmarks"
-                    ? "아직 담아둔 이야기가 없어요"
-                    : view === "mine"
-                      ? "첫 이야기를 들려주세요"
-                      : "아직 일치하는 이야기가 없어요"}
-                </h3>
-                <p>
-                  {view === "bookmarks"
-                    ? "마음에 드는 글의 북마크를 눌러보세요."
-                    : "다른 카테고리를 둘러보거나 새로운 이야기를 남겨보세요."}
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (view === "mine") setWriting(true);
-                    else navigate("home");
-                  }}
-                >
-                  {view === "mine" ? "첫 글 쓰기" : "전체 이야기 보기"}
-                </Button>
-              </div>
-            )}
-            {store.pagination && (
-              <CommunityPagination
-                pagination={store.pagination}
-                disabled={store.busy || store.loading}
-                onChange={(page) => {
-                  store.changePage(page);
-                  feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              )}
+              <EventDiscoveryChips
+                value={discovery}
+                onChange={updateDiscovery}
+                onReset={resetDiscovery}
+                onEdit={() => {
+                  setDiscoveryOpen(true);
                 }}
               />
-            )}
-            <div className="feed-end">
-              <span />
-              우리의 다음 이야기는, 당신으로부터
-              <span />
-            </div>
-          </section>
-        </main>
+              {sort === "popular" && (
+                <div className="sl-subfilter sl-period" role="group" aria-label="인기 집계 기간">
+                  {(
+                    [
+                      ["today", "오늘"],
+                      ["week", "이번 주"],
+                      ["month", "이번 달"],
+                      ["all", "전체"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      type="button"
+                      key={value}
+                      aria-pressed={period === value}
+                      onClick={() => {
+                        setPeriod(value);
+                        setRankingAt(undefined);
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="sl-period__refresh"
+                    onClick={() => {
+                      if (period === "all" || rankingAt === undefined) store.retryFeed();
+                      else setRankingAt(undefined);
+                    }}
+                  >
+                    지금 기준으로 새로 보기
+                  </button>
+                  <p>
+                    {period === "all"
+                      ? "전체 기간에 받은 좋아요 순"
+                      : (period === "today"
+                          ? "한국 시간 오늘 0시"
+                          : period === "month"
+                            ? "한국 시간 이번 달 1일 0시"
+                            : "한국 시간 이번 주 월요일 0시") + "부터 기준 시각까지 받은 좋아요 순"}
+                    {period !== "all" && rankingAt
+                      ? " · " +
+                        new Date(rankingAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) +
+                        " 기준"
+                      : ""}
+                  </p>
+                </div>
+              )}
+              {query.trim() && (
+                <p className="sl-feed__note">
+                  룰북과 이벤트 템플릿까지 찾으려면{" "}
+                  <Link href={`/search?q=${encodeURIComponent(query.trim())}`}>통합 검색</Link>을
+                  이용해보세요.
+                </p>
+              )}
+              {store.feedError && (
+                <div className="community-feed-error" role="alert">
+                  <p>{store.feedError}</p>
+                  <Button
+                    variant="outline"
+                    disabled={store.loading || store.busy}
+                    onClick={store.retryFeed}
+                  >
+                    다시 불러오기
+                  </Button>
+                </div>
+              )}
+              {store.loading && (
+                <p className="feed-status" role="status">
+                  글을 불러오는 중이에요.
+                </p>
+              )}
+              {filtered.length ? (
+                recruitmentCards ? (
+                  <div className="recruitment-card-grid">
+                    {filtered.map((post) => (
+                      <PostPreview
+                        key={post.id}
+                        post={post}
+                        busy={store.busy}
+                        canWrite={store.canWrite}
+                        onOpen={() => openPost(post)}
+                        onLike={() => store.toggleLike(post.id)}
+                        onSave={() => savePost(post.id)}
+                        onTag={setTag}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="post-list sl-post-list">
+                    {filtered.map((post, index) => (
+                      <Fragment key={post.id}>
+                        <PostPreview
+                          post={post}
+                          busy={store.busy}
+                          canWrite={store.canWrite}
+                          onOpen={() => openPost(post)}
+                          onLike={() => store.toggleLike(post.id)}
+                          onSave={() => savePost(post.id)}
+                          onTag={setTag}
+                        />
+                        {feedModule(index)}
+                      </Fragment>
+                    ))}
+                  </div>
+                )
+              ) : store.loading || store.feedError ? null : (
+                <div className="sl-empty">
+                  <h3>
+                    {view === "bookmarks"
+                      ? "아직 담아둔 글이 없어요"
+                      : view === "mine"
+                        ? "첫 글을 남겨보세요"
+                        : "조건에 맞는 글이 아직 없어요"}
+                  </h3>
+                  <p>
+                    {view === "bookmarks"
+                      ? "마음에 드는 모임이나 이야기의 북마크를 눌러보세요."
+                      : "다른 카테고리를 둘러보거나 직접 글을 올려보세요."}
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (view === "mine") setWriting(true);
+                      else navigate("home");
+                    }}
+                  >
+                    {view === "mine" ? "첫 글 쓰기" : "전체 글 보기"}
+                  </Button>
+                </div>
+              )}
+              {store.pagination && (
+                <CommunityPagination
+                  pagination={store.pagination}
+                  disabled={store.busy || store.loading}
+                  onChange={(page) => {
+                    store.changePage(page);
+                    feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                />
+              )}
+            </section>
+          </main>
 
-        <aside className="right-sidebar" aria-label="커뮤니티 소식">
-          <div className="play-banner">
-            <div className="banner-top">
-              <span>다음 주말의 계획</span>
-              <Clapperboard size={27} strokeWidth={1.5} />
-            </div>
-            <h2>
-              보는 예능에서,
-              <br />
-              하는 예능으로.
-            </h2>
-            <p>우리의 다음 에피소드를 만나보세요.</p>
-            <button
-              onClick={() => {
-                chooseCategory("all");
-                setKind("모집");
-                feedRef.current?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              모집 중인 콘텐츠
-              <ArrowUpRight size={18} />
-            </button>
-            <Link className="banner-edition" href="/archive?kind=template">
-              내가 호스트가 되어볼까요? →
-            </Link>
-          </div>
-          <div className="home-shortcuts">
-            <button onClick={() => navigate("popular")}>
-              <Flame size={18} />
-              인기 이야기
-              <ChevronRight size={15} />
-            </button>
-            <button onClick={() => navigate("bookmarks")}>
-              <Bookmark size={18} />내 북마크
-              <ChevronRight size={15} />
-            </button>
-            <button onClick={() => navigate("mine")}>
-              <Pencil size={18} />
-              내가 쓴 글<ChevronRight size={15} />
-            </button>
-          </div>
-          <section className="trending">
-            <h2>
-              요즘 관심 있는 카테고리
-              <Flame size={17} />
-            </h2>
-            {(["mind-games", "race", "party"] as const).map((slug, index) => {
-              const Icon = icons[slug];
-              return (
-                <button key={slug} onClick={() => chooseCategory(slug)}>
-                  <span className="trend-number">{index + 1}</span>
-                  <Icon size={18} />
-                  <span>{label(slug)}</span>
-                  <ChevronRight size={15} />
+          {showRail && (
+            <aside className="sl-rail" aria-label="커뮤니티 소식">
+              <HotStories
+                posts={store.hot}
+                onOpen={openPost}
+                onAll={(selected) => {
+                  navigate("popular");
+                  setPeriod(selected);
+                  setRankingAt(undefined);
+                }}
+              />
+              <section className="sl-host-card" aria-labelledby="sl-host-title">
+                <p className="sl-host-card__eyebrow">호스트·기업 파트너</p>
+                <h2 id="sl-host-title">모임을 여는 분이라면</h2>
+                <ul>
+                  <li>모집글 하나로 참가 신청과 결제 관리</li>
+                  <li>참가자 전용 공지방과 QR 체크인</li>
+                  <li>룰북·템플릿으로 기획 시간 단축</li>
+                </ul>
+                <button
+                  type="button"
+                  className="sl-button sl-button--primary"
+                  onClick={startHosting}
+                >
+                  모집글 올리기
                 </button>
-              );
-            })}
-          </section>
-          <div className="community-note">
-            <Users size={24} />
-            <h3>혼자 와도, 함께 즐겨요</h3>
-            <p>
-              잘하는 것보다 즐기는 게 중요해요.
-              <br />
-              서로의 취향을 존중해주세요.
-            </p>
-            <button onClick={() => setSheet("guide")}>
-              커뮤니티 가이드
-              <ChevronRight size={14} />
-            </button>
-          </div>
-          <div className="preview-note">
-            <span className="preview-pill">
-              {store.mode === "development" ? "LOCAL" : "SLIPER"}
-            </span>
-            <p>
-              {store.canWrite
-                ? store.mode === "development"
-                  ? "개발 공간이에요. 작성한 글과 반응은 로컬 DB에 저장돼요."
-                  : "취향을 나누고, 함께할 다음 이벤트를 찾아보세요."
-                : "로그인하면 이야기를 나누고 모임을 신청할 수 있어요."}
-            </p>
-          </div>
-          <footer className="sidebar-footer">
-            <PolicyLinks />
-            <OperatorContact compact />© 2026 Sliper · 함께 만드는 즐거움
-          </footer>
-        </aside>
+                <Link className="sl-text-link" href="/hosting-guide">
+                  호스트 가이드 보기
+                  <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+              </section>
+              {isHome && <HomeArchive />}
+              <div className="sl-rail__links">
+                <button type="button" onClick={() => navigate("bookmarks")}>
+                  <Bookmark size={15} aria-hidden="true" />내 북마크
+                </button>
+                <button type="button" onClick={() => navigate("mine")}>
+                  <Pencil size={15} aria-hidden="true" />
+                  내가 쓴 글
+                </button>
+                <button type="button" onClick={() => setSheet("guide")}>
+                  커뮤니티 가이드
+                </button>
+              </div>
+            </aside>
+          )}
+        </div>
       </div>
+      <SiteFooter />
 
       <Button
         className={cn("mobile-compose", !feedVisible && "is-away")}
         aria-label={store.canWrite ? "새 글 쓰기" : "로그인하고 글쓰기"}
         disabled={store.busy}
-        onClick={startWriting}
+        onClick={() => {
+          setComposeKind(null);
+          startWriting();
+        }}
       >
         <Pencil size={19} />
         <span>글쓰기</span>
@@ -1073,7 +1038,7 @@ export function SliperCommunity({
             (composeTopic && topicForSlug(composeTopic)?.category) ||
             (category === "all" ? "party" : category)
           }
-          initialKind={kind === "모집" || kind === "투표" ? kind : "이야기"}
+          initialKind={composeKind ?? (kind === "모집" || kind === "투표" ? kind : "이야기")}
           {...(composeTopic ? { initialTopic: composeTopic } : {})}
           post={null}
           upload={store.upload}

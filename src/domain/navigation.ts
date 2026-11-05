@@ -1,11 +1,12 @@
+// `primary` items stay in the header; the rest live under "더보기" so first-time visitors see a short menu.
 export const SITE_NAVIGATION = [
-  { id: "home", label: "홈", href: "/" },
-  { id: "stories", label: "이야기", href: "/stories" },
-  { id: "lightning", label: "번개 모임", href: "/lightning" },
-  { id: "map", label: "이벤트 맵", href: "/map" },
-  { id: "archive", label: "아카이브", href: "/archive" },
-  { id: "games", label: "웹 게임", href: "/games" },
-  { id: "players", label: "플레이어·크루", href: "/players" },
+  { id: "home", label: "홈", href: "/", primary: true },
+  { id: "stories", label: "이야기", href: "/stories", primary: true },
+  { id: "lightning", label: "번개 모임", href: "/lightning", primary: true },
+  { id: "map", label: "이벤트 맵", href: "/map", primary: false },
+  { id: "archive", label: "아카이브", href: "/archive", primary: true },
+  { id: "games", label: "웹 게임", href: "/games", primary: true },
+  { id: "players", label: "플레이어·크루", href: "/players", primary: false },
 ] as const;
 
 export type NavigationSection = (typeof SITE_NAVIGATION)[number]["id"];
