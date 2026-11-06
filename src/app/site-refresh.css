@@ -2563,12 +2563,6 @@ body {
     font-size: 13px;
   }
 }
-@media (max-width: 400px) {
-  /* Room for the role toggle: the mark alone stands for the brand on narrow phones. */
-  .sl-header .sl-brand__word {
-    display: none;
-  }
-}
 
 /* Category grid under the banner (participant view): every category at a glance. */
 .sl-cats {
@@ -2645,5 +2639,33 @@ body {
   }
   .sl-cats__label {
     font-size: 12px;
+  }
+}
+@media (max-width: 720px) {
+  /* The open search field floats under the header; keep the page heading clear of it. */
+  body:has(.sl-search.is-open) .sl-page {
+    padding-top: 62px;
+  }
+}
+@media (max-width: 359px) {
+  /* Narrowest phones: tighten the header so wordmark, role toggle and tools share one row. */
+  .sl-header__inner {
+    gap: 6px;
+  }
+  .sl-brand {
+    font-size: 18px;
+  }
+  .sl-audience-toggle button {
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  .sl-header .sl-icon-button {
+    width: 34px;
+    height: 34px;
+  }
+  .sl-header .login-link {
+    margin-left: 2px;
+    padding: 0 10px;
+    font-size: 12.5px;
   }
 }

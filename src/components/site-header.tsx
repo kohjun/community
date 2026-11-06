@@ -8,10 +8,11 @@ import { TestAccountControls } from "./test-account-controls";
 import { SliperMark } from "./sliper-mark";
 import { AudienceToggle } from "./audience-toggle";
 
-export function SiteBrand() {
+/** The header shows the wordmark alone; the footer keeps the slipper mark beside it. */
+export function SiteBrand({ mark = true }: { mark?: boolean }) {
   return (
     <Link className="sl-brand" href="/" aria-label="Sliper 홈">
-      <SliperMark className="sl-brand__mark" />
+      {mark && <SliperMark className="sl-brand__mark" />}
       <span className="sl-brand__word">
         sliper<span className="sl-brand__dot">.</span>
       </span>
@@ -35,7 +36,7 @@ export function SiteHeader({
   return (
     <header className="sl-header">
       <div className="sl-header__inner">
-        <SiteBrand />
+        <SiteBrand mark={false} />
         <SiteNavigation {...(activeSection ? { activeSection } : {})} />
         <AudienceToggle />
         <div className="sl-header__tools">
