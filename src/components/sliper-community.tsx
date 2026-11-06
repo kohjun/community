@@ -1,6 +1,7 @@
 "use client";
 import { loginHref } from "@/domain/login-return";
 import { useRouter } from "next/navigation";
+import { flushSync } from "react-dom";
 import { useAdSenseContentGuard } from "./adsense-provider";
 import type { FeedQuery } from "@/domain/community";
 import { communityLocation } from "@/domain/community-location";
@@ -18,6 +19,7 @@ import {
   Home,
   List,
   Pencil,
+  Search,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -170,6 +172,8 @@ export function SliperCommunity({
   const [writing, setWriting] = useState(!!initialComposeTopic && initialState.canWrite);
   const [composeKind, setComposeKind] = useState<"모집" | null>(null);
   const [audience] = useAudience();
+  const [searchOpen, setSearchOpen] = useState(!!initialQuery.search);
+  const searchInput = useRef<HTMLInputElement>(null);
   const wide = useMediaQuery("(min-width: 1080px)");
   useEffect(() => {
     if (!initialComposeTopic) return;
@@ -454,6 +458,51 @@ export function SliperCommunity({
       <SiteHeader
         activeSection={view === "stories" ? "stories" : "home"}
         savedMeetupsActive={savedMeetups}
+        search={
+          <>
+            <button
+              type="button"
+              className="sl-icon-button sl-search-toggle"
+              aria-label={searchOpen ? "검색 닫기" : "검색 열기"}
+              aria-expanded={searchOpen}
+              onClick={() => {
+                // Commit before focusing so mobile browsers open the keyboard within the tap.
+                flushSync(() => setSearchOpen(!searchOpen));
+                if (!searchOpen) searchInput.current?.focus();
+              }}
+            >
+              {searchOpen ? <X size={20} /> : <Search size={20} />}
+            </button>
+            <form
+              className={cn("sl-search", searchOpen && "is-open")}
+              role="search"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (window.matchMedia("(max-width:720px)").matches)
+                  event.currentTarget.querySelector("input")?.blur();
+                feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            >
+              <Search size={17} aria-hidden="true" />
+              <input
+                ref={searchInput}
+                aria-label="커뮤니티 검색"
+                maxLength={100}
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  if (view !== "stories") setView("home");
+                }}
+                placeholder={view === "stories" ? "이야기 검색" : "모임·이야기 검색"}
+              />
+              {query && (
+                <button type="button" onClick={() => setQuery("")} aria-label="검색 지우기">
+                  <X size={15} />
+                </button>
+              )}
+            </form>
+          </>
+        }
       />
 
       <div className="sl-page">
