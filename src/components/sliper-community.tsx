@@ -1,7 +1,6 @@
 "use client";
 import { loginHref } from "@/domain/login-return";
 import { useRouter } from "next/navigation";
-import { flushSync } from "react-dom";
 import { useAdSenseContentGuard } from "./adsense-provider";
 import type { FeedQuery } from "@/domain/community";
 import { communityLocation } from "@/domain/community-location";
@@ -12,35 +11,24 @@ import { notifyPushOnboardingMoment } from "@/lib/push-onboarding-events";
 import { Fragment, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
-  BookOpen,
-  FlaskConical,
-  Handshake,
+  BellRing,
   Bookmark,
   Check,
-  Compass,
-  CookingPot,
-  Flag,
   Grid2X2,
-  Heart,
   Home,
   List,
-  Music2,
-  PartyPopper,
   Pencil,
-  Plane,
-  Search,
-  Shield,
-  Trophy,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PostDetailContent } from "./post-detail-content";
 import dynamic from "next/dynamic";
-import { HomeArchive } from "./home-archive";
+import { HomeSections } from "./home-sections";
+import { CATEGORY_ICONS } from "./category-icons";
+import { useAudience } from "@/lib/audience";
 import { homeRecruitments } from "@/domain/home-discovery";
-import { HotStories, RecruitStrip } from "./home-stage";
+import { HotStories } from "./home-stage";
 import { HomeHero } from "./home-hero";
 import { SiteHeader } from "./site-header";
 import { SiteFooter } from "./site-footer";
@@ -76,20 +64,7 @@ const WriteDialog = dynamic(() => import("./write-dialog").then((module) => modu
   ssr: false,
 });
 
-const icons: Record<CategorySlug, LucideIcon> = {
-  travel: Plane,
-  dating: Heart,
-  race: Flag,
-  "mind-games": Compass,
-  survival: Shield,
-  music: Music2,
-  sports: Trophy,
-  cooking: CookingPot,
-  party: PartyPopper,
-  knowledge: BookOpen,
-  lab: FlaskConical,
-  crew: Handshake,
-};
+const icons = CATEGORY_ICONS;
 const kinds = ["전체", "이야기", "모집", "투표"] as const;
 type View = "home" | "stories" | "popular" | "bookmarks" | "mine";
 type Sheet = "categories" | "guide" | null;
@@ -194,8 +169,7 @@ export function SliperCommunity({
   const [composeTopic, setComposeTopic] = useState(initialComposeTopic ?? null);
   const [writing, setWriting] = useState(!!initialComposeTopic && initialState.canWrite);
   const [composeKind, setComposeKind] = useState<"모집" | null>(null);
-  const [searchOpen, setSearchOpen] = useState(!!initialQuery.search);
-  const searchInput = useRef<HTMLInputElement>(null);
+  const [audience] = useAudience();
   const wide = useMediaQuery("(min-width: 1080px)");
   useEffect(() => {
     if (!initialComposeTopic) return;
@@ -397,11 +371,14 @@ export function SliperCommunity({
     }
   }
 
+  const savedMeetups = view === "bookmarks" && kind === "모집";
   const heading =
     view === "stories"
       ? "이야기"
       : view === "bookmarks"
-        ? "다시 보고 싶은 글"
+        ? savedMeetups
+          ? "찜한 모임"
+          : "다시 보고 싶은 글"
         : view === "mine"
           ? "내가 쓴 글"
           : view === "popular"
@@ -421,7 +398,9 @@ export function SliperCommunity({
     view === "stories"
       ? "모임 후기부터 기획 노하우, 질문까지 편하게 나눠요."
       : view === "bookmarks"
-        ? "북마크한 모임과 이야기를 한곳에 모았어요."
+        ? savedMeetups
+          ? "관심 있는 모임의 일정과 모집 상태를 한곳에서 확인하세요."
+          : "북마크한 모임과 이야기를 한곳에 모았어요."
         : view === "mine"
           ? "내가 남긴 글을 확인하고 관리하세요."
           : category in BOARD_DESCRIPTIONS
@@ -431,7 +410,9 @@ export function SliperCommunity({
               : "모집글, 후기, 투표가 한 피드에 올라와요.";
   const feedTitle =
     view === "bookmarks"
-      ? "북마크"
+      ? savedMeetups
+        ? "찜한 모임"
+        : "북마크"
       : view === "mine"
         ? "내가 쓴 글"
         : query
@@ -444,13 +425,12 @@ export function SliperCommunity({
                 ? "투표"
                 : "최근 올라온 글";
   const recruitments = homeRecruitments(store.upcoming, store.featured);
-  const openRecruitments = recruitments.filter(
-    (post) => post.eventAvailable && !post.sample && !post.eventCancelledAt,
-  );
-  // The upcoming highlight query is capped at 8, so larger counts are shown as a floor.
-  const recruitCount = openRecruitments.length;
-  const showRail = wide !== false;
-  const showFeedModules = isHome && wide === false;
+  const homeLanding = isHome && view === "home";
+  // The landing page carries its own sections, so the side rail is for list views only.
+  const showRail = wide !== false && !homeLanding;
+  const sectionStories = store.hot?.length
+    ? store.hot
+    : filtered.filter((post) => post.kind !== "모집");
   function browseRecruitments() {
     chooseCategory("all");
     setKind("모집");
@@ -462,32 +442,7 @@ export function SliperCommunity({
     startWriting();
   }
   function feedModule(index: number) {
-    if (index === 2 && isHome)
-      return (
-        <RecruitStrip
-          posts={recruitments}
-          onOpen={openPost}
-          onSave={savePost}
-          bookmarked={store.bookmarked}
-          busy={store.busy}
-          canWrite={store.canWrite}
-          onAll={browseRecruitments}
-        />
-      );
     if (index === 5) return <AdSlot onCategory={chooseCategory} disabled={advertisingBlocked} />;
-    if (index === 8 && showFeedModules)
-      return (
-        <HotStories
-          posts={store.hot}
-          onOpen={openPost}
-          onAll={(selected) => {
-            navigate("popular");
-            setPeriod(selected);
-            setRankingAt(undefined);
-          }}
-        />
-      );
-    if (index === 12 && showFeedModules) return <HomeArchive />;
     return null;
   }
 
@@ -498,59 +453,19 @@ export function SliperCommunity({
       </a>
       <SiteHeader
         activeSection={view === "stories" ? "stories" : "home"}
-        search={
-          <>
-            <button
-              type="button"
-              className="sl-icon-button sl-search-toggle"
-              aria-label={searchOpen ? "검색 닫기" : "검색 열기"}
-              aria-expanded={searchOpen}
-              onClick={() => {
-                // Commit before focusing so mobile browsers open the keyboard within the tap.
-                flushSync(() => setSearchOpen(!searchOpen));
-                if (!searchOpen) searchInput.current?.focus();
-              }}
-            >
-              {searchOpen ? <X size={20} /> : <Search size={20} />}
-            </button>
-            <form
-              className={cn("sl-search", searchOpen && "is-open")}
-              role="search"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (window.matchMedia("(max-width:720px)").matches)
-                  event.currentTarget.querySelector("input")?.blur();
-                feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-            >
-              <Search size={17} aria-hidden="true" />
-              <input
-                ref={searchInput}
-                aria-label="커뮤니티 검색"
-                maxLength={100}
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  if (view !== "stories") setView("home");
-                }}
-                placeholder={view === "stories" ? "이야기 검색" : "모임·이야기 검색"}
-              />
-              {query && (
-                <button type="button" onClick={() => setQuery("")} aria-label="검색 지우기">
-                  <X size={15} />
-                </button>
-              )}
-            </form>
-          </>
-        }
+        savedMeetupsActive={savedMeetups}
       />
 
       <div className="sl-page">
-        {isHome && view === "home" ? (
+        {homeLanding ? (
           <HomeHero
-            recruitCount={recruitCount}
+            audience={audience}
             recruitments={recruitments}
-            onBrowse={browseRecruitments}
+            onCategory={(value) => {
+              chooseCategory(value);
+              // The landing collapses into the category list, so start from its heading.
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
             onHost={startHosting}
             onOpen={openPost}
           />
@@ -559,6 +474,19 @@ export function SliperCommunity({
             <h1>{heading}</h1>
             <p>{subheading}</p>
           </div>
+        )}
+        {homeLanding && (
+          <HomeSections
+            audience={audience}
+            stories={sectionStories}
+            recruitments={recruitments}
+            onOpen={openPost}
+            onSave={savePost}
+            bookmarked={store.bookmarked}
+            busy={store.busy}
+            canWrite={store.canWrite}
+            onAllRecruits={browseRecruitments}
+          />
         )}
 
         <div className={cn("sl-layout", showRail && "has-rail")}>
@@ -657,6 +585,15 @@ export function SliperCommunity({
                   </div>
                 )}
               </div>
+              {kind === "모집" && (
+                <p className="sl-feed__note sl-feed__note--saved">
+                  원하는 조건의 모임이 열리면 알려드려요.{" "}
+                  <Link href="/discover/saved">
+                    <BellRing size={14} aria-hidden="true" />
+                    조건 저장·모집 알림
+                  </Link>
+                </p>
+              )}
 
               <CategoryMenu
                 category={category}
@@ -864,24 +801,33 @@ export function SliperCommunity({
                 <div className="sl-empty">
                   <h3>
                     {view === "bookmarks"
-                      ? "아직 담아둔 글이 없어요"
+                      ? savedMeetups
+                        ? "찜한 모임이 아직 없어요"
+                        : "아직 담아둔 글이 없어요"
                       : view === "mine"
                         ? "첫 글을 남겨보세요"
                         : "조건에 맞는 글이 아직 없어요"}
                   </h3>
                   <p>
                     {view === "bookmarks"
-                      ? "마음에 드는 모임이나 이야기의 북마크를 눌러보세요."
+                      ? savedMeetups
+                        ? "관심 있는 모집글의 북마크를 눌러두면 여기서 다시 볼 수 있어요."
+                        : "마음에 드는 모임이나 이야기의 북마크를 눌러보세요."
                       : "다른 카테고리를 둘러보거나 직접 글을 올려보세요."}
                   </p>
                   <Button
                     variant="outline"
                     onClick={() => {
                       if (view === "mine") setWriting(true);
+                      else if (savedMeetups) browseRecruitments();
                       else navigate("home");
                     }}
                   >
-                    {view === "mine" ? "첫 글 쓰기" : "전체 글 보기"}
+                    {view === "mine"
+                      ? "첫 글 쓰기"
+                      : savedMeetups
+                        ? "모임 둘러보기"
+                        : "전체 글 보기"}
                   </Button>
                 </div>
               )}
@@ -929,7 +875,6 @@ export function SliperCommunity({
                   <ArrowRight size={15} aria-hidden="true" />
                 </Link>
               </section>
-              {isHome && <HomeArchive />}
               <div className="sl-rail__links">
                 <button type="button" onClick={() => navigate("bookmarks")}>
                   <Bookmark size={15} aria-hidden="true" />내 북마크

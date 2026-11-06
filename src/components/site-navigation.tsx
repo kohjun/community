@@ -8,13 +8,22 @@ import {
   SITE_NAVIGATION,
   activeNavigationSection,
   type CommunityNavigationSection,
+  type NavigationSection,
 } from "@/domain/navigation";
+import { useAudience } from "@/lib/audience";
 
 const EXTRA_LINKS = [
   { href: "/ideas", label: "모임 제안하기" },
   { href: "/hosting-guide", label: "호스트 가이드" },
   { href: "/help", label: "이용 안내" },
 ] as const;
+
+// Which sections lead the header per viewing mode. Everything else stays under "더보기".
+const PRIMARY: Record<"participant" | "host", readonly NavigationSection[]> = {
+  participant: ["stories", "lightning", "archive", "games"],
+  host: ["archive", "players", "stories"],
+};
+const MANAGEMENT = { href: "/management", label: "모임 관리" } as const;
 
 export function SiteNavigation({
   activeSection,
@@ -24,12 +33,17 @@ export function SiteNavigation({
   onNavigate?: (section: CommunityNavigationSection) => void;
 }) {
   const pathname = usePathname();
+  const [audience] = useAudience();
   const active = activeNavigationSection(pathname, activeSection);
+  const managementActive = pathname === "/management" || !!pathname?.startsWith("/management/");
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
   // The brand mark already links home, so the header skips a separate 홈 item.
-  const primary = SITE_NAVIGATION.filter((item) => item.primary && item.id !== "home");
-  const secondary = SITE_NAVIGATION.filter((item) => !item.primary);
+  const primaryIds = PRIMARY[audience];
+  const primary = primaryIds.map((id) => SITE_NAVIGATION.find((item) => item.id === id)!);
+  const secondary = SITE_NAVIGATION.filter(
+    (item) => item.id !== "home" && !primaryIds.includes(item.id),
+  );
   const secondaryActive = secondary.some((item) => item.id === active);
 
   useEffect(() => setMoreOpen(false), [pathname]);
@@ -51,6 +65,15 @@ export function SiteNavigation({
 
   return (
     <nav className="sl-nav" aria-label="주 메뉴">
+      {audience === "host" && (
+        <Link
+          href={MANAGEMENT.href}
+          className="sl-nav__link"
+          aria-current={managementActive ? "page" : undefined}
+        >
+          {MANAGEMENT.label}
+        </Link>
+      )}
       {primary.map(({ id, label, href }) => (
         <Link
           key={id}
@@ -98,6 +121,11 @@ export function SiteNavigation({
                 {label}
               </Link>
             ))}
+            {audience === "participant" && (
+              <Link href={MANAGEMENT.href} aria-current={managementActive ? "page" : undefined}>
+                {MANAGEMENT.label}
+              </Link>
+            )}
             <hr />
             {EXTRA_LINKS.map(({ href, label }) => (
               <Link key={href} href={href}>

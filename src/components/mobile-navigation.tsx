@@ -7,7 +7,6 @@ import {
   Compass,
   UsersRound,
   UserRound,
-  Search,
   ChevronRight,
   Zap,
   BookOpen,
@@ -24,7 +23,7 @@ import { NotificationBell } from "./notification-bell";
 import { mobileNavigationHidden, mobileSection } from "@/domain/mobile-navigation";
 const groups = [
   {
-    title: "모임 찾기",
+    title: "플레이",
     links: [
       { href: "/?kind=모집", label: "모집 중인 모임", icon: CalendarDays },
       { href: "/lightning", label: "번개 모임", icon: Zap },
@@ -41,9 +40,9 @@ const groups = [
     ],
   },
   {
-    title: "모임 열기",
+    title: "아카이브",
     links: [
-      { href: "/archive", label: "룰북·템플릿 아카이브", icon: BookOpen },
+      { href: "/archive?kind=template", label: "템플릿", icon: BookOpen },
       { href: "/hosting-guide", label: "호스트 가이드", icon: Lightbulb },
     ],
   },
@@ -93,10 +92,6 @@ export function MobileNavigation() {
             <DialogDescription>찾는 곳을 골라보세요.</DialogDescription>
           </header>
           <div className="mobile-explore-scroll">
-            <Link className="sl-explore__search" href="/search" onClick={() => setOpen(false)}>
-              <Search size={18} />
-              <span>모임·이야기·자료 통합 검색</span>
-            </Link>
             {groups.map((group) => (
               <section className="sl-explore__group" key={group.title}>
                 <h3>{group.title}</h3>
@@ -109,14 +104,6 @@ export function MobileNavigation() {
                 ))}
               </section>
             ))}
-            <div className="sl-explore__shortcuts">
-              <Link href="/mypage?tab=events" onClick={() => setOpen(false)}>
-                내 행사·공지방
-              </Link>
-              <Link href="/discover/saved" onClick={() => setOpen(false)}>
-                조건 저장·모집 알림
-              </Link>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
