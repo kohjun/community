@@ -59,7 +59,6 @@ export function RecruitStrip({
   canWrite: boolean;
   onAll: () => void;
 }) {
-  const readPosts = useReadPosts();
   if (!posts.length) return null;
   return (
     <section className="sl-module sl-recruits" aria-labelledby="sl-recruits-title">
@@ -73,77 +72,104 @@ export function RecruitStrip({
           <ArrowRight size={15} aria-hidden="true" />
         </button>
       </header>
-      <div className="sl-recruits__track">
-        {posts.slice(0, 8).map((post) => {
-          const status = recruitStatus(post);
-          const image = post.image ?? post.images[0]?.src;
-          const saved = bookmarked.includes(post.id);
-          const open = (event: React.MouseEvent<HTMLAnchorElement>) => {
-            if (!shouldOpenPostModal(event)) return;
-            event.preventDefault();
-            onOpen(post);
-          };
-          return (
-            <article className="sl-recruit" key={post.id}>
-              <a
-                className="sl-recruit__cover"
-                href={postPath(post.id)}
-                onClick={open}
-                tabIndex={-1}
-                aria-hidden="true"
-              >
-                {image ? (
-                  <img src={image} alt="" loading="lazy" />
-                ) : (
-                  <span className="sl-recruit__placeholder">
-                    <SliperMark />
-                  </span>
-                )}
-                <span className={cn("sl-recruit__status", status.open && "is-open")}>
-                  {status.label}
-                </span>
-              </a>
-              <button
-                type="button"
-                className={cn("sl-recruit__save", saved && "is-saved")}
-                aria-label={post.title + " 북마크"}
-                aria-pressed={saved}
-                disabled={busy || !canWrite}
-                onClick={() => onSave(post.id)}
-              >
-                <Bookmark size={16} fill={saved ? "currentColor" : "none"} aria-hidden="true" />
-              </button>
-              <div className="sl-recruit__body">
-                <span className="sl-recruit__meta">
-                  {CATEGORIES.find((c) => c.slug === post.category)?.name} ·{" "}
-                  {post.meetupType === "lightning" ? "번개" : "이벤트"}
-                </span>
-                <a href={postPath(post.id)} onClick={open}>
-                  <h3 className={cn(readPosts.includes(post.id) && "title-is-read")}>
-                    {post.title}
-                  </h3>
-                </a>
-                <dl className="sl-recruit__facts">
-                  <div>
-                    <dt>
-                      <CalendarDays size={13} aria-label="일정" />
-                    </dt>
-                    <dd>{recruitDate(post)}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <MapPin size={13} aria-label="장소" />
-                    </dt>
-                    <dd>{post.location || "장소는 모집글에서 확인"}</dd>
-                  </div>
-                </dl>
-                <span className="sl-recruit__fee">{recruitFee(post)}</span>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+      <RecruitTrack
+        posts={posts}
+        onOpen={onOpen}
+        onSave={onSave}
+        bookmarked={bookmarked}
+        busy={busy}
+        canWrite={canWrite}
+      />
     </section>
+  );
+}
+
+/** The horizontal recruitment cards, shared by the in-feed strip and the home section. */
+export function RecruitTrack({
+  posts,
+  onOpen,
+  onSave,
+  bookmarked,
+  busy,
+  canWrite,
+}: {
+  posts: CommunityPost[];
+  onOpen: (post: CommunityPost) => void;
+  onSave: (id: string) => void;
+  bookmarked: string[];
+  busy: boolean;
+  canWrite: boolean;
+}) {
+  const readPosts = useReadPosts();
+  return (
+    <div className="sl-recruits__track">
+      {posts.slice(0, 8).map((post) => {
+        const status = recruitStatus(post);
+        const image = post.image ?? post.images[0]?.src;
+        const saved = bookmarked.includes(post.id);
+        const open = (event: React.MouseEvent<HTMLAnchorElement>) => {
+          if (!shouldOpenPostModal(event)) return;
+          event.preventDefault();
+          onOpen(post);
+        };
+        return (
+          <article className="sl-recruit" key={post.id}>
+            <a
+              className="sl-recruit__cover"
+              href={postPath(post.id)}
+              onClick={open}
+              tabIndex={-1}
+              aria-hidden="true"
+            >
+              {image ? (
+                <img src={image} alt="" loading="lazy" />
+              ) : (
+                <span className="sl-recruit__placeholder">
+                  <SliperMark />
+                </span>
+              )}
+              <span className={cn("sl-recruit__status", status.open && "is-open")}>
+                {status.label}
+              </span>
+            </a>
+            <button
+              type="button"
+              className={cn("sl-recruit__save", saved && "is-saved")}
+              aria-label={post.title + " 북마크"}
+              aria-pressed={saved}
+              disabled={busy || !canWrite}
+              onClick={() => onSave(post.id)}
+            >
+              <Bookmark size={16} fill={saved ? "currentColor" : "none"} aria-hidden="true" />
+            </button>
+            <div className="sl-recruit__body">
+              <span className="sl-recruit__meta">
+                {CATEGORIES.find((c) => c.slug === post.category)?.name} ·{" "}
+                {post.meetupType === "lightning" ? "번개" : "이벤트"}
+              </span>
+              <a href={postPath(post.id)} onClick={open}>
+                <h3 className={cn(readPosts.includes(post.id) && "title-is-read")}>{post.title}</h3>
+              </a>
+              <dl className="sl-recruit__facts">
+                <div>
+                  <dt>
+                    <CalendarDays size={13} aria-label="일정" />
+                  </dt>
+                  <dd>{recruitDate(post)}</dd>
+                </div>
+                <div>
+                  <dt>
+                    <MapPin size={13} aria-label="장소" />
+                  </dt>
+                  <dd>{post.location || "장소는 모집글에서 확인"}</dd>
+                </div>
+              </dl>
+              <span className="sl-recruit__fee">{recruitFee(post)}</span>
+            </div>
+          </article>
+        );
+      })}
+    </div>
   );
 }
 

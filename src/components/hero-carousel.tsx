@@ -18,7 +18,7 @@ import { shouldAdvanceCarousel } from "@/lib/carousel";
 import { shouldOpenPostModal } from "@/lib/post-sharing";
 import { cn } from "@/lib/utils";
 
-const SLIDE_MS = 4000;
+const SLIDE_MS = 3000;
 const MAX_SLIDES = 5;
 const startFormatter = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -222,7 +222,12 @@ export function HeroCarousel({
         if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
       }}
       onPointerDown={(event) => {
+        swiped.current = false;
         if (event.pointerType !== "mouse") touch.current = { x: event.clientX, y: event.clientY };
+      }}
+      onPointerCancel={() => {
+        touch.current = null;
+        swiped.current = false;
       }}
       onPointerUp={(event) => {
         const start = touch.current;

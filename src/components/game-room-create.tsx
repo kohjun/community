@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  Bookmark,
   Check,
   Gamepad2,
   Link2,
@@ -32,6 +33,7 @@ import {
   type GameGenre,
 } from "@/domain/game-catalog";
 import catalog from "./game-catalog.module.css";
+import { useSavedGames } from "@/lib/saved-games";
 export function GameRoomCreate() {
   const { session, ready } = useSession(),
     router = useRouter();
@@ -42,14 +44,17 @@ export function GameRoomCreate() {
     [showSetup, setShowSetup] = useState(false),
     [query, setQuery] = useState(""),
     [genre, setGenre] = useState<GameGenre>("전체"),
+    [savedOnly, setSavedOnly] = useState(false),
     [maxRounds, setMaxRounds] = useState(5);
   const setupHeading = useRef<HTMLHeadingElement>(null),
     catalogHeading = useRef<HTMLHeadingElement>(null),
     settingsHeading = useRef<HTMLHeadingElement>(null);
   const selected = GAME_CATALOG.find((game) => game.id === gameType)!;
+  const [savedGames, toggleSavedGame] = useSavedGames();
   const games = GAME_CATALOG.filter(
     (game) =>
       (genre === "전체" || game.genre === genre) &&
+      (!savedOnly || savedGames.includes(game.id)) &&
       [game.title, game.summary, game.genre, ...game.tags]
         .join(" ")
         .toLocaleLowerCase()
@@ -188,52 +193,84 @@ export function GameRoomCreate() {
               {item}
             </button>
           ))}
+          <button
+            type="button"
+            className={catalog.savedFilter}
+            aria-pressed={savedOnly}
+            onClick={() => setSavedOnly((value) => !value)}
+          >
+            <Bookmark size={14} fill={savedOnly ? "currentColor" : "none"} aria-hidden="true" />
+            찜한 게임 {savedGames.length > 0 && <small>{savedGames.length}</small>}
+          </button>
         </div>
         <div className={catalog.gameGrid}>
           {games.map((game) => (
-            <button
-              type="button"
-              key={game.id}
-              className={catalog.gameCard}
-              disabled={busy}
-              aria-label={`${game.title} 선택`}
-              aria-pressed={showSetup && gameType === game.id}
-              aria-controls="game-setup"
-              onClick={() => chooseGame(game.id)}
-            >
-              <GameCover game={game.id} />
-              <div className={catalog.cardBody}>
-                <span className={catalog.genre}>{game.genre}</span>
-                <h3>{game.title}</h3>
-                <p>{game.summary}</p>
-                <div className={catalog.tags}>
-                  {game.tags.map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
+            <div key={game.id} className={catalog.gameItem}>
+              <button
+                type="button"
+                className={catalog.gameCard}
+                disabled={busy}
+                aria-label={`${game.title} 선택`}
+                aria-pressed={showSetup && gameType === game.id}
+                aria-controls="game-setup"
+                onClick={() => chooseGame(game.id)}
+              >
+                <GameCover game={game.id} />
+                <div className={catalog.cardBody}>
+                  <span className={catalog.genre}>{game.genre}</span>
+                  <h3>{game.title}</h3>
+                  <p>{game.summary}</p>
+                  <div className={catalog.tags}>
+                    {game.tags.map((tag) => (
+                      <span key={tag}>{tag}</span>
+                    ))}
+                  </div>
+                  <div className={catalog.cardBottom}>
+                    <span>
+                      <UsersRound size={14} /> {game.players}
+                    </span>
+                    <span>
+                      {showSetup && gameType === game.id ? "선택한 게임" : "자세히 보기"}{" "}
+                      <ArrowRight size={14} />
+                    </span>
+                  </div>
                 </div>
-                <div className={catalog.cardBottom}>
-                  <span>
-                    <UsersRound size={14} /> {game.players}
-                  </span>
-                  <span>
-                    {showSetup && gameType === game.id ? "선택한 게임" : "자세히 보기"}{" "}
-                    <ArrowRight size={14} />
-                  </span>
-                </div>
-              </div>
-            </button>
+              </button>
+              <button
+                type="button"
+                className={catalog.save}
+                aria-label={game.title + " 찜하기"}
+                aria-pressed={savedGames.includes(game.id)}
+                onClick={() => toggleSavedGame(game.id)}
+              >
+                <Bookmark
+                  size={17}
+                  fill={savedGames.includes(game.id) ? "currentColor" : "none"}
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
           ))}
         </div>
         {games.length === 0 && (
           <div className={catalog.empty} role="status">
             <Search size={25} />
-            <h3>맞는 게임을 찾지 못했어요</h3>
-            <p>다른 검색어나 장르로 찾아보세요.</p>
+            <h3>
+              {savedOnly && !savedGames.length
+                ? "아직 찜한 게임이 없어요"
+                : "맞는 게임을 찾지 못했어요"}
+            </h3>
+            <p>
+              {savedOnly && !savedGames.length
+                ? "게임 카드의 북마크를 눌러 찜해두세요."
+                : "다른 검색어나 장르로 찾아보세요."}
+            </p>
             <button
               type="button"
               onClick={() => {
                 setQuery("");
                 setGenre("전체");
+                setSavedOnly(false);
               }}
             >
               전체 게임 보기
