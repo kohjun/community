@@ -15,7 +15,8 @@ export function communityLocation(
   const at = params.get("rankingAt"),
     page = Number(params.get("page") ?? 1);
   const discussion = params.get("discussionType"),
-    focus = params.get("focus");
+    focus = params.get("focus"),
+    meetupType = params.get("meetupType");
   return {
     discussionType:
       discussion && (DISCUSSION_TYPES as readonly string[]).includes(discussion)
@@ -31,6 +32,7 @@ export function communityLocation(
         : stories
           ? "이야기"
           : undefined,
+    ...(meetupType === "event" || meetupType === "lightning" ? { meetupType } : {}),
     sort: sort === "popular" || (!sort && view === "popular") ? "popular" : "latest",
     period: period === "week" || period === "month" || period === "all" ? period : "today",
     ...(at &&
@@ -61,6 +63,7 @@ export function communityLocationUrl(current: string, query: FeedQuery, page: nu
     "discussionType",
     "focus",
     "tag",
+    "meetupType",
   ] as const) {
     const value = query[key];
     if (value !== undefined) url.searchParams.set(key, String(value));

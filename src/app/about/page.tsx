@@ -23,7 +23,7 @@ export default function Page() {
             방식과 만나는 곳을 살펴보고 신청할 수 있어요.
           </p>
           <div className="safety-links">
-            <Link href="/lightning">번개 모임 찾기</Link>
+            <Link href="/lightning">번개·모임 찾기</Link>
             <Link href="/map">장소 둘러보기</Link>
           </div>
           <h2>한 번의 경험이 다음 모임으로</h2>

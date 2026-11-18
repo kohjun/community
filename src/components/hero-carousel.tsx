@@ -14,6 +14,11 @@ import type { CommunityPost } from "@/domain/community";
 import type { CategorySlug } from "@/domain/categories";
 import { CATEGORIES } from "@/domain/categories";
 import { postPath } from "@/domain/post-sharing";
+import {
+  EVENT_RECRUITMENTS_HREF,
+  MEETUP_TYPE_LABELS,
+  meetupTypeLabel,
+} from "@/domain/meetup-types";
 import { shouldAdvanceCarousel } from "@/lib/carousel";
 import { shouldOpenPostModal } from "@/lib/post-sharing";
 import { cn } from "@/lib/utils";
@@ -71,8 +76,8 @@ const fallbackSlides: Slide[] = [
     kicker: "미션 레이스 · 야외",
     title: "한강에서 팀을 짜고 미션을 깨는 주말",
     meta: ["처음 와도 팀으로 함께해요"],
-    href: "/?kind=모집",
-    action: "모집 중인 모임 보기",
+    href: EVENT_RECRUITMENTS_HREF,
+    action: `${MEETUP_TYPE_LABELS.event} 보기`,
   },
   {
     key: "intro-mystery",
@@ -94,7 +99,7 @@ const fallbackSlides: Slide[] = [
     title: "자기소개 대신 취향 카드로 시작하는 밤",
     meta: ["번개로 가볍게 모여도 좋아요"],
     href: "/lightning",
-    action: "번개 모임 보기",
+    action: `${MEETUP_TYPE_LABELS.lightning} 보기`,
   },
 ];
 
@@ -126,9 +131,9 @@ function slideFrom(post: CommunityPost, index: number): Slide {
             ? "모집 취소"
             : "모집 마감",
     open,
-    kicker: `${CATEGORIES.find((c) => c.slug === post.category)?.name ?? "모임"} · ${
-      post.meetupType === "lightning" ? "번개" : "이벤트"
-    }`,
+    kicker: `${CATEGORIES.find((c) => c.slug === post.category)?.name ?? "모임"} · ${meetupTypeLabel(
+      post.meetupType,
+    )}`,
     title: post.title,
     meta: [date, post.location, fee].filter((value): value is string => !!value),
     post,

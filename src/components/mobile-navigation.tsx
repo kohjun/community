@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import {
   Home,
   Compass,
-  UsersRound,
   UserRound,
   ChevronRight,
   Zap,
@@ -21,12 +20,13 @@ import {
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import { NotificationBell } from "./notification-bell";
 import { mobileNavigationHidden, mobileSection } from "@/domain/mobile-navigation";
+import { EVENT_RECRUITMENTS_HREF, MEETUP_TYPE_LABELS } from "@/domain/meetup-types";
 const groups = [
   {
     title: "플레이",
     links: [
-      { href: "/?kind=모집", label: "모집 중인 모임", icon: CalendarDays },
-      { href: "/lightning", label: "번개 모임", icon: Zap },
+      { href: "/lightning", label: MEETUP_TYPE_LABELS.lightning, icon: Zap },
+      { href: EVENT_RECRUITMENTS_HREF, label: MEETUP_TYPE_LABELS.event, icon: CalendarDays },
       { href: "/map", label: "이벤트 맵", icon: MapPin },
       { href: "/games", label: "웹 게임", icon: Gamepad2 },
     ],
@@ -40,7 +40,7 @@ const groups = [
     ],
   },
   {
-    title: "아카이브",
+    title: "호스트",
     links: [
       { href: "/archive?kind=template", label: "템플릿", icon: BookOpen },
       { href: "/hosting-guide", label: "호스트 가이드", icon: Lightbulb },
@@ -61,9 +61,12 @@ export function MobileNavigation() {
           <Home size={22} />
           <span>홈</span>
         </Link>
-        <Link href="/?kind=모집" aria-current={active === "meetups" ? "page" : undefined}>
-          <UsersRound size={22} />
-          <span>모임</span>
+        <Link
+          href={EVENT_RECRUITMENTS_HREF}
+          aria-current={active === "meetups" ? "page" : undefined}
+        >
+          <CalendarDays size={22} />
+          <span>{MEETUP_TYPE_LABELS.event}</span>
         </Link>
         <button
           type="button"

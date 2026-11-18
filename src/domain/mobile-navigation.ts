@@ -12,9 +12,10 @@ export function mobileSection(path: string, query: Pick<URLSearchParams, "get">)
     )
   )
     return "my";
+  // The tab is 이벤트·행사; 번개·모임 lives in the explore sheet, so it is not highlighted here.
   if (
-    /^\/(?:lightning|events|map)(?:\/|$)/.test(path) ||
-    (path === "/" && query.get("kind") === "모집")
+    /^\/(?:events|map)(?:\/|$)/.test(path) ||
+    (path === "/" && query.get("kind") === "모집" && query.get("meetupType") !== "lightning")
   )
     return "meetups";
   if (path === "/") {

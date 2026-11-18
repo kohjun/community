@@ -2,9 +2,9 @@
 export const SITE_NAVIGATION = [
   { id: "home", label: "홈", href: "/", primary: true },
   { id: "stories", label: "이야기", href: "/stories", primary: true },
-  { id: "lightning", label: "번개 모임", href: "/lightning", primary: true },
+  { id: "lightning", label: "번개·모임", href: "/lightning", primary: true },
   { id: "map", label: "이벤트 맵", href: "/map", primary: false },
-  { id: "archive", label: "아카이브", href: "/archive", primary: true },
+  { id: "archive", label: "아카이브", href: "/archive", primary: false },
   { id: "games", label: "웹 게임", href: "/games", primary: true },
   { id: "players", label: "플레이어·크루", href: "/players", primary: false },
 ] as const;

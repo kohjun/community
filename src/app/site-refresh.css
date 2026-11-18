@@ -2014,8 +2014,9 @@ body {
 }
 
 /* Home landing: full-bleed banner, role toggle, shortcuts and sections ---------------------- */
+/* 70% of the earlier clamp(380px, 34vw, 500px) banner, so the sections start higher up. */
 .sl-carousel__slide > a {
-  height: clamp(380px, 34vw, 500px);
+  height: clamp(266px, 23.8vw, 350px);
   min-height: 0;
 }
 .sl-carousel__copy,
@@ -2471,9 +2472,10 @@ body {
   }
 }
 @media (max-width: 720px) {
+  /* 70% of the earlier 4 / 3.4 banner height. */
   .sl-carousel__slide > a {
     height: auto;
-    aspect-ratio: 4 / 3.4;
+    aspect-ratio: 4 / 2.38;
   }
   .sl-carousel__copy {
     bottom: 52px;
@@ -2668,4 +2670,84 @@ body {
     padding: 0 10px;
     font-size: 12.5px;
   }
+}
+
+/* 모집글 쓰기 first step: pick 이벤트·행사 or 번개·모임 ------------------------------------- */
+.sl-recruit-type__options {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+.sl-recruit-type__options > button,
+.sl-recruit-type__options > a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--sl-line);
+  border-radius: 14px;
+  background: var(--sl-surface);
+  color: var(--sl-ink-3);
+  text-align: left;
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.sl-recruit-type__options > button:hover,
+.sl-recruit-type__options > a:hover {
+  border-color: var(--sl-accent-line);
+  background: var(--sl-accent-soft);
+}
+.sl-recruit-type__options > button:focus-visible,
+.sl-recruit-type__options > a:focus-visible {
+  outline: 2px solid var(--sl-signature);
+  outline-offset: 2px;
+}
+.sl-recruit-type__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--sl-accent-soft);
+  color: var(--sl-accent-2);
+}
+.sl-recruit-type__copy {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+.sl-recruit-type__copy strong {
+  color: var(--sl-ink);
+  font-size: 15.5px;
+  font-weight: 700;
+}
+.sl-recruit-type__copy small {
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+/* Player cards on the participant home reuse the crew card frame. */
+.sl-player-card .sl-crew-card__top > span:first-child {
+  color: var(--sl-accent-2);
+}
+.sl-player-card__login {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 22px;
+  border: 1px dashed var(--sl-line-2);
+  border-radius: 16px;
+  background: var(--sl-surface);
+  color: var(--sl-ink-3);
+  font-size: 14px;
+}
+.sl-player-card__login strong {
+  color: var(--sl-ink);
+  font-size: 15.5px;
 }

@@ -700,7 +700,7 @@ export function EventMapCommunity({
                     ) : (
                       <CalendarDays size={13} />
                     )}{" "}
-                    {event.meetupType === "lightning" ? "번개" : "모집"}
+                    {event.meetupType === "lightning" ? "번개·모임" : "이벤트·행사"}
                     <span>{categoryName(event.categorySlug)}</span>
                   </span>
                   <strong>{event.title}</strong>
@@ -1195,7 +1195,7 @@ function MapEventDetail({ event }: { event: MapEvent }) {
     <>
       <div className="emap-detail-kicker">
         {event.meetupType === "lightning" ? <Zap size={14} /> : <CalendarDays size={14} />}
-        {event.meetupType === "lightning" ? "번개 모임" : "이벤트 모집"} ·{" "}
+        {event.meetupType === "lightning" ? "번개·모임" : "이벤트·행사"} ·{" "}
         {categoryName(event.categorySlug)}
         <span>{event.open ? "모집 중" : "모집 마감"}</span>
       </div>

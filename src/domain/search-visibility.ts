@@ -5,7 +5,7 @@ export const SEARCH_PAGES = [
     path: "/",
     title: "Sliper — 일상에 예능 한 스푼",
     description:
-      "취향이 만나는 예능 모임 커뮤니티. 이야기와 번개 모임, 진행에 도움이 되는 자료를 만나보세요.",
+      "취향이 만나는 예능 모임 커뮤니티. 이야기와 번개·모임, 진행에 도움이 되는 자료를 만나보세요.",
   },
   {
     path: "/stories",
@@ -14,7 +14,7 @@ export const SEARCH_PAGES = [
   },
   {
     path: "/lightning",
-    title: "번개 모임 | Sliper",
+    title: "번개·모임 | Sliper",
     description: "가까운 곳에서 취향이 맞는 사람들과 가볍게 만나요.",
   },
   {

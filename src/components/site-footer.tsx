@@ -7,8 +7,8 @@ const columns = [
   {
     title: "참여하기",
     links: [
-      { href: "/?kind=모집", label: "모집 중인 모임" },
-      { href: "/lightning", label: "번개 모임" },
+      { href: "/?kind=모집&meetupType=event", label: "이벤트·행사" },
+      { href: "/lightning", label: "번개·모임" },
       { href: "/map", label: "이벤트 맵" },
       { href: "/games", label: "웹 게임" },
     ],

@@ -2,7 +2,7 @@
 import { DISCUSSION_TYPES, DISCUSSION_LABELS, type DiscussionType } from "@/domain/discussions";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { Pencil, X, Plus, Check, CalendarDays, Vote, MapPin, Link2, FileText } from "lucide-react";
+import { Pencil, X, Plus, Check, MapPin, Link2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import { PostBody } from "./post-body";
@@ -23,6 +23,7 @@ import { prepareImageForUpload } from "@/lib/image-precompression";
 import { topicForSlug, topicsForTags, type TopicSlug } from "@/domain/topics";
 import { TopicTagPicker } from "./topic-connections";
 import { mayCloseWriteDialog } from "@/domain/write-close";
+import { MEETUP_TYPE_LABELS } from "@/domain/meetup-types";
 export function WriteDialog({
   open,
   onOpenChange,
@@ -44,7 +45,8 @@ export function WriteDialog({
 }) {
   const connectedTopic = initialTopic ? topicForSlug(initialTopic) : null;
   const [category, setCategory] = useState<CategorySlug>(post?.category ?? initialCategory);
-  const [kind, setKind] = useState<"이야기" | "모집" | "투표">(
+  // Fixed for the dialog's lifetime; the caller picks 이야기 or 모집 before opening it.
+  const [kind] = useState<"이야기" | "모집" | "투표">(
     post?.kind === "후기" ? "이야기" : (post?.kind ?? initialKind ?? "이야기"),
   );
   const [discussionType, setDiscussionType] = useState<DiscussionType>(
@@ -267,39 +269,23 @@ export function WriteDialog({
     >
       <DialogContent className="write-dialog organized-editor">
         <DialogTitle className="utility-title">
-          {post ? (lightning ? "번개 수정하기" : "이야기 수정하기") : "우리의 다음 에피소드"}
+          {kind === "모집"
+            ? (lightning ? MEETUP_TYPE_LABELS.lightning : MEETUP_TYPE_LABELS.event) +
+              (post ? " 수정하기" : " 모집글 쓰기")
+            : kind === "투표"
+              ? "투표 수정하기"
+              : post
+                ? "이야기 수정하기"
+                : "이야기 쓰기"}
         </DialogTitle>
         <DialogDescription className="utility-description">
-          이야기를 나누고, 함께할 사람을 만나고, 새로운 아이디어에 투표해요.
+          {kind === "모집"
+            ? "일정과 장소, 참가비와 신청 방법을 알려주세요."
+            : "후기와 질문, 새로운 아이디어를 편하게 나눠요."}
         </DialogDescription>
         <form onSubmit={publish}>
           <fieldset disabled={pending} className="write-fields">
-            <div className="write-type-cards" aria-label="글 유형 선택">
-              {(
-                [
-                  { value: "이야기", icon: FileText, description: "아이디어와 일상" },
-                  { value: "모집", icon: CalendarDays, description: "함께할 사람 찾기" },
-                  { value: "투표", icon: Vote, description: "의견을 모아보기" },
-                ] as const
-              ).map((item) => (
-                <button
-                  type="button"
-                  key={item.value}
-                  aria-pressed={kind === item.value}
-                  disabled={
-                    verified ||
-                    (lightning && item.value !== "모집") ||
-                    (lockedPoll && item.value !== "투표")
-                  }
-                  className={cn(kind === item.value && "selected")}
-                  onClick={() => setKind(item.value)}
-                >
-                  <item.icon size={20} />
-                  <strong>{item.value}</strong>
-                  <small>{item.description}</small>
-                </button>
-              ))}
-            </div>
+            {/* The format is chosen before the dialog opens: 글쓰기 is 이야기, 모집글 is 이벤트·행사. */}
             <section className="editor-section">
               <h3>
                 <span>01</span>어디에 남길까요?
@@ -448,7 +434,7 @@ export function WriteDialog({
                 <p className="participation-muted">
                   {lightning
                     ? "번개는 2–12명, 개설 후 7일 이내 일정이에요. 정확한 일정과 정원은 내 행사 관리에서 변경해주세요."
-                    : "등록 후 내 행사 관리에서 행사장 위치·정확한 일정·참가비를 설정하면 거리와 취향 검색에 표시돼요. 간단한 모임은 번개에서 빠르게 열 수 있어요."}
+                    : "등록 후 내 행사 관리에서 행사장 위치·정확한 일정·참가비를 설정하면 거리와 취향 검색에 표시돼요. 소규모로 가볍게 모일 땐 번개·모임으로 빠르게 열 수 있어요."}
                 </p>
                 <div className="segmented-control">
                   <button

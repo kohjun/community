@@ -32,6 +32,8 @@ import { useAudience } from "@/lib/audience";
 import { homeRecruitments } from "@/domain/home-discovery";
 import { HotStories } from "./home-stage";
 import { HomeHero } from "./home-hero";
+import { RecruitmentTypeDialog } from "./recruitment-type-dialog";
+import { MEETUP_TYPE_LABELS, type MeetupType } from "@/domain/meetup-types";
 import { SiteHeader } from "./site-header";
 import { SiteFooter } from "./site-footer";
 import { useMediaQuery } from "@/lib/use-media-query";
@@ -156,7 +158,11 @@ export function SliperCommunity({
   const [rankingAt, setRankingAt] = useState<string | undefined>(
     initialQuery.rankingAt ?? initialState.rankingAt,
   );
-  const [discovery, setDiscovery] = useState<EventDiscoveryFilters>(DEFAULT_DISCOVERY_FILTERS);
+  const [discovery, setDiscovery] = useState<EventDiscoveryFilters>(
+    initialQuery.meetupType
+      ? { ...DEFAULT_DISCOVERY_FILTERS, meetupType: initialQuery.meetupType }
+      : DEFAULT_DISCOVERY_FILTERS,
+  );
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [sortCoordinates, setSortCoordinates] = useState<GeoCoordinates | null>(null);
   const [query, setQuery] = useState(initialQuery.search ?? "");
@@ -171,6 +177,7 @@ export function SliperCommunity({
   const [composeTopic, setComposeTopic] = useState(initialComposeTopic ?? null);
   const [writing, setWriting] = useState(!!initialComposeTopic && initialState.canWrite);
   const [composeKind, setComposeKind] = useState<"모집" | null>(null);
+  const [choosingRecruitment, setChoosingRecruitment] = useState(false);
   const [audience] = useAudience();
   const [searchOpen, setSearchOpen] = useState(!!initialQuery.search);
   const searchInput = useRef<HTMLInputElement>(null);
@@ -260,6 +267,11 @@ export function SliperCommunity({
       setFocus(state.focus ?? "all");
       setTopic(state.topic ?? "");
       setTag(state.tag ?? "");
+      setDiscovery((current) =>
+        (state.meetupType ?? "all") === current.meetupType
+          ? current
+          : { ...current, meetupType: state.meetupType ?? "all" },
+      );
     };
     window.addEventListener("popstate", restore);
     return () => window.removeEventListener("popstate", restore);
@@ -376,6 +388,10 @@ export function SliperCommunity({
   }
 
   const savedMeetups = view === "bookmarks" && kind === "모집";
+  // Only the format filter is set: the list is simply 이벤트·행사 or 번개·모임, not a custom search.
+  const discoveryOnlyMeetupType =
+    discovery.meetupType !== "all" &&
+    !hasDiscoveryFilters({ ...discovery, meetupType: "all", eventOnly: false });
   const heading =
     view === "stories"
       ? "이야기"
@@ -393,11 +409,13 @@ export function SliperCommunity({
                 ? `‘${query}’ 검색 결과`
                 : sort === "nearest"
                   ? "내 주변 가까운 모임"
-                  : discoveryActive
-                    ? "내 취향에 맞는 모임"
-                    : kind === "모집"
-                      ? "모집 중인 모임"
-                      : "커뮤니티";
+                  : kind === "모집" && discoveryOnlyMeetupType
+                    ? MEETUP_TYPE_LABELS[discovery.meetupType as MeetupType]
+                    : discoveryActive
+                      ? "내 취향에 맞는 모임"
+                      : kind === "모집"
+                        ? "모집 중인 이벤트·번개"
+                        : "커뮤니티";
   const subheading =
     view === "stories"
       ? "모임 후기부터 기획 노하우, 질문까지 편하게 나눠요."
@@ -442,8 +460,11 @@ export function SliperCommunity({
     feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   function startHosting() {
-    setComposeKind("모집");
-    startWriting();
+    if (!store.canWrite) {
+      startWriting();
+      return;
+    }
+    setChoosingRecruitment(true);
   }
   function feedModule(index: number) {
     if (index === 5) return <AdSlot onCategory={chooseCategory} disabled={advertisingBlocked} />;
@@ -510,11 +531,6 @@ export function SliperCommunity({
           <HomeHero
             audience={audience}
             recruitments={recruitments}
-            onCategory={(value) => {
-              chooseCategory(value);
-              // The landing collapses into the category list, so start from its heading.
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
             onHost={startHosting}
             onOpen={openPost}
           />
@@ -644,12 +660,15 @@ export function SliperCommunity({
                 </p>
               )}
 
-              <CategoryMenu
-                category={category}
-                onSelect={chooseCategory}
-                className="sl-chips"
-                label="카테고리"
-              />
+              {/* Categories belong to 이야기; elsewhere the menu only stays to clear a linked filter. */}
+              {(view === "stories" || category !== "all") && (
+                <CategoryMenu
+                  category={category}
+                  onSelect={chooseCategory}
+                  className="sl-chips"
+                  label="카테고리"
+                />
+              )}
 
               {category in BOARD_TOPICS && (
                 <div className="sl-subfilter" aria-label="세부 주제">
@@ -1023,6 +1042,16 @@ export function SliperCommunity({
         }}
       />
 
+      <RecruitmentTypeDialog
+        open={choosingRecruitment}
+        onOpenChange={setChoosingRecruitment}
+        onEvent={() => {
+          setChoosingRecruitment(false);
+          setComposeKind("모집");
+          startWriting();
+        }}
+      />
+
       {writing && (
         <WriteDialog
           key="new"
@@ -1032,7 +1061,7 @@ export function SliperCommunity({
             (composeTopic && topicForSlug(composeTopic)?.category) ||
             (category === "all" ? "party" : category)
           }
-          initialKind={composeKind ?? (kind === "모집" || kind === "투표" ? kind : "이야기")}
+          initialKind={composeKind ?? "이야기"}
           {...(composeTopic ? { initialTopic: composeTopic } : {})}
           post={null}
           upload={store.upload}
@@ -1041,7 +1070,11 @@ export function SliperCommunity({
             if (!saved) return false;
             changeWriting(false);
             navigate("mine");
-            setToast("새 이야기를 등록했어요.");
+            setToast(
+              input.kind === "모집"
+                ? "이벤트·행사 모집글을 등록했어요."
+                : "새 이야기를 등록했어요.",
+            );
             return true;
           }}
         />

@@ -20,7 +20,7 @@ const EXTRA_LINKS = [
 
 // Which sections lead the header per viewing mode. Everything else stays under "더보기".
 const PRIMARY: Record<"participant" | "host", readonly NavigationSection[]> = {
-  participant: ["stories", "lightning", "archive", "games"],
+  participant: ["stories", "lightning", "games"],
   host: ["archive", "players", "stories"],
 };
 const MANAGEMENT = { href: "/management", label: "모임 관리" } as const;

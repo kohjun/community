@@ -145,7 +145,7 @@ export function RecruitTrack({
             <div className="sl-recruit__body">
               <span className="sl-recruit__meta">
                 {CATEGORIES.find((c) => c.slug === post.category)?.name} ·{" "}
-                {post.meetupType === "lightning" ? "번개" : "이벤트"}
+                {post.meetupType === "lightning" ? "번개·모임" : "이벤트·행사"}
               </span>
               <a href={postPath(post.id)} onClick={open}>
                 <h3 className={cn(readPosts.includes(post.id) && "title-is-read")}>{post.title}</h3>

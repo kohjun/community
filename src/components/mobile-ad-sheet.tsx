@@ -157,7 +157,7 @@ export function MobileAdSheet() {
               <Sparkles size={19} />
             </div>
             <span className="mobile-ad-action">
-              번개 모임 둘러보기 <ArrowUpRight size={16} />
+              번개·모임 둘러보기 <ArrowUpRight size={16} />
             </span>
           </Link>
         </div>

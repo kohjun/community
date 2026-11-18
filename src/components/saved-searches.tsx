@@ -81,8 +81,8 @@ export function SavedSearches({ initial }: { initial: SavedSearchView[] }) {
             모임 종류
             <select name="meetupType">
               <option value="all">전체</option>
-              <option value="lightning">번개</option>
-              <option value="event">행사</option>
+              <option value="lightning">번개·모임</option>
+              <option value="event">이벤트·행사</option>
             </select>
           </label>
           <label>

@@ -199,8 +199,8 @@ export function EventDiscoveryDialog({
                 {(
                   [
                     { value: "all", label: "전체" },
-                    { value: "lightning", label: "번개 모임" },
-                    { value: "event", label: "일반 이벤트" },
+                    { value: "lightning", label: "번개·모임" },
+                    { value: "event", label: "이벤트·행사" },
                   ] as const
                 ).map((item) => (
                   <button
@@ -497,7 +497,7 @@ export function EventDiscoveryChips({
   if (value.eventOnly) chips.push({ label: "이벤트만", remove: { ...DEFAULT_DISCOVERY_FILTERS } });
   if (value.meetupType !== "all")
     chips.push({
-      label: value.meetupType === "lightning" ? "번개" : "일반 이벤트",
+      label: value.meetupType === "lightning" ? "번개·모임" : "이벤트·행사",
       remove: { meetupType: "all" },
     });
   if (value.coordinates)

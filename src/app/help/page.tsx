@@ -24,8 +24,8 @@ export default function Page() {
             모임을 둘러보세요.
           </p>
           <div className="safety-links">
-            <Link href="/">이벤트 찾기</Link>
-            <Link href="/lightning">번개 모임</Link>
+            <Link href="/?kind=모집&meetupType=event">이벤트·행사 찾기</Link>
+            <Link href="/lightning">번개·모임</Link>
             <Link href="/map">이벤트 맵</Link>
           </div>
           <h2>2. 신청하고 공지 확인하기</h2>

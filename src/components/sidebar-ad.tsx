@@ -19,7 +19,7 @@ function HouseSidebarAd({ placement = "left" }: { placement?: "left" | "right" }
           className="sidebar-ad-banner"
           aria-label={
             right
-              ? "슬리퍼 번개 모임 둘러보기 · 광고 미리보기"
+              ? "슬리퍼 번개·모임 둘러보기 · 광고 미리보기"
               : "슬리퍼 아카이브 둘러보기 · 광고 미리보기"
           }
         >
@@ -69,7 +69,7 @@ function HouseSidebarAd({ placement = "left" }: { placement?: "left" | "right" }
             )}
           </div>
           <span className="sidebar-ad-action">
-            {right ? "번개 모임 둘러보기" : "모임 만들어보기"} <ArrowUpRight size={14} />
+            {right ? "번개·모임 둘러보기" : "모임 만들어보기"} <ArrowUpRight size={14} />
           </span>
         </Link>
       </div>

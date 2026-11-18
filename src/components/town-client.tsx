@@ -748,7 +748,7 @@ export function TownClient() {
                     광장 밖에서도 만남을 이어가요. 모집 조건과 참가 절차는 각 모임에서 확인해주세요.
                   </p>
                   <Link href="/lightning" className={styles.boardLink}>
-                    <strong>오늘 가볍게, 번개 모임</strong>
+                    <strong>오늘 가볍게, 번개·모임</strong>
                     <span>
                       취향과 지역으로 모임 찾아보기 <ArrowUpRight size={16} />
                     </span>

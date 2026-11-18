@@ -56,7 +56,8 @@ export default async function Page({
       initial={initial}
       canWrite={!!actor}
       initialVenue={initialVenue}
-      initialOpen={!!actor && !!initialVenue && query.open === "1"}
+      // `open=1` comes from 모집글 쓰기 (no venue) or a map venue; a broken venue link stays closed.
+      initialOpen={!!actor && query.open === "1" && (query.venue === undefined || !!initialVenue)}
       venueUnavailable={venueUnavailable}
       initialCategory={initialCategory}
       initialTag={initialTag}

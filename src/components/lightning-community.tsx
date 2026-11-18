@@ -4,7 +4,7 @@ import { ParticipantGuideEditor } from "./participant-guide";
 import type { ParticipantGuide } from "@/domain/participant-guide";
 import { useAdSenseContentGuard } from "./adsense-provider";
 import Link from "next/link";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -105,6 +105,13 @@ export function LightningCommunity({
   const readPosts = useReadPosts();
   const loadVersion = useRef(0);
   const dialogHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!initialOpen) return;
+    // Opening is a one-time action: reloading or returning to this page should not reopen the form.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("open");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  }, [initialOpen]);
   async function load(
     nextCategory: LightningCategorySlug | "",
     nextTag = tag,

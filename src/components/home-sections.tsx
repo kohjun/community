@@ -9,11 +9,14 @@ import {
   Heart,
   MapPin,
   MessageCircle,
+  Thermometer,
   UsersRound,
 } from "lucide-react";
 import type { CommunityPost } from "@/domain/community";
 import type { CrewPage, CrewSummary } from "@/domain/crew";
 import type { LibraryPage } from "@/domain/library";
+import { loginHref } from "@/domain/login-return";
+import { PLAYER_ROLE_LABELS, type PlayerCard, type PlayerDirectoryView } from "@/domain/player";
 import { CATEGORIES } from "@/domain/categories";
 import { GAME_CATALOG } from "@/domain/game-catalog";
 import { postPath } from "@/domain/post-sharing";
@@ -123,7 +126,6 @@ function StoriesSection({
 }
 
 function RecruitSection({
-  audience,
   posts,
   onOpen,
   onSave,
@@ -132,7 +134,6 @@ function RecruitSection({
   canWrite,
   onAll,
 }: {
-  audience: Audience;
   posts: CommunityPost[];
   onOpen: (post: CommunityPost) => void;
   onSave: (id: string) => void;
@@ -144,12 +145,8 @@ function RecruitSection({
   return (
     <Section
       id="sl-section-recruits"
-      title={audience === "host" ? "다른 호스트는 이렇게 모아요" : "마감 전에 잡아야 할 모임"}
-      description={
-        audience === "host"
-          ? "지금 모집 중인 모임의 일정·장소·참가비를 참고해보세요."
-          : "날짜와 장소, 참가비를 비교하고 바로 신청하세요."
-      }
+      title="마감 전에 잡아야 할 모임"
+      description="이벤트·행사와 번개·모임의 날짜와 장소, 참가비를 비교하고 바로 신청하세요."
       action={
         <>
           <Link className="sl-chip-link" href="/discover/saved">
@@ -224,7 +221,8 @@ function GamesSection({ audience }: { audience: Audience }) {
   );
 }
 
-function CrewsSection({ audience }: { audience: Audience }) {
+/** Host home: partner crews for staffing and co-hosting. */
+function CrewsSection() {
   const [crews, setCrews] = useState<CrewSummary[] | null>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -254,12 +252,8 @@ function CrewsSection({ audience }: { audience: Audience }) {
   return (
     <Section
       id="sl-section-crews"
-      title={audience === "host" ? "같이 모임을 만들 크루" : "요즘 모이는 크루"}
-      description={
-        audience === "host"
-          ? "MC·스태프·기획 파트너를 찾는 크루와 함께 모임을 키워보세요."
-          : "취향이 맞는 사람들과 꾸준히 노는 팀을 찾아보세요."
-      }
+      title="같이 모임을 만들 크루"
+      description="MC·스태프·기획 파트너를 찾는 크루와 함께 모임을 키워보세요."
       action={<MoreLink href="/players?tab=crews">크루 전체</MoreLink>}
     >
       {crews === null ? (
@@ -303,7 +297,93 @@ function CrewsSection({ audience }: { audience: Audience }) {
   );
 }
 
-function TemplatesSection({ audience }: { audience: Audience }) {
+function PlayersSection({ signedIn }: { signedIn: boolean }) {
+  const [players, setPlayers] = useState<PlayerCard[] | null>(null);
+  useEffect(() => {
+    // The directory is members-only, so visitors get a sign-in prompt instead of a request.
+    if (!signedIn) return;
+    const controller = new AbortController();
+    void appRequest<PlayerDirectoryView>("/api/players", "GET", undefined, controller.signal)
+      .then((page) => {
+        if (controller.signal.aborted) return;
+        // Players with a set role and verified attendance first: easier to judge at a glance.
+        const ranked = [...page.items].sort(
+          (a, b) =>
+            Number(!!b.preferredRole) - Number(!!a.preferredRole) ||
+            (b.careerVisible ? b.summary.attended : 0) - (a.careerVisible ? a.summary.attended : 0),
+        );
+        setPlayers(ranked.slice(0, 6));
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setPlayers([]);
+      });
+    return () => controller.abort();
+  }, [signedIn]);
+  return (
+    <Section
+      id="sl-section-players"
+      title="같이 놀 플레이어 찾기"
+      description="역할 성향과 매너 온도를 보고 나와 잘 맞는 플레이어를 찾아보세요."
+      action={<MoreLink href="/players">플레이어 전체</MoreLink>}
+    >
+      {!signedIn ? (
+        <div className="sl-player-card__login">
+          <strong>로그인하고 플레이어를 만나보세요</strong>
+          <span>플레이어의 성향과 공개한 참가 경험을 확인할 수 있어요.</span>
+          <Link className="sl-chip-link" href={loginHref("/players")}>
+            로그인하기
+          </Link>
+        </div>
+      ) : players === null ? (
+        <p className="sl-section__empty" role="status">
+          플레이어를 불러오고 있어요.
+        </p>
+      ) : players.length ? (
+        <div className="sl-section__track">
+          {players.map((player) => (
+            <Link
+              key={player.publicId}
+              href={`/players/${player.publicId}`}
+              className="sl-crew-card sl-player-card"
+            >
+              <span className="sl-crew-card__avatar" aria-hidden="true">
+                {player.nickname.trim().slice(0, 1)}
+              </span>
+              <span className="sl-crew-card__top">
+                <span>
+                  {player.preferredRole ? PLAYER_ROLE_LABELS[player.preferredRole] : "성향 탐색 중"}
+                </span>
+              </span>
+              <strong>{player.nickname}</strong>
+              <span className="sl-crew-card__desc">{player.bio || "다음 게임에서 만나요."}</span>
+              <span className="sl-crew-card__stats">
+                <span>
+                  <Thermometer size={13} aria-hidden="true" />
+                  {player.summary.mannerTemperature.toFixed(1)}℃
+                </span>
+                {player.careerVisible && <span>참가 {player.summary.attended}회</span>}
+                {player.region && (
+                  <span>
+                    <MapPin size={13} aria-hidden="true" />
+                    {player.region}
+                  </span>
+                )}
+              </span>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <p className="sl-section__empty">
+          아직 탐색을 공개한 플레이어가 없어요.{" "}
+          <Link href="/players">내 플레이어 프로필 공개하기</Link>
+        </p>
+      )}
+    </Section>
+  );
+}
+
+/** Host home: ready-to-run event templates. */
+function TemplatesSection() {
   const [items, setItems] = useState<LibraryPage["items"] | null>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -328,12 +408,8 @@ function TemplatesSection({ audience }: { audience: Audience }) {
   return (
     <Section
       id="sl-section-templates"
-      title={audience === "host" ? "그대로 열면 되는 이벤트 템플릿" : "이렇게 노는 모임도 있어요"}
-      description={
-        audience === "host"
-          ? "진행 순서와 준비물이 정리된 템플릿으로 기획 시간을 줄여보세요."
-          : "다른 호스트들이 실제로 운영한 이벤트 템플릿이에요."
-      }
+      title="그대로 열면 되는 이벤트 템플릿"
+      description="진행 순서와 준비물이 정리된 템플릿으로 기획 시간을 줄여보세요."
       action={<MoreLink href="/archive?kind=template">템플릿 전체</MoreLink>}
     >
       {items === null ? (
@@ -375,7 +451,10 @@ function TemplatesSection({ audience }: { audience: Audience }) {
   );
 }
 
-/** Home sections in reading order; hosts see planning material first. */
+/**
+ * Home sections in reading order. Participants find something to join and people to play with;
+ * hosts get planning material (templates, partner crews) and no recruitment browsing.
+ */
 export function HomeSections({
   audience,
   stories,
@@ -397,34 +476,28 @@ export function HomeSections({
   canWrite: boolean;
   onAllRecruits: () => void;
 }) {
-  const recruits = (
-    <RecruitSection
-      key="recruits"
-      audience={audience}
-      posts={recruitments}
-      onOpen={onOpen}
-      onSave={onSave}
-      bookmarked={bookmarked}
-      busy={busy}
-      canWrite={canWrite}
-      onAll={onAllRecruits}
-    />
-  );
   const sections =
     audience === "host"
       ? [
-          <TemplatesSection key="templates" audience={audience} />,
-          <CrewsSection key="crews" audience={audience} />,
-          recruits,
+          <TemplatesSection key="templates" />,
+          <CrewsSection key="crews" />,
           <GamesSection key="games" audience={audience} />,
           <StoriesSection key="stories" posts={stories} onOpen={onOpen} />,
         ]
       : [
           <StoriesSection key="stories" posts={stories} onOpen={onOpen} />,
-          recruits,
+          <RecruitSection
+            key="recruits"
+            posts={recruitments}
+            onOpen={onOpen}
+            onSave={onSave}
+            bookmarked={bookmarked}
+            busy={busy}
+            canWrite={canWrite}
+            onAll={onAllRecruits}
+          />,
           <GamesSection key="games" audience={audience} />,
-          <CrewsSection key="crews" audience={audience} />,
-          <TemplatesSection key="templates" audience={audience} />,
+          <PlayersSection key="players" signedIn={canWrite} />,
         ];
   return <div className="sl-sections">{sections}</div>;
 }
