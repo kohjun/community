@@ -27,6 +27,7 @@ import {
   categorySlugSchema,
   createCommentSchema,
   createPostSchema,
+  publishPostSchema,
   updateCommentSchema,
   updatePostSchema,
   uuidSchema,
@@ -648,6 +649,10 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
       await tx.update(videoAssets).set({ postId, sortOrder }).where(eq(videoAssets.id, id));
   }
 
+  async function publishPost(actor: string | null, input: unknown) {
+    const user = requireActor(actor);
+    return createPost(user, publishPostSchema.parse(input));
+  }
   async function createPost(actor: string | null, input: unknown) {
     const userId = requireActor(actor),
       value = createPostSchema.parse(input);
@@ -739,6 +744,13 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
         .select({ type: eventSettings.meetupType, amountKRW: eventSettings.amountKRW })
         .from(eventSettings)
         .where(eq(eventSettings.postId, value.postId));
+      if (
+        configuration?.type !== "lightning" &&
+        value.kind === "모집" &&
+        !value.applicationUrl &&
+        (previous.kind !== "모집" || !!previous.applicationUrl)
+      )
+        throw new AppError("VALIDATION", "모집글에는 외부 신청 링크가 필요해요.");
       if (configuration?.type === "lightning" && !previous.applicationUrl && value.applicationUrl)
         throw new AppError(
           "VALIDATION",
@@ -1056,6 +1068,7 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
     commentPage,
     resolveQuestion: changed(resolveQuestion),
     createPost: changed(createPost),
+    publishPost: changed(publishPost),
     updatePost: changed(updatePost),
     deletePost: changed(deletePost),
     createComment: changed(createComment),

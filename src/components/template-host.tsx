@@ -6,7 +6,7 @@ import { meetupVenueLabel } from "@/domain/venue-meetup";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { ParticipationShell } from "./participation-shell";
-import { templateHostSchema, type LibraryDetail } from "@/domain/library";
+import { publishTemplateHostSchema, type LibraryDetail } from "@/domain/library";
 import { appRequest } from "@/lib/api-client";
 import type { TemplateHostOrigin } from "@/domain/template-rehosting";
 export function TemplateHost({
@@ -18,8 +18,7 @@ export function TemplateHost({
 }) {
   const router = useRouter(),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [external, setExternal] = useState(false);
+    [error, setError] = useState("");
   const [venue, setVenue] = useState<VenuePoint | null>(null);
   const [location, setLocation] = useState(origin?.location ?? "");
   const [conditionsConfirmed, setConditionsConfirmed] = useState(false);
@@ -39,10 +38,10 @@ export function TemplateHost({
       endsAt: `${f.get("endsAt")}:00+09:00`,
       amountKRW: Number(f.get("amountKRW")),
       capacity: Number(f.get("capacity")),
-      applicationUrl: external ? String(f.get("applicationUrl") ?? "") : null,
+      applicationUrl: String(f.get("applicationUrl") ?? ""),
       description: f.get("description"),
     };
-    const parsed = templateHostSchema.safeParse(value);
+    const parsed = publishTemplateHostSchema.safeParse(value);
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "입력 내용을 확인해주세요.");
       return;
@@ -175,41 +174,36 @@ export function TemplateHost({
         <section className="marketplace-section">
           <h2>신청 방식</h2>
           <div className="marketplace-actions">
-            <label>
+            <label className="recruitment-mode-unavailable">
               <input
                 type="radio"
                 name="applicationMode"
-                checked={!external}
-                onChange={() => setExternal(false)}
+                disabled
+                aria-describedby="template-direct-recruitment-note"
               />
-              슬리퍼에서 참가 신청
+              슬리퍼에서 참가 신청 <span className="recruitment-mode-status">준비 중</span>
             </label>
             <label>
-              <input
-                type="radio"
-                name="applicationMode"
-                checked={external}
-                onChange={() => setExternal(true)}
-              />
+              <input type="radio" name="applicationMode" checked readOnly />
               외부 플랫폼에서 신청 · 결제
             </label>
           </div>
-          {external && (
-            <label className="marketplace-field">
-              외부 신청 링크
-              <input
-                name="applicationUrl"
-                required
-                type="url"
-                maxLength={2048}
-                placeholder="https://"
-              />
-            </label>
-          )}
+          <p id="template-direct-recruitment-note">
+            직접 모집은 결제·정산 기능 준비 중으로 이용할 수 없어요.
+          </p>
+          <label className="marketplace-field">
+            외부 신청 링크
+            <input
+              name="applicationUrl"
+              required
+              type="url"
+              maxLength={2048}
+              placeholder="https://"
+            />
+          </label>
           <p>
-            {external
-              ? "외부 플랫폼에서 신청·결제한 참가자를 관리 페이지에서 승인하면 행사 공지방에 자동 초대돼요."
-              : "참가 신청은 슬리퍼에서 진행해요. 유료 행사의 결제·정산은 연결할 결제 플랫폼에서 처리하고, 결제 확인 후 공지방에 자동 초대돼요."}
+            참가 신청과 결제는 외부 플랫폼에서 진행해요. 내 행사 관리에서 참가자를 확인·승인하면
+            공지방에 초대돼요.
           </p>
         </section>
         <section className="marketplace-section">

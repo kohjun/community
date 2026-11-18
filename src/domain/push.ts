@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const pushPreferencesSchema = z.strictObject({
+  crewMessages: z.boolean().optional(),
   comments: z.boolean(),
   announcements: z.boolean(),
   participation: z.boolean(),
@@ -10,6 +11,7 @@ export const pushPreferencesSchema = z.strictObject({
   reminders: z.boolean().optional(),
 });
 export interface PushPreferences {
+  crewMessages?: boolean;
   comments: boolean;
   announcements: boolean;
   participation: boolean;
@@ -24,6 +26,7 @@ export interface PushSettingsView {
   currentDevice: boolean;
 }
 export const DEFAULT_PUSH_PREFERENCES: PushPreferences = {
+  crewMessages: true,
   comments: true,
   announcements: true,
   participation: true,

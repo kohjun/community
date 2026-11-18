@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, or, sql } from "drizzle-orm";
 import type { Database } from "../db/connection";
 import { objectCleanupJobs as jobs } from "../db/object-cleanup-schema";
+import { gameAssets } from "../db/game-room-schema";
 import { mediaAssets, profilePhotos } from "../db/schema";
 import { videoAssets } from "../db/video-schema";
 import {
@@ -17,7 +18,7 @@ export type CleanupObject = {
   objectKey: string;
 };
 export type CleanupReason =
-  "profile-replaced" | "profile-cleared" | "account-closed" | "upload-rollback";
+  "profile-replaced" | "profile-cleared" | "account-closed" | "upload-rollback" | "game-expired";
 export async function enqueueObjectCleanup(
   connection: CleanupConnection,
   object: CleanupObject,
@@ -121,7 +122,22 @@ export function objectCleanupService(
         and(eq(table.objectKey, object.objectKey), eq(table.storageBackend, object.storageBackend)),
       )
       .limit(1);
-    return !!row;
+    if (row) return true;
+    if (object.kind === "profile") return false;
+    const [game] = await db
+      .select({ id: gameAssets.id })
+      .from(gameAssets)
+      .where(
+        and(
+          eq(gameAssets.storageBackend, object.storageBackend),
+          or(
+            eq(gameAssets.objectKey, object.objectKey),
+            eq(gameAssets.sourceKey, object.objectKey),
+          ),
+        ),
+      )
+      .limit(1);
+    return !!game;
   }
   async function processOne(id?: string) {
     const job = await claim(id);

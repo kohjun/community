@@ -4,6 +4,7 @@ import { currentActor } from "@/server/identity";
 import { crewService } from "@/server/crew-service";
 import { apiResponse, assertSameOrigin, readJson } from "@/server/http";
 import { AppError } from "@/server/errors";
+import { publishRoomWake } from "@/server/room-realtime";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 async function handle(request: Request, context: { params: Promise<{ path?: string[] }> }) {
@@ -12,11 +13,17 @@ async function handle(request: Request, context: { params: Promise<{ path?: stri
       method = request.method === "HEAD" ? "GET" : request.method;
     if (method !== "GET") assertSameOrigin(request);
     const actor = await currentActor(),
-      service = crewService(getDatabase());
+      service = crewService(getDatabase(), undefined, publishRoomWake);
     const query = Object.fromEntries(new URL(request.url).searchParams);
     const [id, action, subaction] = path;
     if (!path.length && method === "GET") return service.list(actor, query);
     if (!path.length && method === "POST") return service.create(actor, await readJson(request));
+    if (id && action === "chat" && path.length === 2) {
+      if (method === "GET") return service.chat(actor, id, query);
+      if (method === "POST") return service.sendChat(actor, id, await readJson(request));
+    }
+    if (id && action === "chat" && subaction && path.length === 3 && method === "DELETE")
+      return service.deleteChat(actor, id, subaction);
     if (id && path.length === 1) {
       if (method === "GET") return service.detail(actor, id);
       if (method === "PATCH") return service.update(actor, id, await readJson(request));

@@ -1,9 +1,12 @@
-export type CatalogGameId = "mbti-intro" | "auction" | "word-liar" | "lobby" | "toast";
+export type CatalogGameId =
+  "mbti-intro" | "auction" | "word-liar" | "lobby" | "toast" | "temperature" | "drawing" | "clue";
 export const GAME_GENRES = [
   "전체",
   "아이스브레이킹",
   "심리·추리",
   "경매·전략",
+  "그림·창작",
+  "사진·단서",
   "자유 진행",
 ] as const;
 export type GameGenre = (typeof GAME_GENRES)[number];
@@ -22,6 +25,57 @@ export type CatalogGame = {
 };
 // Public, static discovery metadata. Game rules and secret round data stay on the server.
 export const GAME_CATALOG: readonly CatalogGame[] = [
+  {
+    id: "drawing",
+    title: "낙서톡",
+    roomTitle: "낙서톡",
+    genre: "그림·창작",
+    eyebrow: "DRAW. PASS. GUESS.",
+    summary: "그리면 전해지고, 맞히면 터진다. 우리만의 그림 파티!",
+    hook: "문장이 그림으로, 그림이 뜻밖의 이야기로",
+    players: "2~12명 · 믹스는 4명부터",
+    format: "믹스·라이브·릴레이",
+    tags: ["그림", "실시간", "전달"],
+    highlights: [
+      "믹스는 문장 → 그림 → 해석 → 실시간 맞히기로 이어져요.",
+      "마지막 해석 문장이 정답! 문장 작성자와 화가는 추리에서 쉬어요.",
+      "라이브 맞히기나 점수 없는 그림 릴레이도 골라요.",
+    ],
+  },
+  {
+    id: "clue",
+    title: "단서각",
+    roomTitle: "단서각",
+    genre: "사진·단서",
+    eyebrow: "LOOK. LISTEN. PIN.",
+    summary: "보고 듣고 찍어라. 단서 하나로 감이 맞는 순간.",
+    hook: "사진 속 여기는 어디? 이 소리의 정체는?",
+    players: "2~12명",
+    format: "사진 핀·줌 아웃·퀴즈·우리 사진",
+    tags: ["지도", "추리", "추억"],
+    highlights: [
+      "사진을 보고 네이버 지도에 비밀리에 핀을 찍어요.",
+      "가장 가까운 사람 모두 1점. 소리·영상은 정답자 모두 1점!",
+      "우리 사진에서는 장소와 사진 주인을 함께 맞혀요.",
+    ],
+  },
+  {
+    id: "temperature",
+    title: "마음의 온도",
+    roomTitle: "마음의 온도",
+    genre: "심리·추리",
+    eyebrow: "WHAT'S YOUR NUMBER?",
+    summary: "같은 상황을 보는 서로의 기준을 0부터 100까지 추리해요.",
+    hook: "어떤 상황이 77만큼 당황스러울까요?",
+    players: "3~30명",
+    format: "기본·추리 2가지 모드",
+    tags: ["대화", "눈치", "순서 추리"],
+    highlights: [
+      "기본 모드는 설명을 듣고 숨겨진 숫자에 가깝게 답해요.",
+      "추리 모드는 참가자가 낸 상황들을 낮은 숫자부터 정렬해요.",
+      "가장 가까운 참가자는 모두 1점을 얻고, 결과를 보며 이유를 나눠요.",
+    ],
+  },
   {
     id: "toast",
     title: "건배의 눈치",

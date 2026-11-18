@@ -170,3 +170,21 @@ test("notification click preserves another page and opens the event separately",
   assert.equal(runtime.focused(), 0);
   assert.deepEqual(runtime.opened, [`${ORIGIN}/events/${POST}`]);
 });
+
+test("crew message notification opens its authorized chat tab and drops unrelated query parameters", async () => {
+  const runtime = worker();
+  await runtime.emit("push", {
+    data: {
+      json: () => ({
+        title: "우리 크루 · 진행자",
+        body: "토요일에 만나요",
+        url: `/crews/${POST}?tab=chat&token=ignored`,
+      }),
+    },
+  });
+  assert.equal(runtime.displayed[0]!.options.data.url, `/crews/${POST}?tab=chat`);
+  await runtime.emit("notificationclick", {
+    notification: { close() {}, data: runtime.displayed[0]!.options.data },
+  });
+  assert.deepEqual(runtime.opened, [`${ORIGIN}/crews/${POST}?tab=chat`]);
+});

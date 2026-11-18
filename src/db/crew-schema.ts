@@ -189,3 +189,30 @@ export const crewContributions = sliper
     ],
   )
   .enableRLS();
+
+export const crewMessages = sliper
+  .table(
+    "crew_messages",
+    {
+      id: uuid("id").primaryKey().defaultRandom(),
+      crewId: uuid("crew_id")
+        .notNull()
+        .references(() => crews.id, { onDelete: "cascade" }),
+      authorId: uuid("author_id").references(() => profiles.id, { onDelete: "set null" }),
+      clientId: uuid("client_id").notNull(),
+      body: text("body").notNull(),
+      createdAt: timestamp("created_at", { withTimezone: true })
+        .notNull()
+        .default(sql`clock_timestamp()`),
+      deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    },
+    (t) => [
+      index("crew_messages_history_idx").on(t.crewId, t.createdAt.desc(), t.id.desc()),
+      unique("crew_messages_client_once").on(t.crewId, t.authorId, t.clientId),
+      check(
+        "crew_messages_body",
+        sql`(${t.deletedAt} is null and char_length(btrim(${t.body})) between 1 and 2000) or (${t.deletedAt} is not null and ${t.body}='')`,
+      ),
+    ],
+  )
+  .enableRLS();

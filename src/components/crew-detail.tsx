@@ -11,6 +11,7 @@ import {
   Plus,
 } from "lucide-react";
 import { RecordBacklink } from "./record-discovery";
+import { CrewChat } from "./crew-chat";
 import { ParticipationShell } from "./participation-shell";
 import { SafetyActions } from "./safety-actions";
 import { Markdown } from "./markdown";
@@ -528,8 +529,13 @@ function CrewOwnerSettings({ store }: { store: CrewStore }) {
 export function CrewDetailView({ initial, canWrite }: { initial: CrewDetail; canWrite: boolean }) {
   const store = useCrew(initial, canWrite),
     crew = store.data;
-  const [tab, setTab] = useState<"overview" | "members" | "activity" | "management">("overview"),
+  const [tab, setTab] = useState<"overview" | "members" | "activity" | "management" | "chat">(
+      "overview",
+    ),
     [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tab") === "chat") setTab("chat");
+  }, []);
   const canManage =
     store.canWrite && !crew.archived && (crew.myRole === "owner" || crew.myRole === "manager");
   const canConfirm =
@@ -537,10 +543,13 @@ export function CrewDetailView({ initial, canWrite }: { initial: CrewDetail; can
     !crew.archived &&
     !!crew.myRole &&
     crew.events.some((event) => event.canVerify);
-  const activeTab = tab === "management" && !canManage ? "overview" : tab;
+  const canChat = store.canWrite && !!crew.myRole;
+  const activeTab =
+    (tab === "management" && !canManage) || (tab === "chat" && !canChat) ? "overview" : tab;
   const tabs = [
     { id: "overview", name: "소개" },
     { id: "members", name: "멤버" },
+    ...(canChat ? [{ id: "chat", name: "톡방" }] : []),
     { id: "activity", name: "활동" },
     ...(canManage ? [{ id: "management", name: "관리" }] : []),
   ] as const;
@@ -650,12 +659,25 @@ export function CrewDetailView({ initial, canWrite }: { initial: CrewDetail; can
                   <p className="crew-form-note">아직 연결된 행사가 없어요.</p>
                 )}
               </section>
+              {canChat && (
+                <section className="crew-panel">
+                  <div className="crew-section-heading">
+                    <h2>크루원과 이야기해요</h2>
+                    <button className="participation-primary" onClick={() => setTab("chat")}>
+                      톡방 입장
+                    </button>
+                  </div>
+                </section>
+              )}
               <CrewContributions
                 page={crew.contributions}
                 busy={store.busy}
                 onMore={() => store.more("contributions")}
               />
             </div>
+          )}
+          {activeTab === "chat" && canChat && (
+            <CrewChat crewId={crew.id} onRevoked={() => void store.refresh()} />
           )}
           {activeTab === "members" && (
             <CrewMembers

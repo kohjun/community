@@ -6,8 +6,10 @@ export function gameDigest(secret: string, context: string, value: string) {
   if (secret.length < 32) throw new Error("Game session signing is not configured.");
   return createHmac("sha256", secret).update(`sliper:game:${context}:${value}`).digest("hex");
 }
-export function issueGameSession(secret: string, now = Date.now()) {
-  const value = `${randomUUID()}.${now}`;
+export function issueGameSession(secret: string, now = Date.now(), existingDevice?: string) {
+  if (existingDevice && !/^[a-f0-9-]{36}$/.test(existingDevice))
+    throw new Error("Invalid game device.");
+  const value = `${existingDevice ?? randomUUID()}.${now}`;
   return `${value}.${gameDigest(secret, "cookie", value)}`;
 }
 export function verifyGameSession(

@@ -12,6 +12,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { comments, posts, profiles, sliper } from "./schema";
+import { crews } from "./crew-schema";
 
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 const updatedAt = () => timestamp("updated_at", { withTimezone: true }).notNull().defaultNow();
@@ -23,6 +24,7 @@ export const pushPreferences = sliper
     userId: uuid("user_id")
       .primaryKey()
       .references(() => profiles.id, { onDelete: "cascade" }),
+    crewMessages: boolean("crew_messages").notNull().default(true),
     comments: boolean("comments").notNull().default(true),
     announcements: boolean("announcements").notNull().default(true),
     participation: boolean("participation").notNull().default(true),
@@ -77,6 +79,7 @@ export const pushDeliveries = sliper
         .references(() => profiles.id, { onDelete: "cascade" }),
       dedupeKey: varchar("dedupe_key", { length: 220 }).notNull(),
       kind: varchar("kind", { length: 24 }).notNull(),
+      crewId: uuid("crew_id").references(() => crews.id, { onDelete: "cascade" }),
       postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
       commentId: uuid("comment_id").references(() => comments.id, { onDelete: "cascade" }),
       title: varchar("title", { length: 120 }).notNull(),
@@ -111,11 +114,11 @@ export const pushDeliveries = sliper
       check("push_deliveries_dedupe", sql`char_length(btrim(${t.dedupeKey})) between 1 and 220`),
       check(
         "push_deliveries_kind",
-        sql`${t.kind} in ('comment','announcement','participation','subscription','reminder','test')`,
+        sql`${t.kind} in ('comment','announcement','participation','subscription','reminder','test','crew_message')`,
       ),
       check(
         "push_deliveries_source",
-        sql`(${t.kind} = 'comment' and ${t.postId} is not null and ${t.commentId} is not null) or (${t.kind} in ('announcement','participation','subscription','reminder') and ${t.postId} is not null and ${t.commentId} is null) or (${t.kind} = 'test' and ${t.commentId} is null)`,
+        sql`(${t.kind} = 'comment' and ${t.postId} is not null and ${t.commentId} is not null) or (${t.kind} in ('announcement','participation','subscription','reminder') and ${t.postId} is not null and ${t.commentId} is null) or (${t.kind} = 'test' and ${t.commentId} is null) or (${t.kind} = 'crew_message' and ${t.crewId} is not null and ${t.postId} is null and ${t.commentId} is null)`,
       ),
       check(
         "push_deliveries_content",

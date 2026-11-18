@@ -554,6 +554,48 @@
       "when": 1793542098231,
       "tag": "0078_toast_game",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1794231941611,
+      "tag": "0079_mind_temperature_game",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1794363228023,
+      "tag": "0080_crew_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1794363484709,
+      "tag": "0081_crew_chat_push",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1794654809862,
+      "tag": "0082_creative_web_games",
+      "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1794656477220,
+      "tag": "0083_game_media_cleanup",
+      "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1794657342057,
+      "tag": "0084_creative_game_results",
+      "breakpoints": true
     }
   ]
 }

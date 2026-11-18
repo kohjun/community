@@ -79,7 +79,7 @@ async function handle(request: Request, context: Context) {
     )
       return service.commentPage(id, actor, Object.fromEntries(new URL(request.url).searchParams));
     if (method === "POST" && resource === "posts" && parts.length === 1)
-      return service.createPost(actor, await readJson(request, 350_000));
+      return service.publishPost(actor, await readJson(request, 350_000));
     if (resource === "posts" && id && parts.length === 2) {
       if (method === "PATCH")
         return service.updatePost(actor, {

@@ -5,6 +5,8 @@ export type MapPin = MapPoint & {
   kind: "place" | "event" | "lightning";
   label: string;
   categoryLabel?: string;
+  badge?: string;
+  colour?: string;
 };
 export type GeocodedAddress = MapPoint & {
   address: string;
@@ -41,6 +43,7 @@ export interface NaverMarkerInstance {
     zIndex: number;
   }): void;
 }
+export type NaverConnection = { from: MapPoint; to: MapPoint; colour: string };
 export type NaverListener = object;
 export interface NaverGeocodeService {
   Status: { OK: string | number };
@@ -73,6 +76,13 @@ export interface NaverMapsSDK {
     title: string;
     zIndex: number;
   }) => NaverMarkerInstance;
+  Polyline?: new (options: {
+    map: NaverMapInstance;
+    path: NaverLatLng[];
+    strokeColor: string;
+    strokeWeight: number;
+    strokeOpacity: number;
+  }) => { setMap: (map: NaverMapInstance | null) => void };
   Position: { RIGHT_CENTER: number };
   Event: {
     addListener(target: object, name: string, listener: (event?: unknown) => void): NaverListener;
@@ -341,9 +351,16 @@ function escapeHtml(value: string): string {
 export function markerIcon(pin: MapPin, selected: boolean): NaverHtmlIcon {
   const label = escapeHtml(pin.label.slice(0, 160));
   const kind = pin.kind === "event" || pin.kind === "lightning" ? pin.kind : "place";
-  const symbol = kind === "place" ? "장소" : kind === "lightning" ? "번개" : "이벤트";
+  const symbol = escapeHtml(
+    pin.badge?.slice(0, 16) ??
+      (kind === "place" ? "장소" : kind === "lightning" ? "번개" : "이벤트"),
+  );
+  const accent =
+    pin.colour && /^#[0-9a-f]{6}$/i.test(pin.colour)
+      ? ` style="background:${pin.colour};color:white"`
+      : "";
   return {
-    content: `<button type="button" class="naver-event-pin naver-event-pin--${kind}${selected ? " is-selected" : ""}" aria-label="${symbol}: ${label}" aria-pressed="${selected}"><span class="naver-event-pin-kind">${symbol}</span><span class="naver-event-pin-label">${label}</span></button>`,
+    content: `<button type="button" class="naver-event-pin naver-event-pin--${kind}${selected ? " is-selected" : ""}" aria-label="${symbol}: ${label}" aria-pressed="${selected}"><span class="naver-event-pin-kind"${accent}>${symbol}</span><span class="naver-event-pin-label">${label}</span></button>`,
     anchor: { x: 22, y: 38 },
   };
 }
@@ -359,6 +376,8 @@ export class NaverMapSession {
   readonly map: NaverMapInstance;
   private readonly markers = new Map<string, OwnedMarker>();
   private readonly listeners: NaverListener[] = [];
+  private connections: { setMap: (map: NaverMapInstance | null) => void }[] = [];
+  private connectionKey = "";
   private boundsTimer: ReturnType<typeof setTimeout> | undefined;
   private lastBounds = "";
   private selectedId: string | null = null;
@@ -454,6 +473,30 @@ export class NaverMapSession {
     this.selectedId = selectedId;
   }
 
+  updateConnections(connections: NaverConnection[]) {
+    if (this.disposed || !this.sdk.Polyline) return;
+    const safe = connections.filter(
+      (c) => isMapPoint(c.from) && isMapPoint(c.to) && /^#[0-9a-f]{6}$/i.test(c.colour),
+    );
+    const key = JSON.stringify(safe);
+    if (key === this.connectionKey) return;
+    for (const line of this.connections) line.setMap(null);
+    this.connections = [];
+    this.connectionKey = key;
+    for (const c of safe)
+      this.connections.push(
+        new this.sdk.Polyline({
+          map: this.map,
+          path: [
+            new this.sdk.LatLng(c.from.latitude, c.from.longitude),
+            new this.sdk.LatLng(c.to.latitude, c.to.longitude),
+          ],
+          strokeColor: c.colour,
+          strokeWeight: 2,
+          strokeOpacity: 0.6,
+        }),
+      );
+  }
   focus(point: MapPoint & { zoom?: number }) {
     if (this.disposed || !isMapPoint(point)) return;
     if (typeof point.zoom === "number" && Number.isFinite(point.zoom))
@@ -487,6 +530,8 @@ export class NaverMapSession {
       release(() => this.sdk.Event.removeListener(owned.listener));
       release(() => owned.marker.setMap(null));
     }
+    for (const line of this.connections) release(() => line.setMap(null));
+    this.connections = [];
     release(() => this.map.destroy());
   }
 }

@@ -2626,24 +2626,60 @@ body {
 }
 @media (max-width: 720px) {
   .sl-cats {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px 4px;
-    padding: 18px var(--sl-gutter) 0;
+    display: grid;
+    grid-template-columns: repeat(6, max-content);
+    grid-template-rows: repeat(2, 44px);
+    gap: 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 12px var(--sl-gutter) 6px;
+    scrollbar-width: none;
+  }
+  .sl-cats::-webkit-scrollbar {
+    display: none;
   }
   .sl-cats button {
+    display: inline-flex;
+    align-items: center;
     gap: 6px;
-    padding: 4px 0;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--sl-line);
+    border-radius: 999px;
+    background: var(--sl-surface);
   }
   .sl-cats__icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 16px;
+    width: 20px;
+    height: 20px;
+    border: 0;
+    background: transparent;
+  }
+  .sl-cats__icon svg {
+    width: 18px;
+    height: 18px;
   }
   .sl-cats__label {
-    font-size: 12px;
+    font-size: 13px;
+    white-space: nowrap;
   }
 }
 @media (max-width: 720px) {
+  .sl-header__inner:has(> .sl-header__tools .account-controls) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+  .sl-header__inner:has(> .sl-header__tools .account-controls) > .sl-brand {
+    justify-self: start;
+  }
+  .sl-header__inner:has(> .sl-header__tools .account-controls) > .sl-audience-toggle {
+    grid-column: 2;
+    margin: 0;
+  }
+  .sl-header__inner:has(> .sl-header__tools .account-controls) > .sl-header__tools {
+    grid-column: 3;
+    justify-self: end;
+  }
+
   /* The open search field floats under the header; keep the page heading clear of it. */
   body:has(.sl-search.is-open) .sl-page {
     padding-top: 62px;
@@ -2653,6 +2689,10 @@ body {
   /* Narrowest phones: tighten the header so wordmark, role toggle and tools share one row. */
   .sl-header__inner {
     gap: 6px;
+  }
+  .sl-header__inner:has(> .sl-header__tools .login-link) {
+    gap: 4px;
+    padding-inline: 8px;
   }
   .sl-brand {
     font-size: 18px;

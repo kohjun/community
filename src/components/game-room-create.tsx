@@ -1,5 +1,13 @@
 "use client";
-import { TownEntry } from "./town-entry";
+import {
+  CreativeSettingsFields,
+  DEFAULT_CREATIVE_OPTIONS,
+  type CreativeOptions,
+} from "./creative-settings-fields";
+import type { GameRoomSettings } from "@/domain/game-room";
+import { DRAWING_MODES } from "@/domain/creative-games";
+import { DEFAULT_TEMPERATURE_SETTINGS } from "@/domain/temperature-game";
+import { TemperatureSettingsFields } from "./temperature-settings-fields";
 import type { ToastMode } from "@/domain/toast-game";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -72,7 +80,11 @@ export function GameRoomCreate() {
   function chooseGame(id: CatalogGameId) {
     const next = GAME_CATALOG.find((game) => game.id === id)!;
     setGameType(id);
-    if (id !== "lobby") {
+    if (id === "drawing" || id === "clue") {
+      const min = id === "drawing" ? DRAWING_MODES[creative.drawingMode].minimum : 2;
+      setCapacity((v) => Math.min(12, Math.max(min, v)));
+      setMinPlayers(min);
+    } else if (id !== "lobby") {
       setCapacity((value) => Math.max(3, value));
       setMinPlayers((value) => Math.max(3, value));
     }
@@ -82,6 +94,23 @@ export function GameRoomCreate() {
     setShowSetup(true);
     reveal(setupHeading);
   }
+  const [temperature, setTemperature] = useState(DEFAULT_TEMPERATURE_SETTINGS);
+  const [creative, setCreative] = useState<
+    Pick<GameRoomSettings, keyof typeof DEFAULT_CREATIVE_OPTIONS>
+  >({ ...DEFAULT_CREATIVE_OPTIONS });
+  const minimum =
+    gameType === "drawing"
+      ? DRAWING_MODES[creative.drawingMode].minimum
+      : gameType === "clue" || gameType === "lobby"
+        ? 2
+        : 3;
+  const maximum = gameType === "drawing" || gameType === "clue" ? 12 : 30;
+  const changeCreative = (next: Partial<CreativeOptions>) => {
+    const { capacity: cap, minPlayers: min, ...fields } = next;
+    if (cap !== undefined) setCapacity(cap);
+    if (min !== undefined) setMinPlayers(min);
+    setCreative((s) => ({ ...s, ...fields }));
+  };
   const [toastMode, setToastMode] = useState<ToastMode>("basic"),
     [toastRounds, setToastRounds] = useState(2),
     [toastAnswerSeconds, setToastAnswerSeconds] = useState(30);
@@ -119,6 +148,14 @@ export function GameRoomCreate() {
     try {
       const room = await appRequest<{ id: string }>("/api/games", "POST", {
         gameType,
+        ...creative,
+        ...(gameType === "temperature"
+          ? {
+              temperatureMode: temperature.mode,
+              temperatureRounds: temperature.rounds,
+              temperatureAnswerSeconds: temperature.answerSeconds,
+            }
+          : {}),
         toastMode,
         toastRounds,
         toastAnswerSeconds,
@@ -140,7 +177,7 @@ export function GameRoomCreate() {
   }
   return (
     <div className={styles.screen}>
-      <header className={catalog.hero}>
+      <header className={catalog.hero} hidden={showSetup}>
         <div>
           <span className={styles.eyebrow}>
             <Gamepad2 size={17} /> SLIPER PLAY
@@ -165,22 +202,30 @@ export function GameRoomCreate() {
           </a>
         )}
       </header>
-      <TownEntry />
-      <section aria-labelledby="game-catalog-heading" className={catalog.library}>
+      <section
+        aria-labelledby="game-catalog-heading"
+        className={catalog.library}
+        hidden={showSetup}
+      >
         <div className={catalog.catalogHeader}>
           <h2 id="game-catalog-heading" ref={catalogHeading} tabIndex={-1}>
             함께할 게임 찾기 <small>{GAME_CATALOG.length}</small>
           </h2>
-          <label className={catalog.search}>
+          <search className={catalog.search}>
             <Search size={17} />
             <input
               type="search"
               aria-label="게임 검색"
+              name="gameQuery"
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               placeholder="게임 이름, 취향으로 검색"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
-          </label>
+          </search>
         </div>
         <div className={catalog.filters} role="group" aria-label="게임 장르">
           {GAME_GENRES.map((item) => (
@@ -205,37 +250,37 @@ export function GameRoomCreate() {
         </div>
         <div className={catalog.gameGrid}>
           {games.map((game) => (
-            <div key={game.id} className={catalog.gameItem}>
-              <button
-                type="button"
-                className={catalog.gameCard}
-                disabled={busy}
-                aria-label={`${game.title} 선택`}
-                aria-pressed={showSetup && gameType === game.id}
-                aria-controls="game-setup"
-                onClick={() => chooseGame(game.id)}
-              >
-                <GameCover game={game.id} />
-                <div className={catalog.cardBody}>
-                  <span className={catalog.genre}>{game.genre}</span>
-                  <h3>{game.title}</h3>
-                  <p>{game.summary}</p>
-                  <div className={catalog.tags}>
-                    {game.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
-                  </div>
-                  <div className={catalog.cardBottom}>
-                    <span>
-                      <UsersRound size={14} /> {game.players}
-                    </span>
-                    <span>
-                      {showSetup && gameType === game.id ? "선택한 게임" : "자세히 보기"}{" "}
-                      <ArrowRight size={14} />
-                    </span>
-                  </div>
+            <article key={game.id} className={`${catalog.gameItem} ${catalog.gameCard}`}>
+              <GameCover game={game.id} />
+              <div className={catalog.cardBody}>
+                <span className={catalog.genre}>{game.genre}</span>
+                <h3>
+                  <button
+                    type="button"
+                    className={catalog.cardAction}
+                    disabled={busy}
+                    aria-label={`${game.title} 선택`}
+                    aria-controls="game-setup"
+                    onClick={() => chooseGame(game.id)}
+                  >
+                    {game.title}
+                  </button>
+                </h3>
+                <p>{game.summary}</p>
+                <div className={catalog.tags}>
+                  {game.tags.map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
                 </div>
-              </button>
+                <footer className={catalog.cardBottom}>
+                  <span>
+                    <UsersRound size={14} aria-hidden="true" /> {game.players}
+                  </span>
+                  <span aria-hidden="true">
+                    자세히 보기 <ArrowRight size={14} />
+                  </span>
+                </footer>
+              </div>
               <button
                 type="button"
                 className={catalog.save}
@@ -244,12 +289,12 @@ export function GameRoomCreate() {
                 onClick={() => toggleSavedGame(game.id)}
               >
                 <Bookmark
-                  size={17}
+                  size={18}
                   fill={savedGames.includes(game.id) ? "currentColor" : "none"}
                   aria-hidden="true"
                 />
               </button>
-            </div>
+            </article>
           ))}
         </div>
         {games.length === 0 && (
@@ -296,16 +341,16 @@ export function GameRoomCreate() {
               <GameCover game={gameType} large />
               <div className={catalog.detailBody}>
                 <span className={catalog.detailEyebrow}>{selected.eyebrow}</span>
-                <h2 id="game-setup-heading" ref={setupHeading} tabIndex={-1}>
+                <h1 id="game-setup-heading" ref={setupHeading} tabIndex={-1}>
                   {selected.title}
-                </h2>
+                </h1>
                 <p className={catalog.hook}>{selected.hook}</p>
                 <div className={catalog.detailFacts}>
                   <span>
                     <UsersRound size={15} /> {selected.players}
                   </span>
                   <span>{selected.format}</span>
-                  <span>진행자 별도</span>
+                  <span>호스트 참가 가능</span>
                 </div>
                 <button
                   type="button"
@@ -328,10 +373,16 @@ export function GameRoomCreate() {
             </div>
             <section
               className={`${styles.card} ${catalog.settings}`}
+              aria-labelledby="game-settings-heading"
               aria-label={`${selected.title} 방 설정`}
             >
               <div className={styles.sectionTitle}>
-                <h2 ref={settingsHeading} tabIndex={-1} className={catalog.settingsHeading}>
+                <h2
+                  id="game-settings-heading"
+                  ref={settingsHeading}
+                  tabIndex={-1}
+                  className={catalog.settingsHeading}
+                >
                   게임방 열기
                 </h2>
                 <span className={styles.pill}>진행자 전용</span>
@@ -339,7 +390,29 @@ export function GameRoomCreate() {
               <p className={catalog.settingsIntro}>
                 게임을 골랐나요? 인원과 규칙을 정하고 친구들을 초대해요.
               </p>
-              <form onSubmit={submit} className={styles.form}>
+              <form
+                onSubmit={submit}
+                method="post"
+                aria-labelledby="game-settings-heading"
+                className={styles.form}
+              >
+                {(gameType === "drawing" || gameType === "clue") && (
+                  <CreativeSettingsFields
+                    kind={gameType}
+                    value={{ ...creative, capacity, minPlayers }}
+                    disabled={busy}
+                    onChange={changeCreative}
+                  />
+                )}
+                {gameType === "temperature" && (
+                  <TemperatureSettingsFields
+                    value={temperature}
+                    capacity={capacity}
+                    disabled={busy}
+                    rowClassName={styles.fields}
+                    onChange={setTemperature}
+                  />
+                )}
                 {gameType === "toast" && (
                   <>
                     <label>
@@ -523,14 +596,13 @@ export function GameRoomCreate() {
                         if (minPlayers > value) setMinPlayers(value);
                       }}
                     >
-                      {Array.from(
-                        { length: gameType !== "lobby" ? 28 : 29 },
-                        (_, i) => i + (gameType !== "lobby" ? 3 : 2),
-                      ).map((n) => (
-                        <option key={n} value={n}>
-                          {n}명
-                        </option>
-                      ))}
+                      {Array.from({ length: maximum - minimum + 1 }, (_, i) => i + minimum).map(
+                        (n) => (
+                          <option key={n} value={n}>
+                            {n}명
+                          </option>
+                        ),
+                      )}
                     </select>
                   </label>
                   <label>
@@ -540,19 +612,18 @@ export function GameRoomCreate() {
                       value={minPlayers}
                       onChange={(e) => setMinPlayers(Number(e.target.value))}
                     >
-                      {Array.from(
-                        { length: capacity - (gameType !== "lobby" ? 2 : 1) },
-                        (_, i) => i + (gameType !== "lobby" ? 3 : 2),
-                      ).map((n) => (
-                        <option key={n} value={n}>
-                          {n}명부터
-                        </option>
-                      ))}
+                      {Array.from({ length: capacity - minimum + 1 }, (_, i) => i + minimum).map(
+                        (n) => (
+                          <option key={n} value={n}>
+                            {n}명부터
+                          </option>
+                        ),
+                      )}
                     </select>
                   </label>
                 </div>
                 <p className={styles.muted}>
-                  호스트는 진행만 맡아요. 참가 정원에는 포함되지 않아요.
+                  호스트도 대기실에서 참가할 수 있어요. 참가하면 정원에 1명으로 포함돼요.
                 </p>
                 {error && (
                   <p role="alert" className={styles.error}>
@@ -612,15 +683,21 @@ export function GameRoomCreate() {
             여러 탭은 한 참가자로 연결돼요.
           </p>
           <p className={styles.templateNote}>
-            {gameType === "toast"
-              ? "건배 버튼은 질문에 대한 선택이에요. 음주는 자유이며 물이나 음료로도 함께할 수 있어요."
-              : gameType === "mbti-intro"
-                ? "참가자가 입력한 MBTI는 게임 종료 후 해당 게임 참가자들에게 공개돼요."
-                : gameType === "auction"
-                  ? "게임 머니는 현금으로 교환할 수 없어요. 판매자는 음수 잔액으로 진행할 수 있고, 유찰이면 매입금을 환급해요."
-                  : gameType === "word-liar"
-                    ? "제시어를 직접 말하지 말고 특징이나 경험으로 설명해보세요. 실제 개인 MBTI는 입력하지 않아요."
-                    : "호스트가 규칙을 직접 안내하는 대기실이에요. 자동 문제·점수·승패 집계는 제공하지 않아요."}
+            {gameType === "drawing"
+              ? "그림은 게임 참가자끼리만 공유해요. 완료된 결과와 개인 자료는 종료 후 24시간 동안 볼 수 있어요."
+              : gameType === "clue"
+                ? "현재 위치를 수집하지 않아요. 문제의 정답을 지도에서 선택해요. 개인 사진은 해당 게임 참가자만 볼 수 있어요."
+                : gameType === "temperature"
+                  ? "상황과 제출 결과는 이 게임의 참가자와 진행자가 결과 화면에서 확인해요."
+                  : gameType === "toast"
+                    ? "건배 버튼은 질문에 대한 선택이에요. 음주는 자유이며 물이나 음료로도 함께할 수 있어요."
+                    : gameType === "mbti-intro"
+                      ? "참가자가 입력한 MBTI는 게임 종료 후 해당 게임 참가자들에게 공개돼요."
+                      : gameType === "auction"
+                        ? "게임 머니는 현금으로 교환할 수 없어요. 판매자는 음수 잔액으로 진행할 수 있고, 유찰이면 매입금을 환급해요."
+                        : gameType === "word-liar"
+                          ? "제시어를 직접 말하지 말고 특징이나 경험으로 설명해보세요. 실제 개인 MBTI는 입력하지 않아요."
+                          : "호스트가 규칙을 직접 안내하는 대기실이에요. 자동 문제·점수·승패 집계는 제공하지 않아요."}
           </p>
         </section>
       )}

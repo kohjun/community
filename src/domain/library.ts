@@ -155,6 +155,14 @@ export const templateHostSchema = z
     if (new Date(v.endsAt) <= new Date(v.startsAt))
       ctx.addIssue({ code: "custom", path: ["endsAt"], message: "종료는 시작보다 늦어야 해요." });
   });
+export const publishTemplateHostSchema = templateHostSchema.superRefine((value, context) => {
+  if (!value.applicationUrl)
+    context.addIssue({
+      code: "custom",
+      path: ["applicationUrl"],
+      message: "외부 신청 링크를 입력해주세요.",
+    });
+});
 export interface LibrarySummary {
   id: string;
   kind: LibraryKind;

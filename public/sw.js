@@ -16,6 +16,7 @@ function safeNotificationUrl(value) {
       const post = url.searchParams.get("post");
       return post && POST_ID.test(post) ? `${url.pathname}?post=${post}` : url.pathname;
     }
+    if (/^\/crews\/[0-9a-f-]{36}$/i.test(url.pathname) && url.searchParams.get("tab") === "chat") return url.pathname + "?tab=chat";
     if (
       url.pathname === "/mypage" ||
       url.pathname === "/participation" ||

@@ -608,3 +608,28 @@ test("KST reward windows stay 24 hours and switch at UTC 15 even in DST sessions
     await pg.exec("set time zone 'UTC'");
   }
 });
+
+test("public publishing refuses new direct recruitment and accepts external links without altering legacy editing", async () => {
+  const direct = {
+    ...input,
+    applicationUrl: null,
+    location: "서울",
+    eventDate: "토요일 오후 3시",
+    eventFee: "무료",
+  };
+  await assert.rejects(service.publishPost(null, direct), code("UNAUTHENTICATED"));
+  await assert.rejects(
+    service.publishPost(owner, direct),
+    (error) => error instanceof Error && error.name === "ZodError",
+  );
+  const published = await service.publishPost(owner, input);
+  assert.equal(published.applicationUrl, input.applicationUrl);
+  const legacy = await service.createPost(owner, direct);
+  const updated = await editPost(owner, {
+    ...direct,
+    postId: legacy.id,
+    title: "기존 직접 모집 수정",
+  });
+  assert.equal(updated.title, "기존 직접 모집 수정");
+  assert.equal(updated.applicationUrl, null);
+});

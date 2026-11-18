@@ -797,3 +797,400 @@ test("undercover word modes give a distinct category word, respect hidden roles,
     assert.equal(final.mbti!.result!.winner, "players");
   }
 });
+
+async function temperatureRoom(mode: "basic" | "deduction", playerCount = 3, rounds = 1) {
+  roomId = (
+    await service.create(owner, {
+      gameType: "temperature",
+      title: "마음의 온도",
+      capacity: playerCount,
+      minPlayers: playerCount,
+      temperatureMode: mode,
+      temperatureRounds: rounds,
+      temperatureAnswerSeconds: 30,
+    })
+  ).id;
+  const moderator = host();
+  const people = Array.from({ length: playerCount }, () => person());
+  const ids: string[] = [];
+  for (const [index, player] of people.entries()) {
+    const view = await joinReady(player, `온도${index + 1}`);
+    ids.push(view.viewer.id!);
+  }
+  const lobby = await service.read(roomId, moderator);
+  const started = await service.host(roomId, moderator, {
+    action: "start",
+    revision: lobby.revision,
+  });
+  return { moderator, people, ids, started, runId: started.temperature!.runId! };
+}
+
+test("temperature basic keeps the answer private, scores simultaneous nearest guesses once, and rotates clues", async () => {
+  const {
+    moderator,
+    people: [a, b, c],
+    ids,
+    started,
+    runId,
+  } = await temperatureRoom("basic");
+  const secret = (await service.read(roomId, a!)).temperature!.mySecret!;
+  assert.ok(Number.isInteger(secret) && secret >= 0 && secret <= 100);
+  assert.equal(started.temperature!.mySecret, null);
+  assert.equal(started.temperature!.clueId, ids[0]);
+  assert.equal((await service.read(roomId, b!)).temperature!.mySecret, null);
+  const waiting = person();
+  assert.equal((await service.connect(roomId, waiting)).temperature, null);
+  const guess = (value: number) => ({ action: "temperature-guess", runId, turn: 1, value });
+  await assert.rejects(service.player(roomId, b!, guess(50)), code("CONFLICT"));
+  now = new Date(now.getTime() + 30_000);
+  assert.equal((await service.read(roomId, moderator)).temperature!.stage, "guess");
+  await assert.rejects(service.player(roomId, a!, guess(50)), code("FORBIDDEN"));
+  const lower = secret === 0 ? 1 : secret - 1;
+  const higher = secret === 100 ? 99 : secret + 1;
+  const submissions = await Promise.allSettled([
+    service.player(roomId, b!, guess(lower)),
+    service.player(roomId, b!, guess(higher)),
+    service.player(roomId, c!, guess(higher)),
+  ]);
+  assert.equal(submissions.filter((entry) => entry.status === "fulfilled").length, 2);
+  const review = await service.read(roomId, moderator);
+  assert.equal(review.temperature!.stage, "review");
+  assert.equal(review.temperature!.result?.mode, "basic");
+  assert.deepEqual(
+    review.temperature!.roster.map((player) => player.score),
+    [0, 1, 1],
+  );
+  assert.equal((await service.read(roomId, waiting)).temperature, null);
+  const next = await service.host(roomId, moderator, {
+    action: "temperature-next",
+    turn: 1,
+    revision: review.revision,
+  });
+  assert.equal(next.temperature!.clueId, ids[1]);
+  assert.equal(next.temperature!.result, null);
+  assert.notEqual(next.temperature!.topic!.question, review.temperature!.topic!.question);
+});
+
+test("temperature deduction reveals only shared shuffled situations until the order is scored", async () => {
+  const { moderator, people, ids, runId } = await temperatureRoom("deduction", 4);
+  const values = [20, 20, 50, 80];
+  for (let index = 0; index < people.length; index++) {
+    await service.player(roomId, people[index]!, {
+      action: "temperature-situation",
+      runId,
+      turn: 1,
+      text: `내가 만난 상황 ${index + 1}`,
+      value: values[index],
+    });
+    if (index < people.length - 1) {
+      const hidden = (await service.read(roomId, moderator)).temperature!;
+      assert.deepEqual(hidden.situations, []);
+      assert.equal(hidden.mySituation, null);
+    }
+  }
+  const ordering = (await service.read(roomId, moderator)).temperature!;
+  assert.equal(ordering.stage, "ordering");
+  assert.equal(ordering.result, null);
+  assert.deepEqual(new Set(ordering.situations.map((item) => item.id)), new Set(ids));
+  for (const item of ordering.situations)
+    assert.deepEqual(Object.keys(item).sort(), ["id", "text"]);
+  const order = (items: string[]) => ({
+    action: "temperature-order",
+    runId,
+    turn: 1,
+    order: items,
+  });
+  await assert.rejects(
+    service.player(roomId, people[0]!, order([ids[0]!, ids[0]!, ids[2]!, ids[3]!])),
+    code("VALIDATION"),
+  );
+  await assert.rejects(
+    service.player(roomId, people[0]!, { ...order(ids), runId: randomUUID() }),
+    code("CONFLICT"),
+  );
+  await service.player(roomId, people[0]!, order(ids));
+  const other = (await service.read(roomId, people[1]!)).temperature!;
+  assert.equal(other.myOrder, null);
+  assert.equal(other.mySituation?.value, 20);
+  assert.deepEqual(other.situations, ordering.situations);
+  assert.deepEqual((await service.connect(roomId, people[0]!)).temperature!.myOrder, ids);
+  await service.player(roomId, people[1]!, order([ids[1]!, ids[0]!, ids[2]!, ids[3]!]));
+  await service.player(roomId, people[2]!, order([ids[2]!, ids[0]!, ids[1]!, ids[3]!]));
+  now = new Date(now.getTime() + 30_000);
+  const review = await service.read(roomId, moderator);
+  const result = review.temperature!.result;
+  assert.equal(result?.mode, "deduction");
+  if (result?.mode !== "deduction") throw new Error("Missing deduction result");
+  assert.equal(result.comparablePairs, 5);
+  assert.deepEqual(
+    ids.slice(0, 3).map((id) => {
+      const item = result.orders.find((entry) => entry.id === id)!;
+      return [item.correctPairs, item.points];
+    }),
+    [
+      [5, 1],
+      [5, 1],
+      [3, 0],
+    ],
+  );
+  assert.deepEqual(
+    review.temperature!.roster.map((person) => person.score),
+    [1, 1, 0, 0],
+  );
+  const end = await service.host(roomId, moderator, {
+    action: "temperature-next",
+    turn: 1,
+    revision: review.revision,
+  });
+  assert.equal(end.phase, "finished");
+  assert.equal(end.temperature!.stage, "result");
+});
+
+test("temperature gives no point without comparable situations and stops without revealing a late answer", async () => {
+  const { moderator, people, runId } = await temperatureRoom("deduction", 3, 2);
+  for (const player of people)
+    await service.player(roomId, player, {
+      action: "temperature-situation",
+      runId,
+      turn: 1,
+      text: "친구와 산책하는 상황",
+      value: 50,
+    });
+  let review = await service.read(roomId, moderator);
+  assert.equal(review.temperature!.stage, "review");
+  assert.deepEqual(
+    review.temperature!.roster.map((person) => person.score),
+    [0, 0, 0],
+  );
+  await service.host(roomId, moderator, {
+    action: "temperature-next",
+    turn: 1,
+    revision: review.revision,
+  });
+  await service.player(roomId, people[0]!, {
+    action: "temperature-situation",
+    runId,
+    turn: 2,
+    text: "혼자 공연을 보는 상황",
+    value: 0,
+  });
+  now = new Date(now.getTime() + 30_000);
+  review = await service.read(roomId, moderator);
+  assert.equal(review.temperature!.stage, "review");
+  assert.deepEqual(
+    review.temperature!.roster.map((person) => person.score),
+    [0, 0, 0],
+  );
+
+  const basic = await temperatureRoom("basic");
+  const guess = await service.host(roomId, basic.moderator, {
+    action: "temperature-open",
+    revision: basic.started.revision,
+    turn: 1,
+  });
+  now = new Date(now.getTime() + 30_000);
+  const stopped = await service.host(roomId, basic.moderator, {
+    action: "finish",
+    revision: guess.revision,
+  });
+  assert.equal(stopped.temperature!.stage, "aborted");
+  assert.equal(stopped.temperature!.result, null);
+  assert.equal((await service.read(roomId, basic.people[0]!)).temperature!.mySecret, null);
+});
+
+test("a host can opt into FIFO, cancel a seat, and stay the room moderator", async () => {
+  const moderator = host();
+  const a = person(),
+    b = person(),
+    waiting = person();
+  await joinReady(a, "참가자1");
+  await joinReady(b, "참가자2");
+  await service.connect(roomId, waiting);
+  await assert.rejects(service.connect(roomId, person(), true), code("FORBIDDEN"));
+  await assert.rejects(service.connect(roomId, person(outsider), true), code("FORBIDDEN"));
+  const [first, again] = await Promise.all([
+    service.connect(roomId, moderator, true),
+    service.connect(roomId, moderator, true),
+  ]);
+  assert.equal(first.viewer.id, again.viewer.id);
+  assert.equal(first.viewer.queuePosition, 2);
+  assert.equal(first.isHost, true);
+  assert.equal(first.canStart, false);
+  await assert.rejects(
+    service.host(roomId, moderator, { action: "start", revision: again.revision }),
+    code("CONFLICT"),
+  );
+  await service.player(roomId, a, { action: "leave" });
+  assert.equal((await service.read(roomId, waiting)).viewer.status, "admitted");
+  await service.player(roomId, b, { action: "leave" });
+  const admitted = await service.connect(roomId, moderator);
+  assert.equal(admitted.viewer.status, "admitted");
+  assert.equal(admitted.viewer.id, first.viewer.id);
+  await assert.rejects(
+    service.host(roomId, moderator, {
+      action: "kick",
+      revision: admitted.revision,
+      playerId: admitted.viewer.id,
+    }),
+    code("CONFLICT"),
+  );
+  const left = await service.player(roomId, moderator, { action: "leave" });
+  assert.equal(left.viewer.status, "host");
+  assert.equal(left.players.length, 1);
+  assert.equal(left.isHost, true);
+  assert.equal((await service.connect(roomId, moderator)).viewer.status, "host");
+  assert.equal((await service.connect(roomId, moderator, true)).viewer.id, first.viewer.id);
+});
+
+for (const gameType of [
+  "mbti",
+  "word-liar",
+  "mbti-intro",
+  "auction",
+  "toast",
+  "temperature",
+] as const) {
+  test(`the playing host sees only their own secrets and can submit in ${gameType}`, async () => {
+    roomId = (
+      await service.create(owner, {
+        title: "호스트 참여 게임",
+        capacity: 3,
+        minPlayers: 3,
+        gameType,
+        toastMode: "target",
+        temperatureMode: "deduction",
+      })
+    ).id;
+    const moderator = host(),
+      a = person(),
+      b = person();
+    const { viewer } = await service.connect(roomId, moderator, true);
+    assert.equal(viewer.status, "admitted");
+    for (const [index, who] of [moderator, a, b].entries()) {
+      await service.connect(roomId, who);
+      const nickname = `게임참가자${index + 1}`;
+      await service.player(
+        roomId,
+        who,
+        gameType === "mbti-intro"
+          ? {
+              action: "intro-profile",
+              nickname,
+              mbti: introWords[index],
+              shareAtEnd: true,
+            }
+          : { action: "nickname", nickname },
+      );
+      await service.player(roomId, who, { action: "ready", ready: true });
+    }
+    const ready = await service.read(roomId, moderator);
+    assert.equal(ready.canStart, true);
+    assert.equal(ready.readyCount, 3);
+    const started = await service.host(roomId, moderator, {
+      action: "start",
+      revision: ready.revision,
+    });
+    assert.equal(started.isHost, true);
+    assert.equal(started.viewer.id, viewer.id);
+    const other = await service.read(roomId, a);
+    await assert.rejects(service.player(roomId, moderator, { action: "leave" }), code("CONFLICT"));
+    if (gameType === "mbti" || gameType === "word-liar") {
+      assert.ok(started.mbti!.assignment);
+      assert.equal(started.mbti!.liarId, null);
+      assert.equal(started.mbti!.result, null);
+      await mbtiVoting(3);
+      const vote = await service.player(roomId, moderator, {
+        action: "mbti-vote",
+        cycle: 1,
+        target: other.viewer.id,
+      });
+      assert.equal(vote.mbti!.myVote, other.viewer.id);
+      assert.equal((await service.read(roomId, a)).mbti!.myVote, null);
+    } else if (gameType === "mbti-intro") {
+      assert.equal(started.mbtiIntro!.myMbti, introWords[0]);
+      assert.equal(other.mbtiIntro!.myMbti, introWords[1]);
+      assert.equal(started.mbtiIntro!.answers, null);
+      await explainIntro([moderator, a, b], 1);
+      const v = await service.player(roomId, moderator, {
+        action: "intro-submit",
+        round: 1,
+        guesses: [
+          { playerId: other.viewer.id, mbti: introWords[1] },
+          { playerId: (await service.read(roomId, b)).viewer.id, mbti: introWords[2] },
+        ],
+      });
+      assert.equal(v.mbtiIntro!.hasSubmitted, true);
+      assert.equal((await service.read(roomId, a)).mbtiIntro!.hasSubmitted, false);
+    } else if (gameType === "auction") {
+      assert.equal(started.auction!.lot!.sellerId, viewer.id);
+      assert.ok(started.auction!.lot!.appraisal);
+      assert.equal(other.auction!.lot!.appraisal, null);
+      await service.host(roomId, moderator, {
+        action: "auction-open",
+        round: 1,
+        revision: started.revision,
+      });
+      now = new Date(now.getTime() + 60_000);
+      const settled = await service.read(roomId, moderator);
+      const next = await service.host(roomId, moderator, {
+        action: "auction-next",
+        round: 1,
+        revision: settled.revision,
+      });
+      assert.equal(next.auction!.lot!.appraisal, null);
+      const open = await service.host(roomId, moderator, {
+        action: "auction-open",
+        round: 2,
+        revision: next.revision,
+      });
+      assert.equal(open.auction!.canBid, true);
+      const bid = await service.player(roomId, moderator, {
+        action: "auction-bid",
+        round: 2,
+        amount: 10,
+      });
+      assert.equal(bid.auction!.lot!.highestBidder, viewer.id);
+    } else if (gameType === "toast") {
+      assert.equal(started.toast!.questionerId, viewer.id);
+      assert.notEqual(started.toast!.target, null);
+      assert.equal(other.toast!.target, null);
+      await service.player(roomId, moderator, {
+        action: "toast-question",
+        turn: 1,
+        question: "약속에 먼저 도착하는 편이다",
+      });
+      const answer = await service.player(roomId, moderator, {
+        action: "toast-answer",
+        turn: 1,
+        cheers: true,
+      });
+      assert.equal(answer.toast!.myAnswer?.cheers, true);
+      assert.equal((await service.read(roomId, a)).toast!.myAnswer, null);
+    } else {
+      const runId = started.temperature!.runId!;
+      for (const [index, who] of [moderator, a, b].entries()) {
+        const submission = await service.player(roomId, who, {
+          action: "temperature-situation",
+          runId,
+          turn: 1,
+          text: `호스트 참여 상황 ${index}`,
+          value: index * 40,
+        });
+        assert.equal(submission.temperature!.mySituation!.value, index * 40);
+      }
+      const ordering = (await service.read(roomId, moderator)).temperature!;
+      assert.equal(ordering.situations.length, 3);
+      assert.equal(ordering.result, null);
+      assert.ok(ordering.situations.every((item) => !Object.hasOwn(item, "value")));
+      const order = ordering.situations.map((item) => item.id);
+      const submitted = await service.player(roomId, moderator, {
+        action: "temperature-order",
+        runId,
+        turn: 1,
+        order,
+      });
+      assert.deepEqual(submitted.temperature!.myOrder, order);
+      assert.equal((await service.read(roomId, a)).temperature!.myOrder, null);
+    }
+  });
+}

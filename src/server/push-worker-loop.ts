@@ -1,3 +1,4 @@
+import { cleanupGameAssets } from "./game-media-core";
 import { objectCleanupService } from "./object-cleanup-service";
 import { removeCleanupObject } from "./object-cleanup-runtime";
 import type { Database } from "../db/connection";
@@ -29,6 +30,7 @@ export function startPushWorker(
         await options.onProgress?.();
         if (Date.now() - lastCleanup >= 30_000) {
           lastCleanup = Date.now();
+          await cleanupGameAssets(db);
           await cleanup.drain(5);
           if (!stopped) await options.onProgress?.();
         }

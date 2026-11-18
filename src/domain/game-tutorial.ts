@@ -1,5 +1,15 @@
+import { creativeTutorial } from "./creative-tutorial";
 import type { WordMode } from "./word-liar";
-export type TutorialGame = "mbti-intro" | "word-liar" | "auction" | "lobby" | "mbti" | "toast";
+export type TutorialGame =
+  | "mbti-intro"
+  | "word-liar"
+  | "auction"
+  | "lobby"
+  | "mbti"
+  | "toast"
+  | "temperature"
+  | "drawing"
+  | "clue";
 export type TutorialAudience = "player" | "host";
 export type TutorialStep = { title: string; body: string; action: string };
 export type GameTutorialCopy = {
@@ -15,7 +25,7 @@ export type GameTutorialCopy = {
 };
 const commonHost: TutorialStep = {
   title: "링크·QR로 초대해요",
-  body: "진행자는 방을 만들고 참가 링크나 QR을 공유해요. 참가자는 회원가입 없이 들어오며, 정원이 차면 접속한 순서대로 기다려요. 진행자는 플레이어 정원에 포함되지 않아요.",
+  body: "진행자는 방을 만들고 참가 링크나 QR을 공유해요. 참가자는 회원가입 없이 들어오며, 정원이 차면 접속한 순서대로 기다려요. 진행자도 대기실에서 ‘플레이어로 참가’를 누르면 정원에 1명으로 포함돼요.",
   action: "참가 링크 복사 또는 QR 크게 보기 → 모두에게 공유",
 };
 const waitForReady: TutorialStep = {
@@ -27,7 +37,7 @@ const intro: GameTutorialCopy = {
   title: "MBTI 자기소개 게임",
   summary: "상황에 대한 내 반응을 소개하고, 다른 사람들의 MBTI를 맞혀요.",
   goal: "나를 제외한 모든 참가자의 MBTI를 가장 먼저 전부 맞히면 승리해요.",
-  facts: ["참가자 3~30명", "진행자 별도", "탈락 없이 함께"],
+  facts: ["참가자 3~30명", "호스트 참가 가능", "탈락 없이 함께"],
   player: [
     {
       title: "닉네임과 내 MBTI를 저장해요",
@@ -59,7 +69,7 @@ const intro: GameTutorialCopy = {
     commonHost,
     {
       ...waitForReady,
-      body: "참가자들이 닉네임과 내 MBTI를 저장하고 모두 준비해야 해요. 방을 만들 때 1~10라운드를 정해요. 진행자는 참가자의 비공개 MBTI를 미리 볼 수 없어요.",
+      body: "참가자들이 닉네임과 내 MBTI를 저장하고 모두 준비해야 해요. 방을 만들 때 1~10라운드를 정해요. 게임이 끝나기 전에는 참가자마다 자신의 MBTI만 확인할 수 있어요.",
     },
     {
       title: "설명 순서를 안내해요",
@@ -99,7 +109,7 @@ const auction: GameTutorialCopy = {
   title: "수상한 경매장",
   summary: "판매자는 물건을 설득해서 팔고, 구매자는 가치를 추리해 입찰해요.",
   goal: "마지막에 남은 게임 머니와 구매한 물건의 감정가를 합친 총 자산이 가장 높으면 승리해요.",
-  facts: ["참가자 3~30명", "진행자 별도", "실제 결제 없음"],
+  facts: ["참가자 3~30명", "호스트 참가 가능", "실제 결제 없음"],
   player: [
     {
       title: "같은 게임 머니로 시작해요",
@@ -131,7 +141,7 @@ const auction: GameTutorialCopy = {
     commonHost,
     {
       title: "인원보다 많은 라운드로 시작해요",
-      body: "총 라운드 수는 실제 참가자 수보다 많아야 해요. 시작 머니와 입찰 시간을 정하고, 입장한 모든 참가자가 닉네임과 준비를 마치면 시작해요. 진행자는 숨겨진 감정가를 미리 보지 않아요.",
+      body: "총 라운드 수는 실제 참가자 수보다 많아야 해요. 시작 머니와 입찰 시간을 정하고, 입장한 모든 참가자가 닉네임과 준비를 마치면 시작해요. 감정가는 판매자 역할을 맡은 사람에게만 먼저 보여요.",
       action: "라운드·머니·시간 설정 → 전원 준비 확인 → 게임 시작",
     },
     {
@@ -173,7 +183,7 @@ const lobby: GameTutorialCopy = {
   title: "자유 게임 대기실",
   summary: "함께 모여 준비하고, 진행자가 정한 미션이나 게임을 자유롭게 즐겨요.",
   goal: "링크·QR 입장과 준비 확인을 도와주는 공통 대기실이에요. 자동 문제·점수·승패 판정은 없어요.",
-  facts: ["참가자 2~30명", "진행자 별도", "규칙은 직접 안내"],
+  facts: ["참가자 2~30명", "호스트 참가 가능", "규칙은 직접 안내"],
   player: [
     {
       title: "링크·QR로 입장해요",
@@ -218,7 +228,8 @@ const lobby: GameTutorialCopy = {
     },
     {
       question: "진행자도 참가 인원에 포함되나요?",
-      answer: "아니요. 진행자는 준비 확인과 시작·종료를 맡으며 플레이어 자리를 차지하지 않아요.",
+      answer:
+        "대기실에서 ‘플레이어로 참가’를 선택하면 정원에 1명으로 포함돼요. 진행만 맡는 경우에는 자리를 차지하지 않아요.",
     },
   ],
 };
@@ -262,7 +273,7 @@ const toast: GameTutorialCopy = {
     },
     {
       title: "결과는 자동으로 공개돼요",
-      body: "전원 제출 또는 제한시간 종료 시 집계해요. 진행자도 개인 선택과 기본 모드 예상, 심화 모드 비공개 목표를 미리 볼 수 없어요. 결과를 확인하고 다음 질문으로 넘겨요.",
+      body: "전원 제출 또는 제한시간 종료 시 집계해요. 다른 참가자의 개인 선택, 예상 인원, 비공개 목표는 미리 볼 수 없어요. 결과를 확인하고 다음 질문으로 넘겨요.",
       action: "제출 인원 확인 → 결과 확인 → 다음 질문으로",
     },
     {
@@ -286,8 +297,7 @@ const toast: GameTutorialCopy = {
   questions: [
     {
       question: "심화 모드 목표는 누가 보나요?",
-      answer:
-        "질문자에게만 미리 보이고 결과 때 공개돼요. 진행자와 다른 참가자들은 미리 볼 수 없어요.",
+      answer: "질문자 본인에게만 미리 보이고 결과 때 공개돼요.",
     },
     {
       question: "시간이 끝날 때까지 제출하지 못하면요?",
@@ -301,11 +311,73 @@ const toast: GameTutorialCopy = {
     },
   ],
 };
+const temperature: GameTutorialCopy = {
+  title: "마음의 온도",
+  summary: "서로의 설명을 듣고 같은 주제를 얼마나 강하게 느끼는지 맞혀요.",
+  goal: "숫자나 상황의 순서를 가장 가깝게 맞히면 1점이에요. 공동 1등은 모두 1점을 받아요.",
+  facts: ["참가자 3~30명", "기본·추리 2가지 모드", "현장에서 말로 대화"],
+  player: [
+    {
+      title: "공통 주제와 0·100의 기준을 확인해요",
+      body: "주제마다 0과 100의 의미가 달라요. 화면을 함께 확인한 뒤 상대가 상황을 어떻게 느낄지 생각해보세요.",
+      action: "주제와 양쪽 기준 읽기",
+    },
+    {
+      title: "기본 모드에서는 비밀 숫자를 맞혀요",
+      body: "힌트 제공자는 자신만 본 숫자에 어울리는 상황을 30초 동안 말해요. 나머지는 숫자를 비공개로 제출해요. 모두 한 번씩 설명하면 1라운드예요.",
+      action: "설명 듣기 → 0~100 숫자 제출",
+    },
+    {
+      title: "추리 모드에서는 상황을 낮은 순서로 놓아요",
+      body: "모두 상황과 숫자를 제출해요. 이름과 상황이 공개되면 내 상황을 포함한 모든 카드를 숫자가 낮을 것 같은 순서로 배치해요.",
+      action: "상황·숫자 제출 → 카드 정렬 → 순서 제출",
+    },
+    {
+      title: "결과를 보고 생각을 나눠요",
+      body: "정답이 공개되면 왜 그 숫자를 선택했는지 이야기해요. 추리 모드는 숫자가 다른 두 상황의 앞뒤 순서를 맞힌 개수로 비교해요.",
+      action: "정답과 점수 확인 → 대화",
+    },
+  ],
+  host: [
+    commonHost,
+    waitForReady,
+    {
+      title: "모드와 제한시간을 정해요",
+      body: "기본 모드는 설명이 끝났을 때 숫자 제출을 열 수 있어요. 30초가 지나면 자동으로 열려요. 추리 모드는 상황 제출과 순서 제출을 따로 진행해요.",
+      action: "게임 시작 → 설명과 제출 확인",
+    },
+    {
+      title: "결과 화면에서 대화를 이어가요",
+      body: "전원 제출이나 시간 종료 후 결과가 공개돼요. 서로의 이유를 들은 뒤 다음 차례로 넘겨요. 마지막에는 누적 점수와 공동 순위를 확인해요.",
+      action: "결과 확인 → 다음 차례 또는 최종 순위",
+    },
+  ],
+  finish: "마지막 결과 확인 → 누적 점수와 최종 순위 공개",
+  tips: [
+    "힌트를 설명할 때 비밀 숫자 자체를 말하지 마세요.",
+    "상황에는 실명, 연락처 등 개인 정보를 넣지 마세요.",
+    "제한시간에 제출하지 않으면 이번 차례는 0점이에요.",
+  ],
+  questions: [
+    {
+      question: "추리 모드에서 같은 숫자는 어떻게 처리하나요?",
+      answer:
+        "같은 숫자끼리의 앞뒤는 비교에서 제외해요. 비교 가능한 쌍이 하나도 없으면 이번 라운드는 모두 0점이에요.",
+    },
+    {
+      question: "누가 제출 내용을 미리 볼 수 있나요?",
+      answer:
+        "본인이 제출한 값만 확인할 수 있어요. 추리 순서 단계에서는 닉네임과 상황만 공개하고, 숫자와 제출 순서는 결과에서 보여줘요.",
+    },
+  ],
+};
 export function getGameTutorial(
   game: TutorialGame,
   mode?: WordMode,
   revealLiar?: boolean,
 ): GameTutorialCopy {
+  if (game === "drawing" || game === "clue") return creativeTutorial(game);
+  if (game === "temperature") return temperature;
   if (game === "toast") return toast;
   if (game === "mbti-intro") return intro;
   if (game === "auction") return auction;
@@ -363,7 +435,7 @@ export function getGameTutorial(
       commonHost,
       {
         ...waitForReady,
-        body: `최소 3명이 모두 닉네임과 준비를 마쳐야 해요. ${assignment} 진행자는 비공개 정답을 미리 보지 않아요.`,
+        body: `최소 3명이 모두 닉네임과 준비를 마쳐야 해요. ${assignment} 각자 자기에게 배정된 카드만 미리 볼 수 있어요.`,
       },
       {
         title: "설명 순서와 비공개 투표를 안내해요",
@@ -380,7 +452,7 @@ export function getGameTutorial(
     ],
     finish: `라이어 발견 → 라이어가 공통 ${subject}를 맞히면 라이어 승리, 틀리면 참가자 승리`,
     tips: [
-      "카드를 다른 사람에게 보여주지 마세요. 진행자에게도 비공개 정답이 미리 보이지 않아요.",
+      "카드를 다른 사람에게 보여주지 마세요. 다른 사람의 카드 내용은 결과 공개 전까지 확인할 수 없어요.",
       "기권표를 제외한 인원이 아닌, 처음 시작한 전체 인원의 과반수로 계산해요.",
       "라이어를 찾은 뒤에도 일반 참가자들은 공통 정답을 말하지 마세요.",
     ],

@@ -230,7 +230,7 @@ export function AuctionGameStage({
                         ? `${name(lot.highestBidder)} 님이 앞서고 있어요`
                         : "첫 입찰로 경매를 시작해보세요"}
                     </p>
-                    {!room.isHost && !isSeller ? (
+                    {room.viewer.status === "admitted" && !isSeller ? (
                       <form
                         onSubmit={(e) => {
                           e.preventDefault();

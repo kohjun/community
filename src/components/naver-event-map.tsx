@@ -8,6 +8,7 @@ import {
   NaverMapSession,
   naverMapsScriptUrl,
   subscribeNaverAuthFailure,
+  type NaverConnection,
   type MapBounds,
   type MapPin,
   type MapPoint,
@@ -16,6 +17,7 @@ import {
 
 export type NaverEventMapProps = {
   clientId: string | null;
+  connections?: NaverConnection[];
   pins: MapPin[];
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -116,6 +118,7 @@ export function NaverEventMap(props: NaverEventMapProps) {
         );
         session.current = map;
         map.update(current.pins, current.selectedId, current.picking);
+        map.updateConnections(current.connections ?? []);
         if (current.focusPoint) map.focus(current.focusPoint);
         pendingFocus.current = false;
         pauseLoading();
@@ -164,8 +167,11 @@ export function NaverEventMap(props: NaverEventMapProps) {
   }, [clientId]);
 
   useEffect(() => {
-    if (hasMapSize(host.current)) session.current?.update(pins, selectedId, picking);
-  }, [pins, selectedId, picking]);
+    if (hasMapSize(host.current)) {
+      session.current?.update(pins, selectedId, picking);
+      session.current?.updateConnections(props.connections ?? []);
+    }
+  }, [pins, selectedId, picking, props.connections]);
 
   useEffect(() => {
     if (!focusPoint) {

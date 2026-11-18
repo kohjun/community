@@ -1,0 +1,2 @@
+ALTER TABLE "sliper"."object_cleanup_jobs" DROP CONSTRAINT "cleanup_reason";--> statement-breakpoint
+ALTER TABLE "sliper"."object_cleanup_jobs" ADD CONSTRAINT "cleanup_reason" CHECK ("sliper"."object_cleanup_jobs"."reason" in ('profile-replaced','profile-cleared','account-closed','upload-rollback','game-expired'));

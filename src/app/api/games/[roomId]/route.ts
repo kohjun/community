@@ -16,9 +16,12 @@ export async function PATCH(request: Request, { params }: Context) {
   return apiResponse(async () => {
     assertSameOrigin(request);
     const { roomId } = await params;
-    const host = new URL(request.url).searchParams.get("host") === "1";
+    const query = new URL(request.url).searchParams;
+    const host = query.get("host") === "1";
     const who = await gameContext(request, roomId, host);
     const body = await readJson(request, 2048);
-    return host ? gameService().host(roomId, who, body) : gameService().player(roomId, who, body);
+    return host && query.get("as") !== "player"
+      ? gameService().host(roomId, who, body)
+      : gameService().player(roomId, who, body);
   });
 }

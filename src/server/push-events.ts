@@ -58,3 +58,19 @@ export async function enqueueAnnouncementPush(
     on conflict(subscription_id,dedupe_key) do nothing
   `);
 }
+
+export async function enqueueCrewChatPush(
+  tx: Transaction,
+  input: { crewId: string; messageId: string; actorId: string },
+) {
+  await tx.execute(sql`
+    insert into sliper.push_deliveries(subscription_id,recipient_id,dedupe_key,kind,crew_id,title,body,url)
+    select s.id,s.user_id,${"crew-message:" + input.messageId},'crew_message',${input.crewId}::uuid,
+      '크루에 새 메시지가 도착했어요','크루 톡방에서 대화를 확인해주세요.',${"/crews/" + input.crewId + "?tab=chat"}
+    from sliper.push_subscriptions s join sliper.crew_members m on m.user_id=s.user_id and m.crew_id=${input.crewId}::uuid
+    left join sliper.push_preferences pref on pref.user_id=s.user_id
+    where s.user_id<>${input.actorId}::uuid and coalesce(pref.crew_messages,true)
+      and (s.expiration_time is null or s.expiration_time>statement_timestamp())
+    on conflict(subscription_id,dedupe_key) do nothing
+  `);
+}

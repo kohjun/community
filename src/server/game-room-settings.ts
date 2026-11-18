@@ -7,17 +7,46 @@ export function roomSettings(room: Room) {
     title: room.title,
     capacity: room.capacity,
     minPlayers: room.minPlayers,
-    gameType: room.toast
-      ? "toast"
-      : room.auction
-        ? "auction"
-        : room.intro
-          ? "mbti-intro"
-          : room.mbti?.words
-            ? "word-liar"
-            : room.mbti
-              ? "mbti"
-              : "lobby",
+    ...(room.drawing
+      ? {
+          drawingMode: room.drawing.settings.mode,
+          drawingSets: room.drawing.settings.sets,
+          drawingSeconds: room.drawing.settings.seconds,
+          drawingScored: room.drawing.settings.scored,
+        }
+      : {}),
+    ...(room.clue
+      ? {
+          clueMode: room.clue.settings.mode,
+          clueRounds: room.clue.settings.rounds,
+          clueSeconds: room.clue.settings.seconds,
+          clueSource: room.clue.settings.source,
+        }
+      : {}),
+    gameType: room.drawing
+      ? "drawing"
+      : room.clue
+        ? "clue"
+        : room.temperature
+          ? "temperature"
+          : room.toast
+            ? "toast"
+            : room.auction
+              ? "auction"
+              : room.intro
+                ? "mbti-intro"
+                : room.mbti?.words
+                  ? "word-liar"
+                  : room.mbti
+                    ? "mbti"
+                    : "lobby",
+    ...(room.temperature
+      ? {
+          temperatureMode: room.temperature.settings.mode,
+          temperatureRounds: room.temperature.settings.rounds,
+          temperatureAnswerSeconds: room.temperature.settings.answerSeconds,
+        }
+      : {}),
     ...(room.toast
       ? {
           toastMode: room.toast.settings.mode,

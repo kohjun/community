@@ -5,11 +5,12 @@ export const runtime = "nodejs";
 export async function POST(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
   return apiResponse(async () => {
     assertSameOrigin(request);
-    const { host } = z
-      .object({ host: z.boolean().default(false) })
+    const { host, play } = z
+      .object({ host: z.boolean().default(false), play: z.boolean().default(false) })
       .strict()
+      .refine((value) => !value.play || value.host)
       .parse(await readJson(request, 256));
     const { roomId } = await params;
-    return gameService().connect(roomId, await gameContext(request, roomId, host, true));
+    return gameService().connect(roomId, await gameContext(request, roomId, host, true), play);
   });
 }

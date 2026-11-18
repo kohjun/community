@@ -30,6 +30,7 @@ export function pushService(db: Database, config: PushConfiguration | null = pus
     const [prefs, subscriptions] = await Promise.all([
       db
         .select({
+          crewMessages: pushPreferences.crewMessages,
           comments: pushPreferences.comments,
           announcements: pushPreferences.announcements,
           participation: pushPreferences.participation,
@@ -147,6 +148,7 @@ export function pushService(db: Database, config: PushConfiguration | null = pus
         .where(eq(pushPreferences.userId, user));
       const preferences = {
         ...value,
+        crewMessages: value.crewMessages ?? saved?.crewMessages ?? true,
         subscriptions:
           value.subscriptions ?? saved?.subscriptions ?? DEFAULT_PUSH_PREFERENCES.subscriptions,
         reminders: value.reminders ?? saved?.reminders ?? DEFAULT_PUSH_PREFERENCES.reminders,
@@ -159,6 +161,7 @@ export function pushService(db: Database, config: PushConfiguration | null = pus
           set: { ...preferences, updatedAt: sql`statement_timestamp()` },
         });
       const disabled = [
+        ...(!preferences.crewMessages ? ["crew_message"] : []),
         ...(!preferences.comments ? ["comment"] : []),
         ...(!preferences.announcements ? ["announcement"] : []),
         ...(!preferences.participation ? ["participation"] : []),

@@ -1,9 +1,23 @@
+import {
+  DEFAULT_TEMPERATURE_SETTINGS,
+  TEMPERATURE_MODES,
+  TEMPERATURE_SECONDS,
+  type TemperatureView,
+} from "./temperature-game";
 import type { ToastView } from "./toast-game";
 import type { AuctionView } from "./auction-game";
 import { WORD_CATEGORY_IDS, WORD_MODES } from "./word-liar";
 import type { IntroView } from "./mbti-intro";
 import { MBTI_TYPES, type MbtiView } from "./mbti-game";
 import { z } from "zod";
+import {
+  creativeSettingsFields,
+  creativePlayerActions,
+  DRAWING_MODES,
+  CLUE_BASIC_LIMITS,
+  type DrawingView,
+  type ClueView,
+} from "./creative-games";
 export const GAME_LEASE_MS = 120_000;
 export const GAME_ROOM_TTL_MS = 24 * 60 * 60 * 1000;
 export const GAME_MAX_QUEUE = 100;
@@ -21,9 +35,25 @@ const cleanText = (min: number, max: number) =>
     );
 export const createGameRoomSchema = z
   .object({
+    ...creativeSettingsFields,
     gameType: z
-      .enum(["lobby", "mbti", "mbti-intro", "word-liar", "auction", "toast"])
+      .enum([
+        "lobby",
+        "mbti",
+        "mbti-intro",
+        "word-liar",
+        "auction",
+        "toast",
+        "temperature",
+        "drawing",
+        "clue",
+      ])
       .default("lobby"),
+    temperatureMode: z.enum(TEMPERATURE_MODES).default(DEFAULT_TEMPERATURE_SETTINGS.mode),
+    temperatureRounds: z.number().int().min(1).max(10).default(DEFAULT_TEMPERATURE_SETTINGS.rounds),
+    temperatureAnswerSeconds: z
+      .literal(TEMPERATURE_SECONDS)
+      .default(DEFAULT_TEMPERATURE_SETTINGS.answerSeconds),
     toastMode: z.enum(["basic", "target"]).default("basic"),
     toastRounds: z.number().int().min(1).max(10).default(2),
     toastAnswerSeconds: z
@@ -45,11 +75,46 @@ export const createGameRoomSchema = z
   .strict()
   .refine((v) => v.minPlayers <= v.capacity, "최소 인원은 정원 이하여야 해요.")
   .refine(
+    (v) =>
+      !["drawing", "clue"].includes(v.gameType) ||
+      (v.capacity <= 12 &&
+        (v.gameType !== "drawing" || v.minPlayers >= DRAWING_MODES[v.drawingMode].minimum)),
+    "새 게임은 최대 12명이며 선택한 모드의 최소 인원이 필요해요.",
+  )
+  .refine(
+    (v) =>
+      v.gameType !== "clue" ||
+      v.clueSource !== "basic" ||
+      v.clueMode === "member" ||
+      v.clueRounds <= CLUE_BASIC_LIMITS[v.clueMode],
+    "기본 문제는 사진 20개·소리 10개까지예요. 더 많은 문제는 직접 출제로 준비해주세요.",
+  )
+  .refine(
     (v) => v.gameType !== "auction" || v.auctionRounds > v.minPlayers,
     "경매 라운드 수는 최소 참가 인원보다 많아야 해요.",
   );
 export type GameRoomSettings = z.output<typeof createGameRoomSchema>;
+const temperatureTurn = z.number().int().min(1).max(300);
+const temperatureValue = z.number().int().min(0).max(100);
+const temperatureSubmission = { turn: temperatureTurn, runId: gameRoomId };
 export const gamePlayerActionSchema = z.discriminatedUnion("action", [
+  ...creativePlayerActions,
+  z.strictObject({
+    action: z.literal("temperature-guess"),
+    ...temperatureSubmission,
+    value: temperatureValue,
+  }),
+  z.strictObject({
+    action: z.literal("temperature-situation"),
+    ...temperatureSubmission,
+    text: cleanText(2, 160),
+    value: temperatureValue,
+  }),
+  z.strictObject({
+    action: z.literal("temperature-order"),
+    ...temperatureSubmission,
+    order: z.array(gameRoomId).min(2).max(30),
+  }),
   z
     .object({
       action: z.literal("toast-question"),
@@ -132,6 +197,18 @@ export const gamePlayerActionSchema = z.discriminatedUnion("action", [
 ]);
 const revision = z.number().int().nonnegative();
 export const gameHostActionSchema = z.discriminatedUnion("action", [
+  z.strictObject({
+    action: z.literal("creative-control"),
+    revision,
+    phaseId: z.uuid(),
+    command: z.enum(["next", "pause", "resume"]),
+  }),
+  creativePlayerActions[6],
+  z.strictObject({
+    action: z.enum(["temperature-open", "temperature-skip", "temperature-next"]),
+    revision,
+    turn: temperatureTurn,
+  }),
   z
     .object({
       action: z.literal("settings"),
@@ -168,9 +245,12 @@ export const gameHostActionSchema = z.discriminatedUnion("action", [
 export type GamePhase = "lobby" | "playing" | "finished" | "closed";
 export type GamePlayerStatus = "waiting" | "admitted" | "left" | "kicked";
 export type GameRoomView = {
+  drawing?: DrawingView | null;
+  clue?: ClueView | null;
   settings?: GameRoomSettings | null;
   settingsVersion?: string | null;
-  gameType?: "lobby" | "mbti" | "mbti-intro" | "word-liar" | "auction" | "toast";
+  gameType?: GameRoomSettings["gameType"];
+  temperature?: TemperatureView | null;
   toast?: ToastView | null;
   auction?: AuctionView | null;
   mbtiIntro?: IntroView | null;

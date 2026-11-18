@@ -1,4 +1,8 @@
 "use client";
+import { CreativeSettingsFields } from "./creative-settings-fields";
+import { DRAWING_MODES, CLUE_MODES } from "@/domain/creative-games";
+import { TemperatureSettingsFields } from "./temperature-settings-fields";
+import { TEMPERATURE_MODE_LABELS, temperatureSettingsFrom } from "@/domain/temperature-game";
 import { useState } from "react";
 import { Check, ChevronDown, RefreshCw, Settings2, X } from "lucide-react";
 import type { GameRoomSettings, GameRoomView } from "@/domain/game-room";
@@ -24,7 +28,14 @@ export function GameRoomSettingsPanel({
     [saved, setSaved] = useState(false);
   const config = room.settings;
   if (!config || !room.settingsVersion || room.phase !== "lobby") return null;
-  const minimum = config.gameType === "lobby" ? 2 : 3;
+  const activeConfig = draft ?? config;
+  const minimum =
+    config.gameType === "drawing"
+      ? DRAWING_MODES[activeConfig.drawingMode].minimum
+      : config.gameType === "clue" || config.gameType === "lobby"
+        ? 2
+        : 3;
+  const maximum = config.gameType === "drawing" || config.gameType === "clue" ? 12 : 30;
   const stale = open && version !== room.settingsVersion;
   const patch = (next: Partial<GameRoomSettings>) =>
     setDraft((value) => (value ? { ...value, ...next } : value));
@@ -36,6 +47,27 @@ export function GameRoomSettingsPanel({
   const info = [
     `정원 ${config.capacity}명`,
     `최소 ${config.minPlayers}명`,
+    ...(config.gameType === "drawing"
+      ? [
+          DRAWING_MODES[config.drawingMode].title,
+          `${config.drawingSets}바퀴`,
+          `${config.drawingSeconds}초`,
+        ]
+      : []),
+    ...(config.gameType === "clue"
+      ? [
+          CLUE_MODES[config.clueMode].title,
+          config.clueMode === "member" ? "모두 사진 1장씩" : `${config.clueRounds}문제`,
+          `${config.clueSeconds}초`,
+        ]
+      : []),
+    ...(config.gameType === "temperature"
+      ? [
+          TEMPERATURE_MODE_LABELS[config.temperatureMode],
+          `${config.temperatureRounds}라운드`,
+          `제출 ${config.temperatureAnswerSeconds}초`,
+        ]
+      : []),
     ...(config.gameType === "toast"
       ? [
           config.toastMode === "basic" ? "기본 · 인원 예측" : "심화 · 목표 질문",
@@ -156,7 +188,7 @@ export function GameRoomSettingsPanel({
                 }}
               >
                 {Array.from(
-                  { length: 31 - Math.max(minimum, room.players.length) },
+                  { length: maximum + 1 - Math.max(minimum, room.players.length) },
                   (_, i) => i + Math.max(minimum, room.players.length),
                 ).map((n) => (
                   <option key={n} value={n}>
@@ -189,6 +221,29 @@ export function GameRoomSettingsPanel({
               </select>
             </label>
           </div>
+          {(config.gameType === "drawing" || config.gameType === "clue") && (
+            <CreativeSettingsFields
+              kind={config.gameType}
+              value={draft}
+              onChange={patch}
+              disabled={busy}
+            />
+          )}
+          {config.gameType === "temperature" && (
+            <TemperatureSettingsFields
+              value={temperatureSettingsFrom(draft)}
+              capacity={draft.capacity}
+              disabled={busy}
+              rowClassName={styles.grid}
+              onChange={(value) =>
+                patch({
+                  temperatureMode: value.mode,
+                  temperatureRounds: value.rounds,
+                  temperatureAnswerSeconds: value.answerSeconds,
+                })
+              }
+            />
+          )}
           {config.gameType === "toast" && (
             <>
               <label>

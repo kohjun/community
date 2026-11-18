@@ -137,7 +137,7 @@ export function MbtiGameStage({
                 </span>
               </div>
               <p>과반수 {game.majority}표가 필요해요. 잘못 지목돼도 탈락하지 않아요.</p>
-              {room.isHost ? (
+              {room.viewer.status !== "admitted" ? (
                 <button
                   disabled={busy}
                   onClick={() => {

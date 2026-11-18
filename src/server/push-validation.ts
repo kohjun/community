@@ -41,6 +41,7 @@ export function validateSubscriptionKeys(p256dh: string, auth: string) {
 export function safePushPath(path: string) {
   if (/[\\\u0000-\u001f\u007f]/.test(path) || path.startsWith("//")) return false;
   return (
+    /^\/crews\/[0-9a-f-]{36}\?tab=chat$/i.test(path) ||
     /^\/\?post=[0-9a-f-]{36}$/i.test(path) ||
     /^\/(rooms|events)\/[0-9a-f-]{36}$/i.test(path) ||
     path === "/mypage" ||

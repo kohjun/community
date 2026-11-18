@@ -1,4 +1,6 @@
 import "server-only";
+import { drawingFinalizer } from "./game-drawing-finalize";
+import { syncDrawingAuthority } from "./game-ink-runtime";
 import { cookies } from "next/headers";
 import { getDatabase } from "../db/client";
 import { gameRoomId } from "../domain/game-room";
@@ -14,7 +16,11 @@ import {
 import { gameRoomService } from "./game-room-service";
 import { publishRoomWake } from "./room-realtime";
 export function gameService() {
-  return gameRoomService(getDatabase(), { wake: publishRoomWake });
+  return gameRoomService(getDatabase(), {
+    wake: publishRoomWake,
+    drawingAuthority: syncDrawingAuthority,
+    finalizeDrawing: drawingFinalizer(),
+  });
 }
 export async function gameContext(
   request: Request,
@@ -25,6 +31,11 @@ export async function gameContext(
   const roomId = gameRoomId.parse(id),
     secret = process.env.VISITOR_HASH_SECRET ?? "";
   if (secret.length < 32) throw new Error("Game sessions are not configured.");
+  const networkHash = gameNetworkKey(request.headers, secret, roomId);
+  if (host) {
+    const actor = await gameHost();
+    return { identityHash: gameDigest(secret, `host-player:${roomId}`, actor), networkHash, actor };
+  }
   const jar = await cookies();
   let device = verifyGameSession(jar.get(GAME_COOKIE)?.value, secret);
   if (!device && createCookie) {
@@ -39,10 +50,22 @@ export async function gameContext(
     device = verifyGameSession(token, secret);
   }
   if (!device) throw new AppError("UNAUTHENTICATED", "다시 입장해 기기 연결을 확인해주세요.");
+  if (
+    device &&
+    Date.now() - Number(jar.get(GAME_COOKIE)?.value.split(".")[1] ?? Date.now()) > 300000
+  ) {
+    jar.set(GAME_COOKIE, issueGameSession(secret, Date.now(), device), {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.APP_ORIGIN?.startsWith("https:") ?? false,
+      path: "/",
+      maxAge: 86400,
+    });
+  }
   return {
     identityHash: gameDigest(secret, `player:${roomId}`, device),
-    networkHash: gameNetworkKey(request.headers, secret, roomId),
-    actor: host ? requireActor(await currentActor()) : null,
+    networkHash,
+    actor: null,
   };
 }
 export async function gameHost() {

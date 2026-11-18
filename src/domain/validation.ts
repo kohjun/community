@@ -157,6 +157,19 @@ function derivePostBody<T extends z.infer<typeof postInputSchema>>(value: T): T 
 export const createPostSchema = postInputSchema
   .superRefine(validateApplicationLink)
   .transform(derivePostBody);
+// Public creation requires an external signup destination while direct payments are unavailable.
+// The base schema also validates historical direct recruitment posts when they are edited.
+export const publishPostSchema = postInputSchema
+  .superRefine((value, context) => {
+    if (value.kind === "모집" && !value.applicationUrl)
+      context.addIssue({
+        code: "custom",
+        path: ["applicationUrl"],
+        message: "외부 신청 페이지 주소를 입력해주세요.",
+      });
+    validateApplicationLink(value, context);
+  })
+  .transform(derivePostBody);
 export const updatePostSchema = postInputSchema
   .extend({ postId: uuidSchema, expectedUpdatedAt: z.iso.datetime() })
   .superRefine(validateApplicationLink)

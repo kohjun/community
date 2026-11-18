@@ -1,3 +1,4 @@
+import { notificationPreviews } from "./notification-previews";
 import { and, asc, desc, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Database } from "../db/connection";
@@ -42,8 +43,8 @@ const eligible = () =>
   });
 export function engagementService(db: Database) {
   const active = safetyService(db).activeMember;
-  async function unreadCount(user: string) {
-    const [row] = await db
+  async function unreadCount(user: string, connection: EngagementConnection = db) {
+    const [row] = await connection
       .select({ count: sql<number>`count(*)::int` })
       .from(inboxItems)
       .where(and(eq(inboxItems.recipientId, user), isNull(inboxItems.readAt), eligible()));
@@ -54,43 +55,59 @@ export function engagementService(db: Database) {
       q = inboxQuerySchema.parse(input),
       scope = pageScope(["unified-inbox", user, q.kind, ...(q.unreadOnly ? ["unread"] : [])]),
       cursor = decodeCursor(q.cursor, scope);
-    const [rows, unread] = await Promise.all([
-      db
-        .select({
-          item: inboxItems,
-          timestamp: preciseTimestamp(inboxItems.createdAt),
-          spoiler: sql<boolean>`exists(select 1 from sliper.posts p where p.id=${inboxItems.postId} and p.spoiler)`,
-        })
-        .from(inboxItems)
-        .where(
-          and(
-            eq(inboxItems.recipientId, user),
-            eligible(),
-            q.kind === "all" ? undefined : eq(inboxItems.kind, q.kind),
-            q.unreadOnly ? isNull(inboxItems.readAt) : undefined,
-            cursor ? afterPosition(inboxItems.createdAt, inboxItems.id, cursor, "desc") : undefined,
-          ),
-        )
-        .orderBy(desc(inboxItems.createdAt), desc(inboxItems.id))
-        .limit(q.limit + 1),
-      unreadCount(user),
-    ]);
-    const items = rows.slice(0, q.limit).map(({ item, timestamp, spoiler }) => ({
-        id: item.id,
-        kind: item.kind,
-        title: spoiler ? "스포일러 글에 새 활동이 있어요" : item.title,
-        body: spoiler ? "글을 펼쳐 내용을 확인해주세요." : item.body,
-        url: item.url,
-        createdAt: timestamp,
-        readAt: item.readAt?.toISOString() ?? null,
-      })),
-      tail = items.at(-1);
-    return {
-      items,
-      nextCursor: rows.length > q.limit && tail ? encodeCursor(scope, tail) : null,
-      unreadCount: unread,
-    };
+    return db.transaction(
+      async (tx) => {
+        const [rows, unread] = await Promise.all([
+          tx
+            .select({
+              item: inboxItems,
+              timestamp: preciseTimestamp(inboxItems.createdAt),
+              spoiler: sql<boolean>`exists(select 1 from sliper.posts p where p.id=${inboxItems.postId} and p.spoiler)`,
+            })
+            .from(inboxItems)
+            .where(
+              and(
+                eq(inboxItems.recipientId, user),
+                eligible(),
+                q.kind === "all" ? undefined : eq(inboxItems.kind, q.kind),
+                q.unreadOnly ? isNull(inboxItems.readAt) : undefined,
+                cursor
+                  ? afterPosition(inboxItems.createdAt, inboxItems.id, cursor, "desc")
+                  : undefined,
+              ),
+            )
+            .orderBy(desc(inboxItems.createdAt), desc(inboxItems.id))
+            .limit(q.limit + 1),
+          unreadCount(user, tx),
+        ]);
+        const previews = await notificationPreviews(
+          tx,
+          rows.slice(0, q.limit).map((row) => row.item),
+        );
+        const items = rows.slice(0, q.limit).map(({ item, timestamp, spoiler }) => ({
+            id: item.id,
+            kind: item.kind,
+            title: spoiler
+              ? "스포일러 글에 새 활동이 있어요"
+              : (previews.get(item.id)?.title ?? item.title),
+            body: spoiler
+              ? "글을 펼쳐 내용을 확인해주세요."
+              : (previews.get(item.id)?.body ?? item.body),
+            url: item.url,
+            createdAt: timestamp,
+            readAt: item.readAt?.toISOString() ?? null,
+          })),
+          tail = items.at(-1);
+        return {
+          items,
+          nextCursor: rows.length > q.limit && tail ? encodeCursor(scope, tail) : null,
+          unreadCount: unread,
+        };
+      },
+      { isolationLevel: "repeatable read", accessMode: "read only" },
+    );
   }
+
   async function markRead(actor: string | null, input: unknown = {}) {
     const user = await active(actor),
       value = inboxReadSchema.parse(input);

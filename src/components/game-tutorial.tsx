@@ -19,6 +19,21 @@ function PracticeExample({ game }: { game: TutorialGame }) {
   const [showCounts, setShowCounts] = useState(false),
     [votes, setVotes] = useState(3),
     [sale, setSale] = useState<number | null>(140);
+  if (game === "drawing" || game === "clue")
+    return (
+      <div className={styles.practice}>
+        <strong>
+          {game === "drawing"
+            ? "떡볶이 펭귄 → 그림 → 치킨 오리 → 실시간 맞히기"
+            : "사진을 보고 지도 선택 → 정답과 거리 비교"}
+        </strong>
+        <p>
+          {game === "drawing"
+            ? "믹스의 정답은 마지막 해석인 ‘치킨 오리’예요. 다른 모드를 고르면 전달이나 맞히기 단계를 단순하게 즐겨요."
+            : "사진은 가장 가까운 사람 모두 1점. 소리·영상은 맞힌 사람 모두 1점. 우리 사진은 사진 주인 추리도 1점이에요."}
+        </p>
+      </div>
+    );
   if (game === "lobby")
     return (
       <div className={styles.practiceNote}>

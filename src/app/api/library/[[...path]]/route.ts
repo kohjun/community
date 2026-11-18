@@ -1,4 +1,4 @@
-import { librarySearchParams } from "@/domain/library";
+import { librarySearchParams, publishTemplateHostSchema } from "@/domain/library";
 import { getDatabase } from "@/db/client";
 import { currentActor } from "@/server/identity";
 import { libraryCollaborationService } from "@/server/library-collaboration-service";
@@ -7,7 +7,7 @@ import { libraryMarketService } from "@/server/library-market-service";
 import { libraryTestPurchaseService } from "@/server/library-test-purchase";
 import { libraryEvidenceService } from "@/server/library-evidence-service";
 import { apiResponse, assertSameOrigin, readJson } from "@/server/http";
-import { AppError } from "@/server/errors";
+import { AppError, requireActor } from "@/server/errors";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 async function handle(request: Request, context: { params: Promise<{ path?: string[] }> }) {
@@ -89,7 +89,11 @@ async function handle(request: Request, context: { params: Promise<{ path?: stri
       if (action === "decision" && method === "POST")
         return service.decideAccess(actor, id, await readJson(request));
       if (action === "host" && method === "POST")
-        return service.host(actor, id, await readJson(request));
+        return service.host(
+          requireActor(actor),
+          id,
+          publishTemplateHostSchema.parse(await readJson(request)),
+        );
       if (action === "event-template" && method === "GET") return service.eventTemplate(actor, id);
     }
     throw new AppError("NOT_FOUND", "요청한 기능을 찾을 수 없어요.");

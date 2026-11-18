@@ -13,7 +13,7 @@ import { meetupVenueLabel } from "@/domain/venue-meetup";
 import { postDocumentToMarkdown, type PostDocument } from "@/domain/post-document";
 import { CATEGORIES, type CategorySlug } from "@/domain/categories";
 import { BOARD_TOPICS } from "@/domain/boards";
-import { createPostSchema, type CreatePostInput } from "@/domain/validation";
+import { createPostSchema, publishPostSchema, type CreatePostInput } from "@/domain/validation";
 import { evaluateContentPolicy } from "@/domain/content-policy";
 import { contentPolicyFields, ContentPolicyInputError } from "@/domain/content-policy-fields";
 import type { CommunityPost } from "@/domain/community";
@@ -67,8 +67,8 @@ export function WriteDialog({
   const editorRef = useRef<RichPostEditorHandle>(null);
   const [anonymous, setAnonymous] = useState(post?.anonymous ?? false),
     [preview, setPreview] = useState(false);
-  const [mode, setMode] = useState<"external" | "direct">(
-    post?.applicationUrl ? "external" : "direct",
+  const [mode, setMode] = useState<"direct" | "external">(
+    post?.kind === "모집" && !post.applicationUrl ? "direct" : "external",
   );
   const [url, setUrl] = useState(post?.applicationUrl ?? ""),
     [location, setLocation] = useState(post?.location ?? ""),
@@ -181,7 +181,7 @@ export function WriteDialog({
   async function publish(event: FormEvent) {
     event.preventDefault();
     if (pendingRef.current || uploadPendingRef.current) return;
-    const parsed = createPostSchema.safeParse({
+    const parsed = (post ? createPostSchema : publishPostSchema).safeParse({
       categorySlug: category,
       kind: verified ? "후기" : kind,
       discussionType: kind === "이야기" && !verified ? discussionType : null,
@@ -436,15 +436,16 @@ export function WriteDialog({
                     ? "번개는 2–12명, 개설 후 7일 이내 일정이에요. 정확한 일정과 정원은 내 행사 관리에서 변경해주세요."
                     : "등록 후 내 행사 관리에서 행사장 위치·정확한 일정·참가비를 설정하면 거리와 취향 검색에 표시돼요. 소규모로 가볍게 모일 땐 번개·모임으로 빠르게 열 수 있어요."}
                 </p>
-                <div className="segmented-control">
+                <div className="segmented-control recruitment-mode-options">
                   <button
                     type="button"
+                    disabled
                     aria-pressed={mode === "direct"}
-                    className={cn(mode === "direct" && "active")}
-                    onClick={() => setMode("direct")}
+                    aria-describedby="direct-recruitment-note"
+                    title="결제·정산 기능 준비 중으로 이용할 수 없어요."
                   >
                     <MapPin size={16} />
-                    직접 정보 등록
+                    직접 정보 등록 <span className="recruitment-mode-status">준비 중</span>
                   </button>
                   <button
                     type="button"
@@ -457,6 +458,17 @@ export function WriteDialog({
                     외부 플랫폼에서 신청
                   </button>
                 </div>
+                <p className="form-note" id="direct-recruitment-note">
+                  {directLightning
+                    ? "번개는 사전 결제 없이 담당자 승인 후 참여해요."
+                    : "직접 모집은 결제·정산 기능 준비 중으로 이용할 수 없어요. 외부 신청 링크를 등록해주세요."}
+                </p>
+                {mode === "direct" && !lightning && (
+                  <p className="form-note">
+                    기존 모집글의 내용을 수정하고 있어요. 신청 방식 변경은 참가 내역에 따라 제한될
+                    수 있어요.
+                  </p>
+                )}
                 {mode === "external" && (
                   <label className="field-label">
                     외부 신청 페이지 주소 <span className="required-label">필수</span>
@@ -523,8 +535,8 @@ export function WriteDialog({
                   {lightning
                     ? "사이트에서 직접 신청하는 번개는 담당자 승인 후 참가가 확정돼요. 사전 결제 없이 비용은 현장에서 함께 정산하며, 외부 결제 모집으로 변경할 수 없어요."
                     : mode === "external"
-                      ? "등록 후 내 행사 관리에서 금액·정원·승인 방식을 설정하세요. 외부 플랫폼에서 신청과 결제를 완료한 참가자를 확인하고 공지방에 초대할 수 있어요."
-                      : "등록 후 내 행사 관리에서 참가 금액과 정원을 설정하면 사이트 내 신청을 받을 수 있어요."}{" "}
+                      ? "외부 플랫폼에서 신청을 마친 참가자를 내 행사 관리에서 확인·승인하면 공지방에 초대할 수 있어요."
+                      : "기존 행사 안내를 수정할 수 있어요. 새 모집글은 외부 신청 링크로 등록해주세요."}{" "}
                   확정 참가자에게만 제공할 연락처는 내 행사 관리에서 따로 등록할 수 있어요. 모임
                   내용과 규칙은 아래 본문에 적어주세요.
                 </p>

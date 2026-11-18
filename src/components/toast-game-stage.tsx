@@ -259,7 +259,7 @@ export function ToastGameStage({
               </div>
             </div>
             <div className={styles.controls}>
-              {room.isHost ? (
+              {!me ? (
                 <div className={styles.waiting}>
                   <LockKeyhole size={28} />
                   <h3>모두의 선택을 기다려요</h3>

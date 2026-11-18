@@ -88,7 +88,9 @@
     "cloud:backup": "tsx scripts/cloud-backup.ts",
     "cloud:restore:drill": "tsx scripts/cloud-restore-drill.ts",
     "town:server": "tsx scripts/town-server.ts",
-    "test:town-browser": "node --import tsx scripts/test-town-browser.mjs"
+    "test:town-browser": "node --import tsx scripts/test-town-browser.mjs",
+    "game:ink": "tsx scripts/game-ink-server.ts",
+    "test:creative-browser": "node --import tsx scripts/test-creative-games-browser.ts"
   },
   "dependencies": {
     "@colyseus/core": "0.18.25",

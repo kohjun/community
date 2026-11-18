@@ -28,7 +28,7 @@ export const objectCleanupJobs = sliper
       check("cleanup_kind", sql`${t.kind} in ('post','profile','video')`),
       check(
         "cleanup_reason",
-        sql`${t.reason} in ('profile-replaced','profile-cleared','account-closed','upload-rollback')`,
+        sql`${t.reason} in ('profile-replaced','profile-cleared','account-closed','upload-rollback','game-expired')`,
       ),
       check("cleanup_status", sql`${t.status} in ('pending','processing','failed')`),
       check("cleanup_attempts", sql`${t.attempts} between 0 and 8`),

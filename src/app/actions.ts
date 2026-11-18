@@ -20,7 +20,7 @@ async function action<T>(work: () => Promise<T>): Promise<ActionResult<T>> {
 }
 export async function createPostAction(input: unknown): Promise<ActionResult<CommunityPost>> {
   return action(async () =>
-    communityService(getDatabase()).createPost(await currentActor(), input),
+    communityService(getDatabase()).publishPost(await currentActor(), input),
   );
 }
 export async function updatePostAction(

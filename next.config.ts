@@ -18,6 +18,12 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: "/games/clue/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
+      },
+      {
         source: "/images/:path*",
         headers: [
           { key: "Cache-Control", value: "public, max-age=3600, stale-while-revalidate=86400" },

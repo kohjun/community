@@ -1,5 +1,9 @@
 "use client";
+import { DrawingGameStage } from "./drawing-game-stage";
+import { ClueGameStage } from "./clue-game-stage";
+import { ClueQuestionPreparation } from "./clue-question-preparation";
 import { GameRoomSettingsPanel } from "./game-room-settings";
+import { TemperatureGameStage } from "./temperature-game-stage";
 import { ToastGameStage } from "./toast-game-stage";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
@@ -47,6 +51,7 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
     editing = useRef(false),
     actionPending = useRef(false);
   const suffix = host ? "?host=1" : "",
+    playerSuffix = host ? "?host=1&as=player" : "",
     base = `/api/games/${roomId}`;
   const apply = useCallback(
     (view: GameRoomView) => {
@@ -92,12 +97,11 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
         const value = current.current;
         const canPing =
           heartbeat &&
-          !host &&
           value &&
           ["admitted", "waiting"].includes(value.viewer.status) &&
           value.phase !== "closed";
         const view = await appRequest<GameRoomView>(
-          base + suffix,
+          base + (canPing ? playerSuffix : suffix),
           canPing ? "PATCH" : "GET",
           canPing ? { action: "heartbeat" } : undefined,
         );
@@ -172,19 +176,15 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
       clearInterval(retry);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [roomId, host, attempt, apply, base, suffix]);
-  async function act(action: Record<string, unknown>, asHost = false) {
+  }, [roomId, host, attempt, apply, base, suffix, playerSuffix]);
+  async function runAction(request: () => Promise<GameRoomView>) {
     if (actionPending.current) return false;
     actionPending.current = true;
     setBusy(true);
     setError("");
     setNotice("");
     try {
-      const view = await appRequest<GameRoomView>(
-        base + (asHost ? "?host=1" : ""),
-        "PATCH",
-        action,
-      );
+      const view = await request();
       editing.current = false;
       apply(view);
       return true;
@@ -201,6 +201,11 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
       actionPending.current = false;
       if (mounted.current) setBusy(false);
     }
+  }
+  function act(action: Record<string, unknown>, asHost = false) {
+    return runAction(() =>
+      appRequest<GameRoomView>(base + (asHost ? suffix : playerSuffix), "PATCH", action),
+    );
   }
   async function copy() {
     const url = gameJoinUrl(window.location.origin, roomId);
@@ -244,7 +249,6 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
     <div className={styles.screen}>
       <div className={styles.breadcrumb}>
         <Link href="/games">웹 게임</Link>
-        <Link href="/games/town">타운으로</Link>
         <ChevronRight size={14} />
         <span>{room.isHost ? "호스트 대기실" : "참가 대기실"}</span>
       </div>
@@ -289,6 +293,45 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
           act({ action: "settings", settings, settingsVersion }, true)
         }
       />
+      {room.clue && <ClueQuestionPreparation room={room} busy={busy} onAction={act} />}
+      {room.drawing && room.drawing.stage !== "lobby" && (
+        <DrawingGameStage
+          room={room}
+          busy={busy}
+          onAction={act}
+          onRefresh={() => {
+            void appRequest<GameRoomView>(base + suffix)
+              .then(apply)
+              .catch(() => {});
+          }}
+        />
+      )}
+      {room.clue && room.clue.stage !== "lobby" && (
+        <ClueGameStage
+          room={room}
+          busy={busy}
+          onAction={act}
+          onRefresh={() => {
+            void appRequest<GameRoomView>(base + suffix)
+              .then(apply)
+              .catch(() => {});
+          }}
+        />
+      )}
+      {room.temperature && room.temperature.stage !== "lobby" && (
+        <TemperatureGameStage
+          key={`${room.temperature.runId}:${room.temperature.turn}`}
+          room={room}
+          game={room.temperature}
+          busy={busy}
+          onAction={(action, asHost) => void act(action, asHost)}
+          onRefresh={() => {
+            void appRequest<GameRoomView>(base + suffix)
+              .then(apply)
+              .catch(() => {});
+          }}
+        />
+      )}
       {room.toast && (
         <ToastGameStage
           key={room.round}
@@ -335,6 +378,14 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
               .catch(() => {});
           }}
         />
+      )}
+      {room.phase === "finished" && (room.drawing?.runId || room.clue?.runId) && (
+        <Link
+          className={styles.primary}
+          href={`/games/${room.id}/results/${room.drawing?.runId ?? room.clue?.runId}${room.isHost ? "?host=1" : ""}`}
+        >
+          이 게임 결과 다시 보기 · 24시간 보관
+        </Link>
       )}
       <div className={styles.stats}>
         <span>
@@ -383,7 +434,7 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
                     "대기"
                   )}
                 </span>
-                {room.isHost && room.phase === "lobby" && (
+                {room.isHost && room.phase === "lobby" && p.id !== me.id && (
                   <button
                     className={styles.iconButton}
                     aria-label={`${p.nickname || "플레이어"} 퇴장`}
@@ -413,18 +464,22 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
                 {room.waiting.map((p) => (
                   <li key={p.id}>
                     <span>대기 {p.position}번</span>
-                    <button
-                      disabled={busy || room.phase !== "lobby"}
-                      onClick={() => {
-                        if (confirm("이 대기자의 입장을 제한할까요?"))
-                          void act(
-                            { action: "kick", playerId: p.id, revision: room.revision },
-                            true,
-                          );
-                      }}
-                    >
-                      입장 제한
-                    </button>
+                    {p.id === me.id ? (
+                      <span>나</span>
+                    ) : (
+                      <button
+                        disabled={busy || room.phase !== "lobby"}
+                        onClick={() => {
+                          if (confirm("이 대기자의 입장을 제한할까요?"))
+                            void act(
+                              { action: "kick", playerId: p.id, revision: room.revision },
+                              true,
+                            );
+                        }}
+                      >
+                        입장 제한
+                      </button>
+                    )}
                   </li>
                 ))}
               </ol>
@@ -432,45 +487,44 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
           )}
         </section>
         <aside className={styles.card}>
-          {room.isHost ? (
+          {room.isHost && (
             <>
               <div className={styles.sectionTitle}>
                 <h2>
                   <Crown size={19} /> 호스트 진행
                 </h2>
-                <span className={styles.pill}>진행자</span>
+                <span className={styles.pill}>
+                  {me.status === "admitted" ? "진행 · 참가" : "진행자"}
+                </span>
               </div>
-              <p className={styles.description}>
-                호스트는 참가 정원에 포함되지 않아요. 준비 현황을 확인하고 라운드를 진행해주세요.
-              </p>
+              {room.phase === "lobby" && (
+                <p className={styles.description}>
+                  {me.status === "host"
+                    ? "직접 플레이할 경우 정원에 1명으로 포함돼요."
+                    : "플레이어로 참가하면서 방 설정과 진행도 맡을 수 있어요."}
+                </p>
+              )}
               {room.phase === "lobby" && (
                 <>
-                  <div className={styles.progress}>
-                    <i
-                      style={{
-                        width: `${room.players.length ? (room.readyCount / room.players.length) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                  <p className={styles.muted}>
-                    {room.canStart
-                      ? "모두 준비됐어요. 지금 시작할 수 있어요."
-                      : `최소 ${room.minPlayers}명 입장 · 입장한 참가자 전원 준비가 필요해요.`}
-                  </p>
-                  {room.auction && room.players.length >= room.auction.settings.maxRounds && (
-                    <p className={styles.error}>
-                      라운드 수보다 참가자가 적어야 해요. 위의 ‘설정 변경’에서 라운드 수를
-                      늘려주세요.
-                    </p>
+                  {me.status === "host" ? (
+                    <button
+                      type="button"
+                      className={styles.secondary}
+                      disabled={busy}
+                      onClick={() => void runAction(() => connectGameRoom(roomId, true, true))}
+                    >
+                      <Gamepad2 size={17} /> 플레이어로 참가
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.secondary}
+                      disabled={busy}
+                      onClick={() => void act({ action: "leave" })}
+                    >
+                      <LogOut size={16} /> 플레이어 참가 취소
+                    </button>
                   )}
-                  <button
-                    className={styles.primary}
-                    disabled={busy || !room.canStart}
-                    onClick={() => void act({ action: "start", revision: room.revision }, true)}
-                  >
-                    <Play size={18} />
-                    게임 시작
-                  </button>
                 </>
               )}
               {room.phase === "playing" && (
@@ -480,17 +534,29 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
                   onClick={() => {
                     if (
                       confirm(
-                        room.mbti || room.mbtiIntro || room.auction || room.toast
-                          ? room.auction
-                            ? "진행 중인 경매를 취소하고 중단할까요? 이번 매입금은 환급하며 완료된 거래는 유지해요."
-                            : "정답 공개 없이 현재 게임을 중단할까요?"
-                          : "현재 라운드를 종료할까요?",
+                        room.drawing || room.clue
+                          ? "지금 게임을 중단할까요? 지금까지의 그림·완료된 결과는 참가자에게 남아요."
+                          : room.temperature ||
+                              room.mbti ||
+                              room.mbtiIntro ||
+                              room.auction ||
+                              room.toast
+                            ? room.auction
+                              ? "진행 중인 경매를 취소하고 중단할까요? 이번 매입금은 환급하며 완료된 거래는 유지해요."
+                              : "정답 공개 없이 현재 게임을 중단할까요?"
+                            : "현재 라운드를 종료할까요?",
                       )
                     )
                       void act({ action: "finish", revision: room.revision }, true);
                   }}
                 >
-                  {room.mbti || room.mbtiIntro || room.auction || room.toast
+                  {room.drawing ||
+                  room.clue ||
+                  room.temperature ||
+                  room.mbti ||
+                  room.mbtiIntro ||
+                  room.auction ||
+                  room.toast
                     ? "게임 중단"
                     : "이번 라운드 종료"}
                 </button>
@@ -505,24 +571,9 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
                   다음 라운드 준비
                 </button>
               )}
-              {room.phase !== "closed" && (
-                <button
-                  className={styles.subtle}
-                  disabled={busy}
-                  onClick={() => {
-                    if (
-                      confirm(
-                        "게임방을 완전히 닫을까요? 참가자들이 모두 퇴장하며 다시 열 수 없어요.",
-                      )
-                    )
-                      void act({ action: "close", revision: room.revision }, true);
-                  }}
-                >
-                  게임방 닫기
-                </button>
-              )}
             </>
-          ) : inactive ? (
+          )}
+          {room.isHost && (me.status === "host" || room.phase !== "lobby") ? null : inactive ? (
             <div className={styles.center}>
               <LogOut size={30} />
               <h2>
@@ -560,7 +611,7 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
           ) : room.phase === "lobby" ? (
             <>
               <div className={styles.sectionTitle}>
-                <h2>함께할 준비</h2>
+                <h2>{room.isHost ? "내 참가 준비" : "함께할 준비"}</h2>
                 <span className={styles.pill}>입장 완료</span>
               </div>
               <form className={styles.form} onSubmit={save}>
@@ -637,7 +688,9 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
               </button>
               <p className={styles.muted}>
                 {me.ready
-                  ? "호스트가 시작하면 게임 화면으로 함께 이동해요."
+                  ? room.isHost
+                    ? "다른 참가자도 준비를 마치면 게임을 시작할 수 있어요."
+                    : "호스트가 시작하면 게임 화면으로 함께 이동해요."
                   : "닉네임을 저장하고 준비 버튼을 눌러주세요."}
               </p>
             </>
@@ -651,6 +704,37 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
                   : "호스트가 다음 라운드를 열면 다시 준비할 수 있어요."}
               </p>
             </div>
+          )}
+          {room.isHost && room.phase === "lobby" && (
+            <>
+              <div className={styles.progress}>
+                <i
+                  style={{
+                    width: `${room.players.length ? (room.readyCount / room.players.length) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+              <p className={styles.muted}>
+                {room.canStart
+                  ? "모두 준비됐어요. 지금 시작할 수 있어요."
+                  : me.status === "waiting"
+                    ? "내 자리가 나면 준비를 마친 뒤 시작할 수 있어요."
+                    : `최소 ${room.minPlayers}명 입장 · 입장한 참가자 전원 준비가 필요해요.`}
+              </p>
+              {room.auction && room.players.length >= room.auction.settings.maxRounds && (
+                <p className={styles.error}>
+                  라운드 수보다 참가자가 적어야 해요. 위의 ‘설정 변경’에서 라운드 수를 늘려주세요.
+                </p>
+              )}
+              <button
+                className={styles.primary}
+                disabled={busy || !room.canStart}
+                onClick={() => void act({ action: "start", revision: room.revision }, true)}
+              >
+                <Play size={18} />
+                게임 시작
+              </button>
+            </>
           )}
           {error && (
             <p role="alert" className={styles.error}>
@@ -699,13 +783,30 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
               )}
             </div>
           )}
+          {room.isHost && room.phase !== "closed" && (
+            <button
+              className={styles.subtle}
+              disabled={busy}
+              onClick={() => {
+                if (
+                  confirm("게임방을 완전히 닫을까요? 참가자들이 모두 퇴장하며 다시 열 수 없어요.")
+                )
+                  void act({ action: "close", revision: room.revision }, true);
+              }}
+            >
+              게임방 닫기
+            </button>
+          )}
         </aside>
       </div>
       {room.phase === "playing" &&
         !room.mbti &&
         !room.mbtiIntro &&
         !room.auction &&
-        !room.toast && (
+        !room.toast &&
+        !room.temperature &&
+        !room.drawing &&
+        !room.clue && (
           <section className={`${styles.card} ${styles.gameStage}`} data-game-phase="playing">
             <span className={styles.eyebrow}>PLAY TOGETHER</span>
             <h2>라운드 {room.round} 진행 중</h2>

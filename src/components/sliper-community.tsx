@@ -28,6 +28,7 @@ import { PostDetailContent } from "./post-detail-content";
 import dynamic from "next/dynamic";
 import { HomeSections } from "./home-sections";
 import { CATEGORY_ICONS } from "./category-icons";
+import { CommunityCategoryMenu } from "./community-category-menu";
 import { useAudience } from "@/lib/audience";
 import { homeRecruitments } from "@/domain/home-discovery";
 import { HotStories } from "./home-stage";
@@ -73,51 +74,6 @@ const kinds = ["전체", "이야기", "모집", "투표"] as const;
 type View = "home" | "stories" | "popular" | "bookmarks" | "mine";
 type Sheet = "categories" | "guide" | null;
 const label = (category: CategorySlug) => CATEGORIES.find((item) => item.slug === category)!.name;
-
-function CategoryMenu({
-  category,
-  onSelect,
-  className,
-  label,
-  showAllIcon = false,
-}: {
-  category: CategorySlug | "all";
-  onSelect: (value: CategorySlug | "all") => void;
-  className: string;
-  label: string;
-  showAllIcon?: boolean;
-}) {
-  return (
-    <nav className={className} aria-label={label}>
-      <button
-        type="button"
-        className={cn(category === "all" && "active")}
-        aria-pressed={category === "all"}
-        data-category="all"
-        onClick={() => onSelect("all")}
-      >
-        {showAllIcon && <Grid2X2 size={17} strokeWidth={1.8} />}
-        <span>전체</span>
-      </button>
-      {CATEGORIES.map((item) => {
-        const Icon = icons[item.slug];
-        return (
-          <button
-            type="button"
-            key={item.slug}
-            className={cn(category === item.slug && "active")}
-            aria-pressed={category === item.slug}
-            data-category={item.slug}
-            onClick={() => onSelect(item.slug)}
-          >
-            <Icon size={17} strokeWidth={1.8} />
-            <span>{item.name}</span>
-          </button>
-        );
-      })}
-    </nav>
-  );
-}
 
 export function SliperCommunity({
   initialState,
@@ -662,12 +618,7 @@ export function SliperCommunity({
 
               {/* Categories belong to 이야기; elsewhere the menu only stays to clear a linked filter. */}
               {(view === "stories" || category !== "all") && (
-                <CategoryMenu
-                  category={category}
-                  onSelect={chooseCategory}
-                  className="sl-chips"
-                  label="카테고리"
-                />
+                <CommunityCategoryMenu category={category} onSelect={chooseCategory} />
               )}
 
               {category in BOARD_TOPICS && (

@@ -166,7 +166,7 @@ export function MbtiIntroStage({
                   ? "설명을 들으며 미리 선택해도 좋아요"
                   : `추리 제출 ${g.submittedCount} / ${g.roster.length}명`}
               </span>
-              {!room.isHost && g.myMbti && (
+              {g.myMbti && (
                 <span>
                   <LockKeyhole size={12} /> 내 MBTI {g.myMbti}
                 </span>
@@ -179,7 +179,7 @@ export function MbtiIntroStage({
                 듣고 자유롭게 추리해보세요.
               </p>
             </details>
-            {!room.isHost && (
+            {room.viewer.status === "admitted" && (
               <form
                 onSubmit={(e) => {
                   e.preventDefault();

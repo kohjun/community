@@ -7,6 +7,7 @@ import {
   crewEvents,
   crewActivity,
   crewContributions,
+  crewMessages,
 } from "../db/crew-schema";
 import { profiles, posts, eventSettings, roomManagers } from "../db/schema";
 import { eventResults } from "../db/player-schema";
@@ -42,8 +43,10 @@ import { AppError, requireActor } from "./errors";
 import { authorVisible, contentVisible } from "./safety-visibility";
 import { enforceRequestLimit } from "./request-limits";
 import { awardActivity } from "./activity";
-import { preciseTimestamp } from "./pagination";
+import { preciseTimestamp, pageScope, encodeCursor, decodeCursor } from "./pagination";
+import { crewChatInputSchema, crewChatQuerySchema, type CrewChatRoom } from "../domain/crew-chat";
 import { assertContentAllowed } from "./content-policy";
+import { enqueueCrewChatPush } from "./push-events";
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type QueryDb = Database | Tx;
 type Crew = typeof crews.$inferSelect;
@@ -62,7 +65,18 @@ function validId(id: string) {
   if (!parsed.success) throw new AppError("NOT_FOUND", "크루를 찾을 수 없어요.");
   return parsed.data;
 }
-export function crewService(db: Database, clock = () => new Date()) {
+export function crewService(
+  db: Database,
+  clock = () => new Date(),
+  wake: (id: string) => Promise<void> = async () => {},
+) {
+  async function notifyChat(id: string) {
+    try {
+      await wake(id);
+    } catch {
+      /* Committed messages are recovered by the stream's DB reconciliation. */
+    }
+  }
   async function active(connection: QueryDb, user: string) {
     const [profile] = await connection
       .select({ id: profiles.id })
@@ -194,6 +208,7 @@ export function crewService(db: Database, clock = () => new Date()) {
       const crew = await locked(tx, id, user);
       await work(tx, crew, user);
     });
+    await notifyChat(id);
     return detail(user, id);
   }
   async function summaries(
@@ -937,7 +952,155 @@ export function crewService(db: Database, clock = () => new Date()) {
       { publicId: value.memberPublicId, active: true, postId: value.postId },
     );
   }
+  async function chatAccess(tx: QueryDb, actor: string | null, id: string) {
+    const user = requireActor(actor);
+    await active(tx, user);
+    const crew = await readCrew(tx, id, user);
+    const myRole = await role(tx, crew, user);
+    if (!myRole) throw new AppError("FORBIDDEN", "승인된 크루원만 톡방을 이용할 수 있어요.");
+    return { user, crew, myRole };
+  }
+  async function chat(
+    actor: string | null,
+    id: string,
+    input: unknown = {},
+  ): Promise<CrewChatRoom> {
+    const query = crewChatQuerySchema.parse(input);
+    return db.transaction(
+      async (tx) => {
+        const { user, crew, myRole } = await chatAccess(tx, actor, id);
+        const scope = pageScope(["crew-chat", crew.id, user]);
+        const cursor = decodeCursor(query.cursor, scope);
+        const visible = sql<boolean>`not exists(
+        select 1 from sliper.member_blocks b where
+        (b.blocker_id=${user} and b.blocked_id=${crewMessages.authorId}) or
+        (b.blocked_id=${user} and b.blocker_id=${crewMessages.authorId})
+      ) and not exists(select 1 from sliper.member_safety s where s.user_id=${crewMessages.authorId}
+        and (s.status='closed' or (s.status='suspended' and (s.suspended_until is null or s.suspended_until > ${clock().toISOString()}::timestamptz))))`;
+        const rows = await tx
+          .select({
+            id: crewMessages.id,
+            body: crewMessages.body,
+            createdAt: preciseTimestamp(crewMessages.createdAt),
+            deletedAt: crewMessages.deletedAt,
+            authorId: crewMessages.authorId,
+            publicId: profiles.publicId,
+            nickname: profiles.nickname,
+            avatar: profiles.avatar,
+            visible,
+          })
+          .from(crewMessages)
+          .leftJoin(profiles, eq(profiles.id, crewMessages.authorId))
+          .where(
+            and(
+              eq(crewMessages.crewId, crew.id),
+              cursor
+                ? sql`(${crewMessages.createdAt},${crewMessages.id}) < (${cursor.at}::timestamptz,${cursor.id}::uuid)`
+                : undefined,
+            ),
+          )
+          .orderBy(desc(crewMessages.createdAt), desc(crewMessages.id))
+          .limit(51);
+        const [count] = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(crewMembers)
+          .where(eq(crewMembers.crewId, crew.id));
+        const selected = rows.slice(0, 50);
+        return {
+          crewId: crew.id,
+          name: crew.name,
+          memberCount: count?.count ?? 0,
+          myRole,
+          canSend: crew.status === "active",
+          nextCursor: rows.length > 50 ? encodeCursor(scope, selected[selected.length - 1]!) : null,
+          messages: selected.reverse().map((row) => {
+            const removed = !!row.deletedAt || !row.visible || !row.publicId;
+            return {
+              id: row.id,
+              body: removed ? "" : row.body,
+              createdAt: row.createdAt,
+              author: removed
+                ? null
+                : { publicId: row.publicId!, nickname: row.nickname!, avatar: avatar(row.avatar!) },
+              mine: row.authorId === user,
+              removed,
+              canDelete:
+                !removed &&
+                crew.status === "active" &&
+                (row.authorId === user || myRole === "owner" || myRole === "manager"),
+            };
+          }),
+        };
+      },
+      { isolationLevel: "repeatable read", accessMode: "read only" },
+    );
+  }
+  async function sendChat(actor: string | null, id: string, input: unknown) {
+    const value = crewChatInputSchema.parse(input);
+    const user = requireActor(actor);
+    assertContentAllowed({ body: value.body });
+    await enforceRequestLimit(db, user, "crew_chat_send", 30, 60);
+    await db.transaction(async (tx) => {
+      await lockPeople(tx, user);
+      const crew = await locked(tx, id, user);
+      if (!(await role(tx, crew, user)))
+        throw new AppError("FORBIDDEN", "승인된 크루원만 메시지를 보낼 수 있어요.");
+      const [existing] = await tx
+        .select()
+        .from(crewMessages)
+        .where(
+          and(
+            eq(crewMessages.crewId, crew.id),
+            eq(crewMessages.authorId, user),
+            eq(crewMessages.clientId, value.clientId),
+          ),
+        );
+      if (existing) {
+        if (existing.deletedAt || existing.body !== value.body)
+          throw new AppError(
+            "CONFLICT",
+            "이미 처리한 메시지예요. 내용을 확인하고 다시 보내주세요.",
+          );
+        return;
+      }
+      const [message] = await tx
+        .insert(crewMessages)
+        .values({ crewId: crew.id, authorId: user, ...value })
+        .returning({ id: crewMessages.id });
+      await enqueueCrewChatPush(tx, { crewId: crew.id, messageId: message!.id, actorId: user });
+    });
+    await notifyChat(id);
+    return chat(user, id);
+  }
+  async function deleteChat(actor: string | null, id: string, messageId: string) {
+    const user = requireActor(actor),
+      target = uuidSchema.parse(messageId);
+    await enforceRequestLimit(db, user, "crew_chat_delete", 60, 60);
+    await db.transaction(async (tx) => {
+      await lockPeople(tx, user);
+      const crew = await locked(tx, id, user),
+        myRole = await role(tx, crew, user);
+      if (!myRole) throw new AppError("FORBIDDEN", "승인된 크루원만 이용할 수 있어요.");
+      const [message] = await tx
+        .select()
+        .from(crewMessages)
+        .where(and(eq(crewMessages.crewId, crew.id), eq(crewMessages.id, target)));
+      if (!message) throw new AppError("NOT_FOUND", "메시지를 찾을 수 없어요.");
+      if (message.authorId !== user && myRole !== "owner" && myRole !== "manager")
+        throw new AppError("FORBIDDEN", "다른 멤버의 메시지는 운영진만 삭제할 수 있어요.");
+      if (!message.deletedAt)
+        await tx
+          .update(crewMessages)
+          .set({ body: "", deletedAt: clock() })
+          .where(eq(crewMessages.id, message.id));
+    });
+    await notifyChat(id);
+    return chat(user, id);
+  }
   return {
+    chat,
+    sendChat,
+    deleteChat,
     list,
     detail,
     activity,

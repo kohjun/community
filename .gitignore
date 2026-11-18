@@ -20,3 +20,6 @@ id_ed25519
 credentials.json
 service-account*.json
 secrets/
+
+# Local agent permissions and preferences
+.claude/settings.local.json

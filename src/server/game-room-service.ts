@@ -1,3 +1,41 @@
+import { drawingSettingsFrom, clueSettingsFrom } from "../domain/creative-games";
+import {
+  newDrawing,
+  startDrawing,
+  tickDrawing,
+  actDrawing,
+  drawingView,
+  drawingAssignment,
+  controlDrawing,
+} from "./drawing-game";
+import {
+  newClue,
+  startClue,
+  tickClue,
+  answerClue,
+  prepareClue,
+  clueView,
+  clueReady,
+  controlClue,
+} from "./clue-game";
+import { gameAssets, gameRuns } from "../db/game-room-schema";
+import type { FinalizeDrawing } from "./game-drawing-finalize";
+import type { InkAuthority } from "./game-ink-core";
+import { randomUUID } from "node:crypto";
+import { temperatureSettingsFrom } from "../domain/temperature-game";
+import {
+  newTemperature,
+  startTemperature,
+  tickTemperature,
+  temperatureView,
+  guessTemperature,
+  submitTemperatureSituation,
+  submitTemperatureOrder,
+  openTemperatureGuess,
+  nextTemperature,
+  skipTemperature,
+  abortTemperature,
+} from "./temperature-game";
 import { roomSettings, roomSettingsVersion } from "./game-room-settings";
 import {
   newToast,
@@ -42,7 +80,7 @@ import {
   guessMbti,
   mbtiView,
 } from "./mbti-game";
-import { and, asc, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import type { Database } from "../db/connection";
 import { gameRooms, gamePlayers, gameRequestLimits } from "../db/game-room-schema";
 import { memberSafety } from "../db/safety-schema";
@@ -65,7 +103,12 @@ type Player = typeof gamePlayers.$inferSelect;
 export type GamePrincipal = { identityHash: string; networkHash: string; actor: string | null };
 export function gameRoomService(
   db: Database,
-  options: { now?: () => Date; wake?: (id: string) => Promise<void> } = {},
+  options: {
+    now?: () => Date;
+    wake?: (id: string) => Promise<void>;
+    finalizeDrawing?: FinalizeDrawing;
+    drawingAuthority?: (authority: InkAuthority) => Promise<void>;
+  } = {},
 ) {
   const clock = options.now ?? (() => new Date());
   async function active(tx: Database, actor: string | null) {
@@ -103,7 +146,7 @@ export function gameRoomService(
   }
   async function withRoom(
     id: string,
-    who: GamePrincipal,
+    context: { who: GamePrincipal; stopTemperature?: boolean },
     work: (
       tx: Database,
       room: Room,
@@ -112,8 +155,10 @@ export function gameRoomService(
       changed: () => void,
     ) => Promise<void>,
   ) {
+    const { who, stopTemperature } = context;
     const roomId = gameRoomId.parse(id);
     let dirty = false;
+    let authority: InkAuthority | null = null;
     const view = await db.transaction(async (transaction) => {
       const tx = transaction as unknown as Database;
       await tx.execute(sql`set local statement_timeout = '5s'`);
@@ -124,8 +169,11 @@ export function gameRoomService(
         .for("update");
       if (!found) throw new AppError("NOT_FOUND", "게임방을 찾을 수 없어요.");
       const room: Room = found;
-      if (who.actor !== null && who.actor !== room.hostId)
+      const initialPhase = room.phase;
+      const host = who.actor !== null && who.actor === room.hostId;
+      if (who.actor !== null && !host)
         throw new AppError("FORBIDDEN", "이 방의 호스트 계정으로 로그인해주세요.");
+      if (host) await active(tx, who.actor);
       const now = clock();
       if (room.expiresAt <= now)
         throw new AppError("NOT_FOUND", "사용 기간이 지난 게임방이에요. 새 방을 열어주세요.");
@@ -171,6 +219,36 @@ export function gameRoomService(
         }
       }
       await reconcile();
+      if (
+        room.phase === "playing" &&
+        room.drawing?.endsAt !== null &&
+        room.drawing?.endsAt !== undefined &&
+        room.drawing.endsAt <= now.getTime() &&
+        ["draw", "live", "judging"].includes(room.drawing.stage)
+      ) {
+        if (
+          await options.finalizeDrawing?.(
+            tx,
+            room.id,
+            room.drawing,
+            Object.fromEntries(players.map((p) => [p.id, p.identityHash])),
+            room.expiresAt,
+            room.drawing.stage as "draw" | "live" | "judging",
+          )
+        )
+          changed();
+      }
+      if (room.phase === "playing" && room.drawing && tickDrawing(room.drawing, now.getTime()))
+        changed();
+      if (room.phase === "playing" && room.clue && tickClue(room.clue, now.getTime())) changed();
+      if (
+        room.phase === "playing" &&
+        (room.drawing?.stage === "result" || room.clue?.stage === "result")
+      ) {
+        room.phase = "finished";
+        room.expiresAt = new Date(now.getTime() + GAME_ROOM_TTL_MS);
+        changed();
+      }
       if (room.phase === "playing" && room.mbti && tickMbti(room.mbti, now.getTime())) changed();
       if (room.phase === "playing" && room.auction && tickAuction(room.auction, now.getTime())) {
         if (room.auction.stage === "result") room.phase = "finished";
@@ -180,8 +258,80 @@ export function gameRoomService(
         if (room.toast.stage === "result") room.phase = "finished";
         changed();
       }
+      if (
+        !stopTemperature &&
+        room.phase === "playing" &&
+        room.temperature &&
+        tickTemperature(room.temperature, now.getTime())
+      )
+        changed();
+      const priorDrawingStage = room.drawing?.stage;
       await work(tx, room, players, now, changed);
+      if (
+        room.drawing &&
+        ((priorDrawingStage === "live" && room.drawing.stage === "judging") ||
+          (priorDrawingStage === "draw" && room.drawing.stage === "interpret"))
+      ) {
+        if (
+          await options.finalizeDrawing?.(
+            tx,
+            room.id,
+            room.drawing,
+            Object.fromEntries(players.map((p) => [p.id, p.identityHash])),
+            room.expiresAt,
+            priorDrawingStage,
+          )
+        )
+          changed();
+      }
       await reconcile();
+      if (
+        room.phase === "playing" &&
+        (room.drawing?.stage === "result" || room.clue?.stage === "result")
+      ) {
+        room.phase = "finished";
+        changed();
+      }
+      if (
+        dirty &&
+        (room.drawing || room.clue) &&
+        room.phase === "finished" &&
+        initialPhase !== "finished"
+      ) {
+        const endedAt = room.drawing?.finishedAt ?? room.clue?.finishedAt ?? now.getTime(),
+          runId = room.drawing?.runId ?? room.clue?.runId;
+        room.expiresAt = new Date(endedAt + GAME_ROOM_TTL_MS);
+        await tx
+          .update(gameAssets)
+          .set({ expiresAt: room.expiresAt })
+          .where(
+            and(
+              eq(gameAssets.roomId, room.id),
+              runId ? eq(gameAssets.runId, runId) : isNull(gameAssets.runId),
+            ),
+          );
+        if (runId)
+          await tx
+            .insert(gameRuns)
+            .values({
+              id: runId,
+              roomId: room.id,
+              hostId: room.hostId,
+              title: room.title,
+              members: Object.fromEntries(
+                players
+                  .filter((p) =>
+                    (room.drawing?.roster ?? room.clue?.roster ?? []).some((r) => r.id === p.id),
+                  )
+                  .map((p) => [p.id, p.identityHash]),
+              ),
+              content: { drawing: room.drawing, clue: room.clue },
+              startedAt: room.startedAt ?? now,
+              endedAt: new Date(endedAt),
+              expiresAt: room.expiresAt,
+            })
+            .onConflictDoNothing();
+      }
       if (dirty) {
         room.revision++;
         await tx
@@ -190,6 +340,10 @@ export function gameRoomService(
             title: room.title,
             capacity: room.capacity,
             minPlayers: room.minPlayers,
+            drawing: room.drawing,
+            clue: room.clue,
+            expiresAt: room.expiresAt,
+            temperature: room.temperature,
             toast: room.toast,
             auction: room.auction,
             intro: room.intro,
@@ -202,42 +356,72 @@ export function gameRoomService(
           })
           .where(eq(gameRooms.id, roomId));
       }
-      const host = who.actor !== null && who.actor === room.hostId;
-      if (host) await active(tx, who.actor);
-      const me = players.find((p) => p.identityHash === who.identityHash);
+      const seat = players.find((p) => p.identityHash === who.identityHash);
+      const me =
+        host && seat?.status !== "admitted" && seat?.status !== "waiting" ? undefined : seat;
+      const playerId = me?.status === "admitted" ? me.id : null;
       const admitted = players.filter((p) => p.status === "admitted");
       const waiting = players.filter((p) => p.status === "waiting");
       const access = host || (!!me && ["admitted", "waiting"].includes(me.status));
       const online = (p: Player) => now.getTime() - p.lastSeenAt.getTime() < GAME_LEASE_MS;
+      const settings = roomSettings(room);
+      if (room.drawing) {
+        const d = room.drawing,
+          live = drawingView(d, null, now.getTime()).liveCanvasId;
+        const members: InkAuthority["members"] = {};
+        if (room.phase === "playing") {
+          for (const p of admitted) {
+            const assignment = drawingAssignment(d, p.id),
+              canvas = d.stage === "draw" ? (assignment?.canvasId ?? null) : live;
+            members[p.id] = {
+              read: canvas ? [canvas] : [],
+              write:
+                d.paused === null && ["draw", "live"].includes(d.stage)
+                  ? (assignment?.canvasId ?? null)
+                  : null,
+            };
+          }
+          members.host = { read: live ? [live] : [], write: null };
+        }
+        authority = {
+          roomId: room.id,
+          revision: room.revision,
+          phaseId: d.phaseId,
+          expiresAt: Math.min(room.expiresAt.getTime(), now.getTime() + 120000),
+          members,
+        };
+      }
       return {
-        settings: access ? roomSettings(room) : null,
+        settings: access ? settings : null,
+        drawing:
+          room.drawing && (host || me?.status === "admitted") && room.phase !== "closed"
+            ? drawingView(room.drawing, playerId, now.getTime())
+            : null,
+        clue:
+          room.clue && (host || me?.status === "admitted") && room.phase !== "closed"
+            ? clueView(room.clue, playerId, now.getTime(), host ? room.hostId : null)
+            : null,
+        temperature:
+          room.temperature && (host || me?.status === "admitted") && room.phase !== "closed"
+            ? temperatureView(room.temperature, playerId, now.getTime())
+            : null,
         settingsVersion: access ? roomSettingsVersion(room) : null,
         toast:
           room.toast && (host || me?.status === "admitted") && room.phase !== "closed"
-            ? toastView(room.toast, host ? null : (me?.id ?? null), now.getTime())
+            ? toastView(room.toast, playerId, now.getTime())
             : null,
-        gameType: room.toast
-          ? "toast"
-          : room.auction
-            ? "auction"
-            : room.intro
-              ? "mbti-intro"
-              : room.mbti?.words
-                ? "word-liar"
-                : room.mbti
-                  ? "mbti"
-                  : "lobby",
+        gameType: settings.gameType,
         auction:
           room.auction && (host || me?.status === "admitted") && room.phase !== "closed"
-            ? auctionView(room.auction, host ? null : (me?.id ?? null), now.getTime())
+            ? auctionView(room.auction, playerId, now.getTime())
             : null,
         mbtiIntro:
           room.intro && (host || me?.status === "admitted") && room.phase !== "closed"
-            ? introView(room.intro, host ? null : (me?.id ?? null), now.getTime())
+            ? introView(room.intro, playerId, now.getTime())
             : null,
         mbti:
           room.mbti && (host || me?.status === "admitted") && room.phase !== "closed"
-            ? mbtiView(room.mbti, host ? null : (me?.id ?? null), now.getTime())
+            ? mbtiView(room.mbti, playerId, now.getTime())
             : null,
         id: room.id,
         title: room.title,
@@ -252,7 +436,13 @@ export function gameRoomService(
         canStart:
           host &&
           room.phase === "lobby" &&
+          me?.status !== "waiting" &&
           admitted.length >= room.minPlayers &&
+          (!room.clue ||
+            clueReady(
+              room.clue,
+              admitted.map((p) => p.id),
+            )) &&
           (!room.auction || admitted.length < room.auction.settings.maxRounds) &&
           admitted.every(
             (p) =>
@@ -264,12 +454,11 @@ export function gameRoomService(
         waitingCount: waiting.length,
         readyCount: admitted.filter((p) => p.ready).length,
         viewer: {
-          id: host ? null : (me?.id ?? null),
-          status: host ? "host" : (me?.status ?? "new"),
-          nickname: host ? null : (me?.nickname ?? null),
-          ready: host ? false : (me?.ready ?? false),
-          queuePosition:
-            !host && me?.status === "waiting" ? waiting.findIndex((p) => p.id === me.id) + 1 : null,
+          id: me?.id ?? null,
+          status: me?.status ?? (host ? "host" : "new"),
+          nickname: me?.nickname ?? null,
+          ready: me?.ready ?? false,
+          queuePosition: me?.status === "waiting" ? waiting.indexOf(me) + 1 : null,
         },
         players: access
           ? admitted.map((p) => ({
@@ -283,6 +472,7 @@ export function gameRoomService(
       } satisfies GameRoomView;
     });
     // Publish only after COMMIT. Hints contain a room UUID, never players or credentials.
+    if (authority) await options.drawingAuthority?.(authority);
     if (dirty) await options.wake?.(roomId);
     return view;
   }
@@ -305,7 +495,7 @@ export function gameRoomService(
       const hostId = await active(db, actor);
       const value = createGameRoomSchema.parse(input);
       if (
-        ["mbti", "mbti-intro", "word-liar", "auction", "toast"].includes(value.gameType) &&
+        !["lobby", "drawing", "clue"].includes(value.gameType) &&
         (value.minPlayers < 3 || value.capacity < 3)
       )
         throw new AppError("VALIDATION", "이 게임은 최소 3명으로 설정해주세요.");
@@ -317,6 +507,12 @@ export function gameRoomService(
           title: value.title,
           capacity: value.capacity,
           minPlayers: value.minPlayers,
+          drawing: value.gameType === "drawing" ? newDrawing(drawingSettingsFrom(value)) : null,
+          clue: value.gameType === "clue" ? newClue(clueSettingsFrom(value)) : null,
+          temperature:
+            value.gameType === "temperature"
+              ? newTemperature(temperatureSettingsFrom(value))
+              : null,
           toast:
             value.gameType === "toast"
               ? newToast({
@@ -347,11 +543,13 @@ export function gameRoomService(
       return { id: room!.id };
     },
     read(id: string, who: GamePrincipal) {
-      return withRoom(id, who, async () => {});
+      return withRoom(id, { who }, async () => {});
     },
-    connect(id: string, who: GamePrincipal) {
-      return withRoom(id, who, async (tx, room, players, now, changed) => {
-        if (who.actor === room.hostId) return; // Hosts do not occupy a player seat.
+    connect(id: string, who: GamePrincipal, play = false) {
+      return withRoom(id, { who }, async (tx, room, players, now, changed) => {
+        const host = who.actor === room.hostId;
+        if (play && !host) throw new AppError("FORBIDDEN", "방을 만든 호스트만 사용할 수 있어요.");
+        if (host && !play && room.phase === "closed") return;
         if (room.phase === "closed") throw new AppError("CONFLICT", "종료된 게임방이에요.");
         const me = players.find((p) => p.identityHash === who.identityHash);
         if (me?.status === "kicked")
@@ -361,6 +559,9 @@ export function gameRoomService(
           await tx.update(gamePlayers).set({ lastSeenAt: now }).where(eq(gamePlayers.id, me.id));
           return;
         }
+        if (host && !play) return;
+        if (host && room.phase !== "lobby")
+          throw new AppError("CONFLICT", "대기실에서 플레이어로 참가할 수 있어요.");
         await limit(tx, room.id, who.identityHash, 20, now);
         await limit(tx, room.id, who.networkHash, 180, now);
         if (players.filter((p) => p.status === "waiting").length >= GAME_MAX_QUEUE)
@@ -411,14 +612,98 @@ export function gameRoomService(
       const value = gamePlayerActionSchema.parse(input);
       if (value.action === "nickname" || value.action === "intro-profile")
         policy("닉네임", value.nickname);
+      if (value.action === "drawing-text" || value.action === "drawing-guess")
+        policy("게임 문장", value.text);
+      if (value.action === "clue-question") {
+        policy("문제 이름", value.label);
+        policy("사진 이야기", value.story);
+        for (const c of value.choices ?? []) policy("문제 보기", c);
+      }
       if (value.action === "word-guess") policy("정답 입력", value.guess);
       if (value.action === "toast-question") policy("건배 질문", value.question);
-      return withRoom(id, who, async (tx, room, players, now, changed) => {
+      if (value.action === "temperature-situation") policy("상황", value.text);
+      return withRoom(id, { who }, async (tx, room, players, now, changed) => {
         const me = players.find((p) => p.identityHash === who.identityHash);
-        if (!me || !["admitted", "waiting"].includes(me.status))
+        if (!me || !["admitted", "waiting"].includes(me.status)) {
+          if (who.actor === room.hostId && value.action === "heartbeat") return;
           throw new AppError("FORBIDDEN", "먼저 게임방에 입장해주세요.");
+        }
         if (room.phase === "closed") throw new AppError("CONFLICT", "종료된 게임방이에요.");
         await limit(tx, room.id, who.identityHash, 50, now);
+        if (
+          value.action === "drawing-text" ||
+          value.action === "drawing-image" ||
+          value.action === "drawing-guess" ||
+          value.action === "drawing-judge" ||
+          value.action === "drawing-vote" ||
+          value.action === "clue-answer" ||
+          value.action === "clue-question"
+        ) {
+          if (me.status !== "admitted")
+            throw new AppError("FORBIDDEN", "입장한 참가자만 참여할 수 있어요.");
+          if (value.action === "clue-question") {
+            if (!room.clue || room.phase !== "lobby")
+              throw new AppError("CONFLICT", "단서각 대기실에서 출제해주세요.");
+            const [asset] = await tx
+              .select()
+              .from(gameAssets)
+              .where(
+                and(
+                  eq(gameAssets.id, value.assetId),
+                  eq(gameAssets.roomId, room.id),
+                  eq(gameAssets.uploaderHash, who.identityHash),
+                  eq(gameAssets.status, "ready"),
+                  isNull(gameAssets.runId),
+                ),
+              );
+            if (!asset) throw new AppError("VALIDATION", "처리가 완료된 내 자료를 선택해주세요.");
+            prepareClue(
+              room.clue,
+              {
+                id: randomUUID(),
+                assetId: asset.id,
+                basicAsset: null,
+                media:
+                  asset.kind === "audio" ? "audio" : asset.kind === "video" ? "video" : "photo",
+                authorId: me.id,
+                label: value.label,
+                story: value.story,
+                point: value.point ?? null,
+                choices: value.choices ?? null,
+                correctChoice: value.correctChoice ?? null,
+                credit: null,
+              },
+              me.id,
+              who.actor === room.hostId,
+            );
+          } else if (value.action === "clue-answer") {
+            if (!room.clue || room.phase !== "playing")
+              throw new AppError("CONFLICT", "진행 중인 단서각에서 제출해주세요.");
+            answerClue(room.clue, me.id, value.runId, value.phaseId, value, now.getTime());
+          } else {
+            if (!room.drawing || room.phase !== "playing")
+              throw new AppError("CONFLICT", "진행 중인 낙서톡에서 제출해주세요.");
+            if (value.action === "drawing-image") {
+              const [asset] = await tx
+                .select()
+                .from(gameAssets)
+                .where(
+                  and(
+                    eq(gameAssets.id, value.assetId),
+                    eq(gameAssets.roomId, room.id),
+                    eq(gameAssets.uploaderHash, who.identityHash),
+                    eq(gameAssets.status, "ready"),
+                    eq(gameAssets.runId, value.runId),
+                  ),
+                );
+              if (!asset || asset.kind !== "drawing" || asset.phaseId !== value.phaseId)
+                throw new AppError("VALIDATION", "현재 단계에 그린 내 그림을 제출해주세요.");
+            }
+            actDrawing(room.drawing, me.id, value, now.getTime());
+          }
+          changed();
+          return;
+        }
         if (
           value.action === "toast-question" ||
           value.action === "toast-answer" ||
@@ -444,6 +729,30 @@ export function gameRoomService(
               );
           }
           if (room.toast.stage === "result") room.phase = "finished";
+          changed();
+          return;
+        }
+        if (
+          value.action === "temperature-guess" ||
+          value.action === "temperature-situation" ||
+          value.action === "temperature-order"
+        ) {
+          if (room.phase !== "playing" || !room.temperature || me.status !== "admitted")
+            throw new AppError("FORBIDDEN", "이번 게임에 입장한 참가자만 제출할 수 있어요.");
+          if (value.action === "temperature-guess")
+            guessTemperature(room.temperature, me.id, value.runId, value.turn, value.value);
+          else if (value.action === "temperature-situation")
+            submitTemperatureSituation(
+              room.temperature,
+              me.id,
+              value.runId,
+              value.turn,
+              value.text,
+              value.value,
+              now.getTime(),
+            );
+          else
+            submitTemperatureOrder(room.temperature, me.id, value.runId, value.turn, value.order);
           changed();
           return;
         }
@@ -492,6 +801,8 @@ export function gameRoomService(
           return;
         }
         if (value.action === "leave") {
+          if (who.actor === room.hostId && room.phase !== "lobby")
+            throw new AppError("CONFLICT", "대기실에서 플레이어 참가를 취소할 수 있어요.");
           if (room.intro && room.phase === "lobby") delete room.intro.registered[me.id];
           me.status = "left";
           me.ready = false;
@@ -532,10 +843,13 @@ export function gameRoomService(
     host(id: string, who: GamePrincipal, input: unknown) {
       const value = gameHostActionSchema.parse(input);
       if (value.action === "settings") policy("방 제목", value.settings.title);
-      return withRoom(id, who, async (tx, room, players, now, changed) => {
+      const context = {
+        who,
+        stopTemperature: value.action === "finish" || value.action === "close",
+      };
+      return withRoom(id, context, async (tx, room, players, now, changed) => {
         if (!who.actor || who.actor !== room.hostId)
           throw new AppError("FORBIDDEN", "이 방의 호스트만 진행할 수 있어요.");
-        await active(tx, who.actor);
         await limit(tx, room.id, who.identityHash, 50, now);
         if (value.action === "settings") {
           if (room.phase !== "lobby")
@@ -556,7 +870,10 @@ export function gameRoomService(
               "이 방의 게임 종류는 바꿀 수 없어요. 현재 게임의 옵션을 변경해주세요.",
             );
           const joined = players.filter((p) => p.status === "admitted").length;
-          if (config.gameType !== "lobby" && (config.capacity < 3 || config.minPlayers < 3))
+          if (
+            !["lobby", "drawing", "clue"].includes(config.gameType) &&
+            (config.capacity < 3 || config.minPlayers < 3)
+          )
             throw new AppError("VALIDATION", "이 게임은 최소 3명으로 설정해주세요.");
           if (config.capacity < joined)
             throw new AppError("CONFLICT", `현재 입장한 ${joined}명보다 정원을 줄일 수 없어요.`);
@@ -568,6 +885,14 @@ export function gameRoomService(
             capacity: config.capacity,
             minPlayers: config.minPlayers,
           };
+          if (room.drawing) candidate.drawing = newDrawing(drawingSettingsFrom(config));
+          if (room.clue) {
+            candidate.clue = newClue(clueSettingsFrom(config));
+            if (config.clueMode === room.clue.settings.mode)
+              candidate.clue.prepared = room.clue.prepared;
+          }
+          if (room.temperature)
+            candidate.temperature = newTemperature(temperatureSettingsFrom(config));
           if (room.toast)
             candidate.toast = newToast({
               mode: config.toastMode,
@@ -595,6 +920,46 @@ export function gameRoomService(
           changed();
           return;
         }
+        if (value.action === "clue-question") {
+          if (!room.clue || room.phase !== "lobby" || room.clue.settings.mode === "member")
+            throw new AppError("CONFLICT", "호스트 직접 출제 대기실에서 사용해주세요.");
+          const [asset] = await tx
+            .select()
+            .from(gameAssets)
+            .where(
+              and(
+                eq(gameAssets.id, value.assetId),
+                eq(gameAssets.roomId, room.id),
+                eq(gameAssets.uploaderHash, who.identityHash),
+                eq(gameAssets.status, "ready"),
+                isNull(gameAssets.runId),
+              ),
+            );
+          if (!asset) throw new AppError("VALIDATION", "처리가 완료된 내 자료를 선택해주세요.");
+          const owner =
+            players.find((p) => p.identityHash === who.identityHash && p.status === "admitted")
+              ?.id ?? room.hostId;
+          prepareClue(
+            room.clue,
+            {
+              id: randomUUID(),
+              assetId: asset.id,
+              basicAsset: null,
+              media: asset.kind === "audio" ? "audio" : asset.kind === "video" ? "video" : "photo",
+              authorId: owner,
+              label: value.label,
+              story: value.story,
+              point: value.point ?? null,
+              choices: value.choices ?? null,
+              correctChoice: value.correctChoice ?? null,
+              credit: null,
+            },
+            owner,
+            true,
+          );
+          changed();
+          return;
+        }
         if (
           (value.action === "start" && room.phase === "playing") ||
           (value.action === "finish" && room.phase === "finished") ||
@@ -604,6 +969,22 @@ export function gameRoomService(
         if (room.revision !== value.revision)
           throw new AppError("CONFLICT", "참가 현황이 바뀌었어요. 최신 상태에서 다시 눌러주세요.");
         if (room.phase === "closed") throw new AppError("CONFLICT", "종료된 게임방이에요.");
+        if (
+          value.action === "temperature-open" ||
+          value.action === "temperature-skip" ||
+          value.action === "temperature-next"
+        ) {
+          if (room.phase !== "playing" || !room.temperature)
+            throw new AppError("CONFLICT", "진행 중인 마음의 온도 게임이 아니에요.");
+          if (value.action === "temperature-open")
+            openTemperatureGuess(room.temperature, value.turn, now.getTime());
+          else if (value.action === "temperature-skip")
+            skipTemperature(room.temperature, value.turn);
+          else nextTemperature(room.temperature, value.turn, now.getTime());
+          if (room.temperature.stage === "result") room.phase = "finished";
+          changed();
+          return;
+        }
         if (value.action === "toast-next" || value.action === "toast-skip") {
           if (room.phase !== "playing" || !room.toast)
             throw new AppError("CONFLICT", "진행 중인 건배 게임이 아니에요.");
@@ -655,10 +1036,20 @@ export function gameRoomService(
           changed();
           return;
         }
+        if (value.action === "creative-control") {
+          const state = room.drawing ?? room.clue;
+          if (!state || room.phase !== "playing" || state.phaseId !== value.phaseId)
+            throw new AppError("CONFLICT", "현재 단계에서 진행해주세요.");
+          if (room.drawing) controlDrawing(room.drawing, value.command, now.getTime());
+          if (room.clue) controlClue(room.clue, value.command, now.getTime());
+          changed();
+          return;
+        }
         if (value.action === "start") {
           const joined = players.filter((p) => p.status === "admitted");
           if (
             room.phase !== "lobby" ||
+            players.some((p) => p.identityHash === who.identityHash && p.status === "waiting") ||
             joined.length < room.minPlayers ||
             joined.some(
               (p) =>
@@ -668,6 +1059,31 @@ export function gameRoomService(
             throw new AppError(
               "CONFLICT",
               "최소 인원이 모이고 입장한 참가자 모두 준비되어야 시작할 수 있어요.",
+            );
+          if (room.drawing)
+            startDrawing(
+              room.drawing,
+              joined.map((p) => ({ id: p.id, nickname: p.nickname! })),
+              now.getTime(),
+            );
+          if (room.clue) {
+            const hostSeat = players.find(
+              (p) => p.identityHash === who.identityHash && p.status === "admitted",
+            );
+            room.clue.prepared = room.clue.prepared.map((q) =>
+              q.authorId === room.hostId ? { ...q, authorId: hostSeat?.id ?? null } : q,
+            );
+            startClue(
+              room.clue,
+              joined.map((p) => ({ id: p.id, nickname: p.nickname! })),
+              now.getTime(),
+            );
+          }
+          if (room.temperature)
+            startTemperature(
+              room.temperature,
+              joined.map((p) => ({ id: p.id, nickname: p.nickname! })),
+              now.getTime(),
             );
           if (room.toast)
             startToast(
@@ -691,11 +1107,28 @@ export function gameRoomService(
               joined.map((p) => ({ id: p.id, nickname: p.nickname! })),
               now.getTime(),
             );
+          const creativeRun = room.drawing?.runId ?? room.clue?.runId;
+          if (creativeRun)
+            await tx
+              .update(gameAssets)
+              .set({ runId: creativeRun })
+              .where(and(eq(gameAssets.roomId, room.id), isNull(gameAssets.runId)));
           room.phase = "playing";
           room.startedAt = now;
         } else if (value.action === "finish") {
           if (room.phase !== "playing")
             throw new AppError("CONFLICT", "진행 중인 라운드가 없어요.");
+          if (room.drawing) {
+            room.drawing.stage = "aborted";
+            room.drawing.endsAt = null;
+            room.drawing.finishedAt = now.getTime();
+          }
+          if (room.clue) {
+            room.clue.stage = "aborted";
+            room.clue.endsAt = null;
+            room.clue.finishedAt = now.getTime();
+          }
+          if (room.temperature) abortTemperature(room.temperature);
           if (room.toast) abortToast(room.toast);
           if (room.auction) abortAuction(room.auction);
           if (room.intro) room.intro.stage = "aborted";
@@ -707,6 +1140,9 @@ export function gameRoomService(
         } else if (value.action === "reset") {
           if (room.phase !== "finished")
             throw new AppError("CONFLICT", "라운드를 종료한 후 다음 게임을 준비해주세요.");
+          if (room.drawing) room.drawing = newDrawing(room.drawing.settings);
+          if (room.clue) room.clue = newClue(room.clue.settings);
+          if (room.temperature) room.temperature = newTemperature(room.temperature.settings);
           if (room.toast) room.toast = newToast(room.toast.settings);
           if (room.auction) room.auction = newAuction(room.auction.settings);
           if (room.intro) room.intro = newIntro(room.intro.maxRounds);
@@ -726,6 +1162,8 @@ export function gameRoomService(
             (p) => p.id === value.playerId && ["admitted", "waiting"].includes(p.status),
           );
           if (!target) throw new AppError("NOT_FOUND", "참가자를 찾을 수 없어요.");
+          if (target.identityHash === who.identityHash)
+            throw new AppError("CONFLICT", "본인 자리는 참가 취소 버튼으로 비울 수 있어요.");
           if (room.intro) delete room.intro.registered[target.id];
           target.status = "kicked";
           target.ready = false;
@@ -734,6 +1172,7 @@ export function gameRoomService(
             .set({ status: "kicked", ready: false })
             .where(eq(gamePlayers.id, target.id));
         } else {
+          if (room.temperature && room.phase === "playing") abortTemperature(room.temperature);
           if (room.toast && room.phase === "playing") abortToast(room.toast);
           if (room.auction && room.phase === "playing") abortAuction(room.auction);
           room.phase = "closed";

@@ -638,3 +638,9 @@
 .recent a:last-child {
   border-bottom: 0;
 }
+
+/* Keep focus and action targets stable in long, live-updating game forms.
+   Explicit user-requested scroll animations can still opt in with behavior:smooth. */
+:global(html):has(.screen) {
+  scroll-behavior: auto;
+}

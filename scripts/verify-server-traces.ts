@@ -1,8 +1,15 @@
 import { lstat, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { sanitizeStandaloneArtifact } from "./standalone-artifact-policy";
 import { inspectServerTraceManifest } from "./server-trace-policy";
 
-const counts = { manifests: 0, privateRemoved: 0, workerDependencies: 0, errors: 0 };
+const counts = {
+  manifests: 0,
+  privateRemoved: 0,
+  workerDependencies: 0,
+  privateCopiesRemoved: 0,
+  errors: 0,
+};
 async function traces(directory: string): Promise<string[]> {
   const metadata = await lstat(directory);
   if (!metadata.isDirectory() || metadata.isSymbolicLink())
@@ -41,6 +48,10 @@ try {
       await writeFile(plan.location, JSON.stringify(plan.manifest) + "\n", "utf8");
       counts.privateRemoved += plan.privateRemoved;
     }
+  if (counts.workerDependencies === 0) {
+    const sanitized = await sanitizeStandaloneArtifact(root);
+    counts.privateCopiesRemoved = sanitized.privateCopiesRemoved;
+  }
 } catch {
   // Manifest errors can include private paths or JSON contents; never display the exception.
   counts.errors++;

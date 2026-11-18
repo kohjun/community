@@ -15,7 +15,7 @@
 .hero p {
   font-size: 14px;
   line-height: 1.8;
-  color: #77818f;
+  color: #526174;
 }
 .heroFacts {
   display: flex;
@@ -28,7 +28,7 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #778ba2;
+  color: #526174;
 }
 .heroFacts svg {
   color: #5294d5;
@@ -95,7 +95,7 @@
   outline: none !important;
   background: transparent !important;
   height: 42px !important;
-  font-size: 12px !important;
+  font-size: 1rem !important;
 }
 .filters {
   display: flex;
@@ -107,7 +107,7 @@
   border: 1px solid #e3e8ef;
   border-radius: 9px;
   background: #fff;
-  color: #7a889b;
+  color: #526174;
   min-height: 40px;
   padding: 9px 13px;
   font-size: 12px;
@@ -319,22 +319,22 @@
   min-width: 0;
 }
 .genre {
-  font-size: 10px;
+  font-size: 0.75rem;
   font-weight: 650;
-  color: #7990aa;
+  color: #526174;
 }
 .gameCard .cardBody h3 {
   font-weight: 750;
-  font-size: 15px;
+  font-size: 1.0625rem;
   line-height: 1.5;
   letter-spacing: -0.5px;
   padding-top: 6px;
   overflow-wrap: anywhere;
 }
 .cardBody p {
-  font-size: 12px;
+  font-size: 0.875rem;
   line-height: 1.85;
-  color: #8491a3;
+  color: #526174;
   padding-top: 8px;
   flex: 1;
   overflow-wrap: anywhere;
@@ -346,11 +346,11 @@
   margin-top: 13px;
 }
 .tags span {
-  font-size: 9px;
+  font-size: 0.6875rem;
   line-height: 1.4;
   border-radius: 5px;
   background: #f3f6fa;
-  color: #8797aa;
+  color: #526174;
   padding: 4px 5px;
 }
 .cardBottom {
@@ -367,8 +367,8 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
-  color: #8b9ab0;
+  font-size: 0.75rem;
+  color: #526174;
 }
 .cardBottom > span:last-child {
   color: #4c8ac6;
@@ -376,7 +376,7 @@
 .catalogNote {
   font-size: 11px;
   line-height: 1.8;
-  color: #98a6b9;
+  color: #526174;
   padding-top: 16px;
 }
 .empty {
@@ -479,9 +479,9 @@
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 1.4px;
-  color: #7da4cd;
+  color: #2163a8;
 }
-.detail .detailBody h2 {
+.detail .detailBody h1 {
   font-weight: 750;
   font-size: 27px;
   letter-spacing: -1px;
@@ -492,7 +492,7 @@
 }
 .hook {
   font-size: 13px;
-  color: #8291a4;
+  color: #526174;
   line-height: 1.8;
   padding-top: 8px;
 }
@@ -510,7 +510,7 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #7389a4;
+  color: #526174;
 }
 .detailBody h3 {
   font-size: 14px;
@@ -542,13 +542,13 @@
 }
 .highlights p {
   font-size: 13px;
-  color: #7c8da3;
+  color: #526174;
   line-height: 1.85;
   overflow-wrap: anywhere;
 }
 .settingsIntro {
-  font-size: 12px;
-  color: #8796a9;
+  font-size: 0.875rem;
+  color: #526174;
   line-height: 1.85;
   padding-bottom: 24px;
 }
@@ -579,7 +579,7 @@
 }
 .startGuide p {
   font-size: 11px;
-  color: #8c9db3;
+  color: #526174;
   line-height: 1.9;
   padding-top: 5px;
 }
@@ -589,7 +589,7 @@
   justify-content: center;
   gap: 7px;
   font-size: 11px;
-  color: #96a5b7;
+  color: #526174;
   line-height: 1.9;
   padding-top: 20px;
 }
@@ -731,14 +731,14 @@
     padding: 13px 12px;
   }
   .genre {
-    font-size: 9px;
+    font-size: 0.6875rem;
   }
   .gameCard .cardBody h3 {
-    font-size: 14px;
+    font-size: 1rem;
     line-height: 1.6;
   }
   .cardBody p {
-    font-size: 11px;
+    font-size: 0.875rem;
     padding-top: 7px;
   }
   .tags {
@@ -746,7 +746,7 @@
     margin-top: 11px;
   }
   .tags span {
-    font-size: 8px;
+    font-size: 0.6875rem;
     padding: 4px;
   }
   .cardBottom {
@@ -757,7 +757,7 @@
     padding-top: 11px;
   }
   .cardBottom > span {
-    font-size: 10px;
+    font-size: 0.75rem;
   }
   .catalogNote {
     font-size: 10px;
@@ -805,7 +805,7 @@
   .detailBody {
     padding: 23px 19px;
   }
-  .detail .detailBody h2 {
+  .detail .detailBody h1 {
     font-size: 24px;
     scroll-margin-top: 95px;
   }
@@ -864,4 +864,126 @@
   --accent: #318db2;
   --base: #e1f5fa;
   --tile: #3d9fbd;
+}
+
+.cover[data-game="temperature"] {
+  --accent: #a84747;
+  --base: #fcebe5;
+  --tile: #c95351;
+}
+
+.cover[data-game="drawing"] {
+  background: linear-gradient(140deg, #e8f3ff, #cce5ff);
+}
+.cover[data-game="clue"] {
+  background: linear-gradient(140deg, #e9f7ff, #dceaff);
+}
+
+.hero[hidden],
+.library[hidden] {
+  display: none;
+}
+.library {
+  container: game-library / inline-size;
+}
+.gameItem {
+  container: game-card / inline-size;
+}
+.cardAction {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: start;
+}
+.cardAction::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.gameCard:has(.cardAction:focus-visible) {
+  outline: 3px solid #095fb8;
+  outline-offset: 3px;
+}
+.gameCard .cardAction:focus-visible {
+  outline: none;
+}
+.gameCard {
+  border-color: #dce4ee;
+  box-shadow: 0 2px 6px #12315404;
+}
+.save {
+  min-inline-size: 48px;
+  min-block-size: 48px;
+  color: #40536b;
+}
+.filters button {
+  min-block-size: 44px;
+  font-size: 0.8125rem;
+}
+.filters button[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 1px #0a84fe;
+}
+.catalogHeader .search {
+  color: #526174;
+}
+.search input::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+.setup {
+  margin-block-start: 0;
+  padding-block-start: 0;
+  border-block-start: 0;
+}
+.back {
+  min-block-size: 48px;
+  font-size: 0.875rem;
+  color: #334d6d;
+}
+.detail .detailBody h1 {
+  text-wrap: balance;
+}
+.hook {
+  font-size: 0.9375rem;
+}
+.settings {
+  scroll-margin-block-start: 6rem;
+}
+@container game-library (max-width: 56rem) {
+  .gameGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@container game-library (max-width: 42rem) {
+  .gameGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container game-library (max-width: 22rem) {
+  .gameGrid {
+    grid-template-columns: 1fr;
+  }
+}
+@container game-card (max-width: 12rem) {
+  .cardBody {
+    padding: 0.875rem 0.75rem;
+  }
+  .cardBody p {
+    font-size: 0.8125rem;
+    line-height: 1.65;
+  }
+  .cardBottom {
+    gap: 0.5rem;
+  }
+}
+@media (pointer: coarse) {
+  .save,
+  .filters button,
+  .myRooms {
+    min-inline-size: 48px;
+    min-block-size: 48px;
+  }
 }

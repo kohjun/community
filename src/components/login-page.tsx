@@ -44,7 +44,7 @@ export function LoginPage({
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (gate.current) return;
-    if (!localTestLoginAvailable) {
+    if (!socialLoginAvailable && !localTestLoginAvailable) {
       prepared();
       return;
     }
@@ -57,13 +57,14 @@ export function LoginPage({
     setFailed(false);
     setNotice("");
     try {
-      const result = await appRequest<{ nickname: string; redirect: string }>(
-        "/api/auth/test/login",
+      const email = String(fields.get("email") ?? "").trim();
+      const password = String(fields.get("password") ?? "");
+      const result = await appRequest<{ redirect: string }>(
+        socialLoginAvailable ? "/api/auth/password" : "/api/auth/test/login",
         "POST",
-        {
-          username: String(fields.get("email") ?? "").trim(),
-          password: String(fields.get("password") ?? ""),
-        },
+        socialLoginAvailable
+          ? { action: "login", email, password, returnTo }
+          : { username: email, password },
         controller.signal,
       );
       if (!mounted.current || controller.signal.aborted) return;
@@ -71,9 +72,11 @@ export function LoginPage({
       setNotice("로그인했어요. 잠시만 기다려주세요.");
       notifyPushSettingsChanged();
       router.push(
-        result.redirect === "/signup"
-          ? `/signup?returnTo=${encodeURIComponent(returnTo)}`
-          : returnTo,
+        socialLoginAvailable
+          ? result.redirect
+          : result.redirect === "/signup"
+            ? `/signup?returnTo=${encodeURIComponent(returnTo)}`
+            : returnTo,
       );
       router.refresh();
     } catch (cause) {
@@ -104,11 +107,11 @@ export function LoginPage({
               {localTestLoginAvailable
                 ? "로컬 테스트 계정 로그인"
                 : socialLoginAvailable
-                  ? "카카오·구글 계정으로 간편하게 시작하기"
+                  ? "이메일·카카오·구글로 시작할 수 있어요"
                   : "로그인 연결 준비 중"}
             </div>
-            {localTestLoginAvailable && (
-              <form onSubmit={login} aria-busy={busy}>
+            {(socialLoginAvailable || localTestLoginAvailable) && (
+              <form method="post" onSubmit={login} aria-busy={busy}>
                 <label className="sr-only" htmlFor="login-email">
                   아이디(이메일)
                 </label>
@@ -151,7 +154,9 @@ export function LoginPage({
             <div className="login-help">
               <Link href="/help">로그인 도움말</Link>
               <span>·</span>
-              <Link href="/signup">기본 정보 입력</Link>
+              <Link href={`/signup?returnTo=${encodeURIComponent(returnTo)}`}>
+                {socialLoginAvailable ? "회원가입" : "기본 정보 입력"}
+              </Link>
             </div>
             <div className="login-divider">
               <span />

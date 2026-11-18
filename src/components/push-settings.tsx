@@ -19,6 +19,11 @@ import { PushOnboardingGuideButton } from "./push-onboarding";
 
 const PREFERENCES: { key: keyof PushPreferences; label: string; description: string }[] = [
   {
+    key: "crewMessages",
+    label: "크루 톡방 메시지",
+    description: "가입한 크루의 새 메시지와 내용 미리보기",
+  },
+  {
     key: "announcements",
     label: "공지방 새 공지",
     description: "참가한 모임의 담당자가 올린 공지",

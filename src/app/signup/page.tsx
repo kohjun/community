@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { currentActor } from "@/server/identity";
+import { redirect } from "next/navigation";
+import { currentIdentity } from "@/server/identity";
+import { authConfiguration } from "@/server/auth-config";
+import { EmailSignup } from "@/components/email-signup";
 import { communityService } from "@/server/community-service";
 import { getDatabase } from "@/db/client";
 import { safeProfileReturnTo } from "@/domain/profile";
@@ -14,7 +17,9 @@ export default async function Page({
 }) {
   const query = await searchParams;
   const returnTo = safeProfileReturnTo(query.returnTo);
-  const actor = await currentActor();
+  const { actor, authenticatedId } = await currentIdentity();
+  if (authenticatedId && !actor) redirect("/settings/account");
+  if (!actor && authConfiguration()) return <EmailSignup returnTo={returnTo} />;
   if (!actor)
     return (
       <ParticipationShell>

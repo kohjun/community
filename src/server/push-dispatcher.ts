@@ -1,4 +1,4 @@
-import { posts } from "../db/schema";
+import { notificationPreviews } from "./notification-previews";
 import { createHash, randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import webpush from "web-push";
@@ -173,18 +173,33 @@ export function pushDispatcher(
           { delivery: true },
         )
       : sql`true`;
+    const crewMessageMatch = /^crew-message:([0-9a-f-]{36})$/i.exec(delivery.dedupeKey);
+    const crewEligible = sql`exists(select 1 from sliper.crew_messages message
+      join sliper.crews crew on crew.id=message.crew_id and crew.status='active'
+      join sliper.crew_members member on member.crew_id=crew.id and member.user_id=${delivery.recipientId}::uuid
+      where message.id=${crewMessageMatch?.[1] ?? null}::uuid and crew.id=${delivery.crewId}::uuid
+        and message.deleted_at is null and message.author_id is not null and member.created_at<=message.created_at
+        and message.author_id<>member.user_id
+        and not exists(select 1 from sliper.content_restrictions r where r.target_type='crew' and r.target_id=crew.id and r.hidden)
+        and not exists(select 1 from sliper.member_safety s where s.user_id in (message.author_id,crew.owner_id)
+          and (s.status='closed' or (s.status='suspended' and (s.suspended_until is null or s.suspended_until>statement_timestamp()))))
+        and not exists(select 1 from sliper.member_blocks b where
+          (b.blocker_id=member.user_id and b.blocked_id in (message.author_id,crew.owner_id)) or
+          (b.blocked_id=member.user_id and b.blocker_id in (message.author_id,crew.owner_id))))`;
     const eligible =
-      delivery.kind === "subscription" || delivery.kind === "reminder"
-        ? engagementEligible
-        : delivery.kind === "comment"
-          ? sql`
+      delivery.kind === "crew_message"
+        ? crewEligible
+        : delivery.kind === "subscription" || delivery.kind === "reminder"
+          ? engagementEligible
+          : delivery.kind === "comment"
+            ? sql`
       exists(select 1 from sliper.notifications n
         join sliper.comments c on c.id=n.comment_id and c.post_id=n.post_id
         join sliper.posts p on p.id=n.post_id
         where n.recipient_id=${delivery.recipientId}::uuid and n.comment_id=${delivery.commentId}::uuid
           and n.post_id=${delivery.postId}::uuid and p.status='published' and c.status='published')`
-          : delivery.kind === "announcement" && roomMatch
-            ? sql`
+            : delivery.kind === "announcement" && roomMatch
+              ? sql`
       exists(select 1 from sliper.posts p
         join sliper.room_messages message on message.post_id=p.id and message.id=${roomMatch[1]}::uuid
         where p.id=${delivery.postId}::uuid and p.status='published' and (
@@ -193,24 +208,24 @@ export function pushDispatcher(
           or exists(select 1 from sliper.room_members m join sliper.event_applications a on a.id=m.application_id
             where m.post_id=p.id and m.user_id=${delivery.recipientId}::uuid and m.revoked_at is null and a.status='confirmed')
         ))`
-            : delivery.kind === "participation" && waitlistMatch
-              ? currentSourceEligible
-              : delivery.kind === "participation" && eventChangeMatch
-                ? sql`
+              : delivery.kind === "participation" && waitlistMatch
+                ? currentSourceEligible
+                : delivery.kind === "participation" && eventChangeMatch
+                  ? sql`
       exists(select 1 from sliper.event_changes change
         join sliper.event_change_recipients recipient on recipient.change_id=change.id and recipient.post_id=change.post_id
         join sliper.posts p on p.id=change.post_id
         where change.id=${eventChangeMatch[1]}::uuid and change.post_id=${delivery.postId}::uuid
           and recipient.user_id=${delivery.recipientId}::uuid and p.status='published')`
-                : delivery.kind === "participation" && applicationMatch
-                  ? sql`
+                  : delivery.kind === "participation" && applicationMatch
+                    ? sql`
       exists(select 1 from sliper.event_applications a join sliper.posts p on p.id=a.post_id
         where a.id=${applicationMatch[1]}::uuid and a.user_id=${delivery.recipientId}::uuid and a.post_id=${delivery.postId}::uuid
           and a.status=${applicationMatch[2]} and p.status='published'
           and (a.status<>'confirmed' or exists(select 1 from sliper.room_members m where m.application_id=a.id and m.revoked_at is null)))`
-                  : delivery.kind === "test"
-                    ? sql`true`
-                    : sql`false`;
+                    : delivery.kind === "test"
+                      ? sql`true`
+                      : sql`false`;
     const [row] = await db
       .select({ id: pushDeliveries.id })
       .from(pushDeliveries)
@@ -224,6 +239,7 @@ export function pushDispatcher(
           sql`not exists(select 1 from sliper.member_safety state where state.user_id=${delivery.recipientId}::uuid and (state.status='closed' or (state.status='suspended' and (state.suspended_until is null or state.suspended_until>statement_timestamp()))))`,
           sql`${pushDeliveries.expiresAt}>statement_timestamp()`,
           sql`coalesce((select case
+          when ${pushDeliveries.kind}='crew_message' then pref.crew_messages
           when ${pushDeliveries.kind}='comment' then pref.comments
           when ${pushDeliveries.kind}='announcement' then pref.announcements
           when ${pushDeliveries.kind}='participation' then pref.participation
@@ -272,23 +288,14 @@ export function pushDispatcher(
       return;
     }
     try {
-      const [source] = delivery.postId
-        ? await db
-            .select({ spoiler: posts.spoiler })
-            .from(posts)
-            .where(eq(posts.id, delivery.postId))
-        : [];
-      await sender(
-        subscription,
-        source?.spoiler
-          ? {
-              ...delivery,
-              title: "스포일러 글에 새 활동이 있어요",
-              body: "글을 펼쳐 내용을 확인해주세요.",
-            }
-          : delivery,
-        config,
-      );
+      const previews = await notificationPreviews(db, [
+        { ...delivery, sourceId: delivery.commentId },
+      ]);
+      if (!(await maySend(delivery))) {
+        await finish(delivery, "cancelled", "NO_LONGER_ELIGIBLE");
+        return;
+      }
+      await sender(subscription, { ...delivery, ...previews.get(delivery.id) }, config);
       // "sent" means accepted by the push provider, not viewed on the device.
       await finish(delivery, "sent", null);
     } catch (error) {

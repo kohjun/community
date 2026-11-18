@@ -1,3 +1,5 @@
+import { processGameMedia } from "../src/server/game-media-worker";
+import { cleanupGameAssets } from "../src/server/game-media-core";
 import { workerHeartbeat } from "../src/server/worker-health";
 import { config } from "dotenv";
 import { setTimeout as delay } from "node:timers/promises";
@@ -25,11 +27,17 @@ try {
     console.log(JSON.stringify(await worker.drain(controller.signal)));
   } else {
     console.log("Sliper video worker ready (concurrency: 1).");
+    let lastGameCleanup = 0;
     while (!controller.signal.aborted) {
       try {
         const result = await worker.drain(controller.signal);
         await heartbeat!.success();
-        if (result.processed) continue;
+        if (Date.now() - lastGameCleanup >= 60_000) {
+          await cleanupGameAssets(connection.db);
+          lastGameCleanup = Date.now();
+        }
+        const gameMedia = await processGameMedia(connection.db, controller.signal);
+        if (result.processed || gameMedia.processed) continue;
       } catch {
         // Credentials, source paths and private uploader IDs never enter logs.
         console.error("Sliper video worker: processing requires retry or lease recovery.");

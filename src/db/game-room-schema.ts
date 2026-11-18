@@ -1,3 +1,5 @@
+import type { DrawingState, ClueState } from "../domain/creative-games";
+import type { TemperatureState } from "../domain/temperature-game";
 import type { ToastState } from "../domain/toast-game";
 import type { AuctionState } from "../domain/auction-game";
 import { sql } from "drizzle-orm";
@@ -26,6 +28,9 @@ export const gameRooms = sliper
       hostId: uuid("host_id")
         .notNull()
         .references(() => profiles.id, { onDelete: "cascade" }),
+      drawing: jsonb("drawing").$type<DrawingState>(),
+      clue: jsonb("clue").$type<ClueState>(),
+      temperature: jsonb("temperature").$type<TemperatureState>(),
       toast: jsonb("toast").$type<ToastState>(),
       auction: jsonb("auction").$type<AuctionState>(),
       intro: jsonb("mbti_intro").$type<IntroState>(),
@@ -104,6 +109,73 @@ export const gameRequestLimits = sliper
     (t) => [
       primaryKey({ columns: [t.roomId, t.subjectHash] }),
       check("game_limit_count", sql`${t.count} > 0`),
+    ],
+  )
+  .enableRLS();
+
+// Room-scoped media stays separate from public posts; orphaned parents are cleaned durably.
+export const gameRuns = sliper
+  .table(
+    "game_runs",
+    {
+      id: uuid("id").primaryKey(),
+      roomId: uuid("room_id").references(() => gameRooms.id, { onDelete: "set null" }),
+      hostId: uuid("host_id").references(() => profiles.id, { onDelete: "set null" }),
+      title: varchar("title", { length: 60 }).notNull(),
+      members: jsonb("members").$type<Record<string, string>>().notNull(),
+      content: jsonb("content")
+        .$type<{ drawing: DrawingState | null; clue: ClueState | null }>()
+        .notNull(),
+      startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+      endedAt: timestamp("ended_at", { withTimezone: true }).notNull(),
+      expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    },
+    (t) => [
+      index("game_runs_expiry").on(t.expiresAt),
+      index("game_runs_room").on(t.roomId, t.endedAt),
+    ],
+  )
+  .enableRLS();
+export const gameAssets = sliper
+  .table(
+    "game_assets",
+    {
+      id: uuid("id").primaryKey().defaultRandom(),
+      roomId: uuid("room_id").references(() => gameRooms.id, { onDelete: "set null" }),
+      runId: uuid("run_id"),
+      uploaderHash: varchar("uploader_hash", { length: 64 }).notNull(),
+      phaseId: uuid("phase_id"),
+      kind: varchar("kind", { length: 12 })
+        .$type<"drawing" | "photo" | "audio" | "video">()
+        .notNull(),
+      status: varchar("status", { length: 12 })
+        .$type<"ready" | "queued" | "processing" | "failed">()
+        .notNull(),
+      storageBackend: varchar("storage_backend", { length: 12 })
+        .$type<"local" | "supabase">()
+        .notNull(),
+      objectKey: varchar("object_key", { length: 48 }).notNull(),
+      sourceKey: varchar("source_key", { length: 48 }),
+      contentType: varchar("content_type", { length: 40 }).notNull(),
+      byteSize: integer("byte_size").notNull(),
+      attempts: integer("attempts").notNull().default(0),
+      lockToken: uuid("lock_token"),
+      leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+      expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+      createdAt: stamp("created_at"),
+    },
+    (t) => [
+      index("game_assets_room_owner").on(t.roomId, t.uploaderHash),
+      index("game_assets_cleanup").on(t.expiresAt),
+      index("game_assets_jobs").on(t.status, t.createdAt),
+      check("game_assets_kind", sql`${t.kind} in ('drawing','photo','audio','video')`),
+      check("game_assets_status", sql`${t.status} in ('ready','queued','processing','failed')`),
+      check("game_assets_backend", sql`${t.storageBackend} in ('local','supabase')`),
+      check(
+        "game_assets_size",
+        sql`${t.byteSize}>0 and ${t.byteSize}<=26214400 and ${t.attempts}>=0`,
+      ),
+      check("game_assets_owner", sql`${t.uploaderHash} ~ '^[a-f0-9]{64}$'`),
     ],
   )
   .enableRLS();
