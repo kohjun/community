@@ -433,7 +433,13 @@ export function SliperCommunity({
         본문으로 바로가기
       </a>
       <SiteHeader
-        activeSection={view === "stories" ? "stories" : "home"}
+        activeSection={
+          view === "stories"
+            ? "stories"
+            : kind === "모집" && discovery.meetupType === "event"
+              ? "events"
+              : "home"
+        }
         savedMeetupsActive={savedMeetups}
         search={
           <>
@@ -510,7 +516,7 @@ export function SliperCommunity({
           />
         )}
 
-        <div className={cn("sl-layout", showRail && "has-rail")}>
+        <div className={cn("sl-layout", homeLanding && "sl-layout--home", showRail && "has-rail")}>
           <main id="main-content" className="sl-feed">
             <section ref={feedRef} className="sl-feed__section" aria-labelledby="feed-title">
               <div className="sl-feed__head">

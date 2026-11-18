@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Bookmark, Search, UserRound } from "lucide-react";
-import type { CommunityNavigationSection } from "@/domain/navigation";
+import type { CommunityNavigationActiveSection } from "@/domain/navigation";
 import { NotificationBell } from "./notification-bell";
 import { SiteNavigation } from "./site-navigation";
 import { TestAccountControls } from "./test-account-controls";
@@ -29,7 +29,7 @@ export function SiteHeader({
   search,
   savedMeetupsActive = false,
 }: {
-  activeSection?: CommunityNavigationSection;
+  activeSection?: CommunityNavigationActiveSection;
   search?: ReactNode;
   savedMeetupsActive?: boolean;
 }) {

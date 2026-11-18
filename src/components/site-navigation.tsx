@@ -2,84 +2,88 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import {
-  SITE_NAVIGATION,
+  AUDIENCE_NAVIGATION,
   activeNavigationSection,
   type CommunityNavigationSection,
-  type NavigationSection,
+  type CommunityNavigationActiveSection,
 } from "@/domain/navigation";
 import { useAudience } from "@/lib/audience";
-
-const EXTRA_LINKS = [
-  { href: "/ideas", label: "모임 제안하기" },
-  { href: "/hosting-guide", label: "호스트 가이드" },
-  { href: "/help", label: "이용 안내" },
-] as const;
-
-// Which sections lead the header per viewing mode. Everything else stays under "더보기".
-const PRIMARY: Record<"participant" | "host", readonly NavigationSection[]> = {
-  participant: ["stories", "lightning", "games"],
-  host: ["archive", "players", "stories"],
-};
-const MANAGEMENT = { href: "/management", label: "모임 관리" } as const;
 
 export function SiteNavigation({
   activeSection,
   onNavigate,
 }: {
-  activeSection?: CommunityNavigationSection;
+  activeSection?: CommunityNavigationActiveSection;
   onNavigate?: (section: CommunityNavigationSection) => void;
 }) {
   const pathname = usePathname();
   const [audience] = useAudience();
+  const { primary, more } = AUDIENCE_NAVIGATION[audience];
   const active = activeNavigationSection(pathname, activeSection);
-  const managementActive = pathname === "/management" || !!pathname?.startsWith("/management/");
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreRef = useRef<HTMLDivElement>(null);
-  // The brand mark already links home, so the header skips a separate 홈 item.
-  const primaryIds = PRIMARY[audience];
-  const primary = primaryIds.map((id) => SITE_NAVIGATION.find((item) => item.id === id)!);
-  const secondary = SITE_NAVIGATION.filter(
-    (item) => item.id !== "home" && !primaryIds.includes(item.id),
+  const secondaryActive = more.some(
+    (item) => item.id === active || pathname === item.href || pathname?.startsWith(item.href + "/"),
   );
-  const secondaryActive = secondary.some((item) => item.id === active);
+  const menuId = useId();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [nativePopover, setNativePopover] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => setMoreOpen(false), [pathname]);
+  function placeMenu() {
+    const trigger = triggerRef.current,
+      panel = panelRef.current;
+    if (!trigger || !panel) return;
+    const r = trigger.getBoundingClientRect();
+    const width = Math.min(220, window.innerWidth - 32);
+    panel.style.setProperty("--sl-menu-width", `${width}px`);
+    panel.style.setProperty(
+      "--sl-menu-left",
+      `${Math.min(Math.max(16, r.right - width), window.innerWidth - width - 16)}px`,
+    );
+    panel.style.setProperty("--sl-menu-top", `${r.bottom + 8}px`);
+  }
+  function closeMenu() {
+    if (nativePopover && panelRef.current?.matches(":popover-open")) panelRef.current.hidePopover();
+    setMoreOpen(false);
+  }
+  useEffect(() => setNativePopover(Object.hasOwn(HTMLElement.prototype, "popover")), []);
+  useEffect(() => closeMenu(), [pathname, audience, activeSection]);
   useEffect(() => {
     if (!moreOpen) return;
-    const close = (event: PointerEvent) => {
+    window.addEventListener("resize", placeMenu);
+    // Old browsers keep the same navigation links with a small disclosure fallback.
+    const outside = (event: PointerEvent) => {
       if (!moreRef.current?.contains(event.target as Node)) setMoreOpen(false);
     };
     const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMoreOpen(false);
+      if (event.key === "Escape") {
+        setMoreOpen(false);
+        triggerRef.current?.focus({ preventScroll: true });
+      }
     };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", escape);
+    if (!nativePopover) {
+      document.addEventListener("pointerdown", outside);
+      document.addEventListener("keydown", escape);
+    }
     return () => {
-      document.removeEventListener("pointerdown", close);
+      window.removeEventListener("resize", placeMenu);
+      document.removeEventListener("pointerdown", outside);
       document.removeEventListener("keydown", escape);
     };
-  }, [moreOpen]);
+  }, [moreOpen, nativePopover]);
 
   return (
     <nav className="sl-nav" aria-label="주 메뉴">
-      {audience === "host" && (
-        <Link
-          href={MANAGEMENT.href}
-          className="sl-nav__link"
-          aria-current={managementActive ? "page" : undefined}
-        >
-          {MANAGEMENT.label}
-        </Link>
-      )}
       {primary.map(({ id, label, href }) => (
         <Link
           key={id}
           href={href}
           className="sl-nav__link"
-          aria-label={id === "games" ? "웹 게임 (베타)" : undefined}
+          aria-label={id === "games" ? "웹게임 (베타)" : undefined}
           aria-current={active === id ? "page" : undefined}
           onClick={(event) => {
             if (
@@ -102,38 +106,50 @@ export function SiteNavigation({
           )}
         </Link>
       ))}
-      <div className="sl-nav__more" ref={moreRef}>
+      <div
+        className="sl-nav__more"
+        ref={moreRef}
+        onBlurCapture={(event) => {
+          if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node))
+            closeMenu();
+        }}
+      >
         <button
           type="button"
           className="sl-nav__link"
+          ref={triggerRef}
           aria-expanded={moreOpen}
-          aria-haspopup="true"
+          aria-controls={menuId}
+          popoverTarget={nativePopover ? menuId : undefined}
           data-active={secondaryActive || undefined}
-          onClick={() => setMoreOpen((open) => !open)}
+          onClick={() => {
+            placeMenu();
+            if (!nativePopover) setMoreOpen((open) => !open);
+          }}
         >
-          더보기
-          <ChevronDown size={15} aria-hidden="true" />
+          더보기 <ChevronDown size={15} aria-hidden="true" />
         </button>
-        {moreOpen && (
-          <div className="sl-nav__menu">
-            {secondary.map(({ id, label, href }) => (
-              <Link key={id} href={href} aria-current={active === id ? "page" : undefined}>
-                {label}
-              </Link>
-            ))}
-            {audience === "participant" && (
-              <Link href={MANAGEMENT.href} aria-current={managementActive ? "page" : undefined}>
-                {MANAGEMENT.label}
-              </Link>
-            )}
-            <hr />
-            {EXTRA_LINKS.map(({ href, label }) => (
-              <Link key={href} href={href}>
-                {label}
-              </Link>
-            ))}
-          </div>
-        )}
+        <div
+          id={menuId}
+          className="sl-nav__menu"
+          ref={panelRef}
+          popover={nativePopover ? "auto" : undefined}
+          hidden={!nativePopover && !moreOpen}
+          onToggle={(event) => {
+            if (nativePopover) setMoreOpen(event.newState === "open");
+          }}
+        >
+          {more.map(({ id, label, href }) => (
+            <Link
+              key={id}
+              href={href}
+              onClick={closeMenu}
+              aria-current={active === id || pathname === href ? "page" : undefined}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
       </div>
     </nav>
   );

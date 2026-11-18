@@ -1,3 +1,5 @@
+import { EVENT_RECRUITMENTS_HREF } from "./meetup-types";
+
 // `primary` items stay in the header; the rest live under "더보기" so first-time visitors see a short menu.
 export const SITE_NAVIGATION = [
   { id: "home", label: "홈", href: "/", primary: true },
@@ -11,11 +13,42 @@ export const SITE_NAVIGATION = [
 
 export type NavigationSection = (typeof SITE_NAVIGATION)[number]["id"];
 export type CommunityNavigationSection = "home" | "stories";
+export type CommunityNavigationActiveSection = CommunityNavigationSection | "events";
+export type ActiveNavigationSection = NavigationSection | "events";
+
+// Viewing mode changes presentation; authorization remains on the server.
+export const AUDIENCE_NAVIGATION = {
+  participant: {
+    primary: [
+      { id: "stories", label: "이야기", href: "/stories" },
+      { id: "events", label: "이벤트·행사", href: EVENT_RECRUITMENTS_HREF },
+      { id: "lightning", label: "번개·모임", href: "/lightning" },
+      { id: "games", label: "웹게임", href: "/games" },
+    ],
+    more: [
+      { id: "players", label: "플레이어", href: "/players" },
+      { id: "map", label: "이벤트 맵", href: "/map" },
+      { id: "ideas", label: "모임 제안하기", href: "/ideas" },
+    ],
+  },
+  host: {
+    primary: [
+      { id: "archive", label: "아카이브", href: "/archive" },
+      { id: "players", label: "크루", href: "/players?tab=crews" },
+      { id: "games", label: "웹게임", href: "/games" },
+      { id: "stories", label: "이야기", href: "/stories" },
+    ],
+    more: [
+      { id: "hosting-guide", label: "호스트 가이드", href: "/hosting-guide" },
+      { id: "management", label: "모임 관리", href: "/management" },
+    ],
+  },
+} as const;
 
 export function activeNavigationSection(
   pathname: string | null,
-  communitySection?: CommunityNavigationSection,
-): NavigationSection | null {
+  communitySection?: CommunityNavigationActiveSection,
+): ActiveNavigationSection | null {
   if (!pathname) return null;
   const path = pathname.replace(/\/+$/, "") || "/";
   if ((path === "/" || path === "/stories") && communitySection) return communitySection;

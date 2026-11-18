@@ -604,6 +604,9 @@ body {
   margin: 0 auto;
   padding: 8px var(--sl-gutter) 80px;
 }
+.sl-layout--home {
+  grid-template-columns: minmax(0, 1fr);
+}
 .sl-rail {
   display: none;
 }
@@ -2790,4 +2793,134 @@ body {
 .sl-player-card__login strong {
   color: var(--sl-ink);
   font-size: 15.5px;
+}
+
+/* The same role-aware navigation stays visible on phones and desktops. */
+.sl-nav__menu[hidden],
+.sl-nav__menu[popover]:not(:popover-open) {
+  display: none;
+}
+.sl-nav__menu[popover] {
+  position: fixed;
+  inset: auto;
+  top: var(--sl-menu-top, 64px);
+  left: var(--sl-menu-left, 16px);
+  width: var(--sl-menu-width, 220px);
+  margin: 0;
+  max-height: calc(100dvh - var(--sl-menu-top, 64px) - 16px);
+  overflow-y: auto;
+}
+.sl-nav__menu a {
+  display: flex;
+  align-items: center;
+  min-block-size: 44px;
+}
+.sl-nav__link[aria-current="page"]::after,
+.sl-nav__link[data-active]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 12px;
+  inset-block-end: 0;
+  border-block-end: 3px solid currentColor;
+}
+@media (max-width: 720px) {
+  html {
+    scroll-padding-top: 116px;
+  }
+  .sl-header__inner {
+    flex-wrap: wrap;
+    row-gap: 0;
+    height: auto;
+    min-height: 100px;
+  }
+  .sl-header__inner > .sl-brand,
+  .sl-header__tools,
+  .sl-audience-toggle {
+    align-self: center;
+  }
+  .sl-header__inner > .sl-brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: 56px;
+  }
+  .sl-header__inner > .sl-nav {
+    display: flex;
+    flex: 0 0 calc(100% + var(--sl-gutter) * 2);
+    order: 3;
+    align-items: stretch;
+    gap: 0;
+    width: calc(100% + var(--sl-gutter) * 2);
+    height: 44px;
+    margin-inline: calc(-1 * var(--sl-gutter));
+    padding-inline: 4px;
+    overflow: visible;
+    border-top: 1px solid var(--sl-line-soft);
+  }
+  .sl-nav > .sl-nav__link,
+  .sl-nav__more {
+    flex: 1 1 0;
+    min-inline-size: 0;
+  }
+  .sl-nav__link {
+    justify-content: center;
+    gap: 2px;
+    height: 44px;
+    padding: 0 2px;
+    border-radius: 0;
+    font-size: 12px;
+    letter-spacing: -0.045em;
+  }
+  .sl-nav__more {
+    position: static;
+  }
+  .sl-nav__more > .sl-nav__link {
+    width: 100%;
+  }
+  .sl-nav__link svg {
+    width: 12px;
+    height: 12px;
+    flex: none;
+  }
+  .sl-nav__badge {
+    position: absolute;
+    top: 0;
+    right: 3px;
+    padding: 0 2px;
+    font-size: 7px;
+    line-height: 10px;
+  }
+  .sl-nav__menu:not([popover]) {
+    top: 100%;
+    right: 16px;
+    left: auto;
+    max-width: calc(100vw - 32px);
+  }
+  .sl-header__inner:has(> .sl-header__tools .account-controls) {
+    grid-template-rows: 56px 44px;
+  }
+  .sl-header__inner:has(> .sl-header__tools .account-controls) > .sl-brand,
+  .sl-header__inner:has(> .sl-header__tools .account-controls) > .sl-audience-toggle,
+  .sl-header__inner:has(> .sl-header__tools .account-controls) > .sl-header__tools {
+    grid-row: 1;
+  }
+  .sl-header__inner:has(> .sl-header__tools .account-controls) > .sl-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .sl-feed__section {
+    scroll-margin-top: 116px;
+  }
+  .sl-search.is-open {
+    top: calc(100% + 8px);
+  }
+}
+@media (max-width: 359px) {
+  .sl-header__inner:has(> .sl-header__tools .login-link) > .sl-nav {
+    flex-basis: calc(100% + 16px);
+    width: calc(100% + 16px);
+    margin-inline: -8px;
+  }
+  .sl-nav__link {
+    font-size: 11.5px;
+  }
 }

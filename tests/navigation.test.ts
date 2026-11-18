@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { activeNavigationSection, SITE_NAVIGATION } from "../src/domain/navigation";
+import {
+  activeNavigationSection,
+  AUDIENCE_NAVIGATION,
+  SITE_NAVIGATION,
+} from "../src/domain/navigation";
 
 test("all main menus keep their active section on list and detail pages", () => {
   const routes = [
@@ -90,4 +94,41 @@ test("personal tools and discovery destinations are consolidated outside the pri
     SITE_NAVIGATION.map((item) => item.id),
     ["home", "stories", "lightning", "map", "archive", "games", "players"],
   );
+});
+
+test("event recruitment marks its own header destination without selecting lightning", () => {
+  assert.equal(activeNavigationSection("/", "events"), "events");
+  assert.equal(activeNavigationSection("/lightning", "events"), "lightning");
+  assert.equal(activeNavigationSection("/archive", "events"), "archive");
+});
+
+test("participant header separates scheduled events from lightning and keeps discovery in more", () => {
+  const { primary, more } = AUDIENCE_NAVIGATION.participant;
+  assert.deepEqual(
+    primary.map((item) => item.label),
+    ["이야기", "이벤트·행사", "번개·모임", "웹게임"],
+  );
+  const eventUrl = new URL(primary[1].href, "https://sliper.kr");
+  assert.equal(eventUrl.searchParams.get("kind"), "모집");
+  assert.equal(eventUrl.searchParams.get("meetupType"), "event");
+  assert.equal(primary[2].href, "/lightning");
+  assert.deepEqual(
+    more.map((item) => item.label),
+    ["플레이어", "이벤트 맵", "모임 제안하기"],
+  );
+  assert.equal(more[0].href, "/players");
+});
+
+test("host header opens the crew tab and places operations in more", () => {
+  const { primary, more } = AUDIENCE_NAVIGATION.host;
+  assert.deepEqual(
+    primary.map((item) => item.label),
+    ["아카이브", "크루", "웹게임", "이야기"],
+  );
+  assert.equal(primary[1].href, "/players?tab=crews");
+  assert.deepEqual(
+    more.map((item) => item.label),
+    ["호스트 가이드", "모임 관리"],
+  );
+  assert.equal(more[1].href, "/management");
 });
