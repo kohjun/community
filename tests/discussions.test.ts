@@ -18,7 +18,7 @@ import { readPublicPostShare } from "../src/server/post-sharing-reader";
 import { createPostSchema } from "../src/domain/validation";
 import { previewPost } from "../src/domain/discussions";
 import { communityLocation, communityLocationUrl } from "../src/domain/community-location";
-import { reconcilePosts } from "../src/lib/community-state";
+import { matchesPostQuery, reconcilePosts } from "../src/lib/community-state";
 import { AppError } from "../src/server/errors";
 import { pushDispatcher } from "../src/server/push-dispatcher";
 const pg = new PGlite(),
@@ -362,6 +362,60 @@ test("story focus and subtype survive page links while invalid options are ignor
     communityLocation(new URLSearchParams("focus=bad&discussionType=bad"), true).discussionType,
     undefined,
   );
+});
+
+test("story, question, poll and recruitment boards keep their own results and totals", async () => {
+  const story = await service.createPost(owner, input({ categorySlug: "general" }));
+  const asked = await question({ categorySlug: "general" });
+  const review = await service.createPost(owner, input({ kind: "후기" }));
+  const poll = await service.createPost(
+    owner,
+    input({ kind: "투표", poll: { question: "어느 쪽이 좋아요?", options: ["낮", "저녁"] } }),
+  );
+  const event = await service.createPost(
+    owner,
+    input({ kind: "모집", applicationUrl: "https://example.com/event" }),
+  );
+  const lightning = await service.createPost(
+    owner,
+    input({ kind: "모집", applicationUrl: "https://example.com/lightning" }),
+  );
+  const lightningDetails = {
+    meetupType: "lightning",
+    amountKRW: 0,
+    capacity: 8,
+    venueLatitude: 37.55,
+    venueLongitude: 126.98,
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    startsAt: new Date("2026-01-02T00:00:00Z"),
+    endsAt: new Date("2026-01-02T01:00:00Z"),
+  };
+  await db
+    .insert(base.eventSettings)
+    .values({ postId: lightning.id, ...lightningDetails })
+    .onConflictDoUpdate({ target: base.eventSettings.postId, set: lightningDetails });
+
+  const cases = [
+    { search: "kind=모집&meetupType=event", stories: true, expected: [story, asked, review, poll] },
+    { search: "kind=이야기", stories: true, expected: [story, review] },
+    { search: "discussionType=question&category=general", stories: true, expected: [asked] },
+    { search: "kind=투표", stories: true, expected: [poll] },
+    { search: "meetupType=event&kind=이야기", stories: false, expected: [event] },
+    { search: "meetupType=lightning", stories: false, expected: [lightning] },
+  ];
+  for (const { search, stories, expected } of cases) {
+    const query = communityLocation(new URLSearchParams(search), stories);
+    const feed = await service.feed(null, query);
+    const expectedIds = new Set(expected.map((post) => post.id));
+    assert.equal(feed.pagination?.totalItems, expectedIds.size, search);
+    assert.deepEqual(new Set(feed.posts.map((post) => post.id)), expectedIds, search);
+    assert.ok(
+      feed.posts.every((post) => matchesPostQuery(post, query)),
+      search,
+    );
+    if (stories) assert.equal(matchesPostQuery(event, query), false, search);
+  }
+  assert.equal(story.category, "general");
 });
 
 test("24h question answer rate excludes immature, self, hidden, staff and sample activity", async () => {

@@ -318,9 +318,9 @@ test("listing URLs round-trip periods and page without overwriting post/deep lin
     period: "week" as const,
     rankingAt: now.toISOString(),
   };
-  const relative = communityLocationUrl("https://sliper.example/stories?post=one#feed", query, 2);
+  const relative = communityLocationUrl("https://sliper.example/?post=one#feed", query, 2);
   const url = new URL(relative, "https://sliper.example");
-  const parsed = communityLocation(url.searchParams, true, now.getTime());
+  const parsed = communityLocation(url.searchParams, false, now.getTime());
   assert.equal(parsed.kind, "모집");
   assert.equal(parsed.period, "week");
   assert.equal(parsed.page, 2);

@@ -85,6 +85,7 @@ export interface CommunityComment {
 }
 
 export interface FeedQuery {
+  board?: "stories" | undefined;
   category?: CategorySlug | undefined;
   kind?: CommunityPost["kind"] | undefined;
   discussionType?: DiscussionType | undefined;

@@ -63,6 +63,16 @@ function withQueryDistance(post: CommunityPost, query: FeedQuery) {
   return { ...post, distanceKm };
 }
 export function matchesPostQuery(post: CommunityPost, query: FeedQuery) {
+  if (query.board === "stories") {
+    if (post.kind === "모집") return false;
+    if (
+      query.kind === "이야기" &&
+      !query.discussionType &&
+      query.focus !== "unanswered" &&
+      post.discussionType === "question"
+    )
+      return false;
+  }
   const eventSearch =
     queryTrue(query.eventOnly) ||
     query.meetupType !== undefined ||

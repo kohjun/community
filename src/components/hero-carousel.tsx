@@ -1,187 +1,46 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import {
-  ArrowRight,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  MapPin,
-  Pause,
-  Play,
-} from "lucide-react";
-import type { CommunityPost } from "@/domain/community";
-import type { CategorySlug } from "@/domain/categories";
-import { CATEGORIES } from "@/domain/categories";
-import { postPath } from "@/domain/post-sharing";
-import {
-  EVENT_RECRUITMENTS_HREF,
-  MEETUP_TYPE_LABELS,
-  meetupTypeLabel,
-} from "@/domain/meetup-types";
+import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
+import { EVENT_RECRUITMENTS_HREF, MEETUP_TYPE_LABELS } from "@/domain/meetup-types";
 import { shouldAdvanceCarousel } from "@/lib/carousel";
-import { shouldOpenPostModal } from "@/lib/post-sharing";
 import { cn } from "@/lib/utils";
 
-const SLIDE_MS = 3000;
-const MAX_SLIDES = 5;
-const startFormatter = new Intl.DateTimeFormat("ko-KR", {
-  timeZone: "Asia/Seoul",
-  month: "long",
-  day: "numeric",
-  weekday: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-const feeFormatter = new Intl.NumberFormat("ko-KR");
-
-type Scene = "race" | "mystery" | "party";
-const sceneFor: Partial<Record<CategorySlug, Scene>> = {
-  race: "race",
-  sports: "race",
-  travel: "race",
-  survival: "race",
-  "mind-games": "mystery",
-  knowledge: "mystery",
-  lab: "mystery",
-  party: "party",
-  dating: "party",
-  music: "party",
-  cooking: "party",
-};
-const scenes: Scene[] = ["race", "mystery", "party"];
-
-interface Slide {
-  key: string;
-  scene: Scene;
-  image?: string | undefined;
-  badge: string;
-  open: boolean;
-  kicker: string;
-  title: string;
-  meta: string[];
-  post?: CommunityPost;
-  href: string;
-  action: string;
-}
-
-/** Shown only when no recruitment exists yet, so the slot never sits empty. */
-const fallbackSlides: Slide[] = [
+const SLIDE_MS = 6000;
+const POSTERS = [
   {
-    key: "intro-race",
-    scene: "race",
-    badge: "슬리퍼 모임",
-    open: false,
-    kicker: "미션 레이스 · 야외",
-    title: "한강에서 팀을 짜고 미션을 깨는 주말",
-    meta: ["처음 와도 팀으로 함께해요"],
+    id: "web-games",
+    title: "웹게임",
+    description: "설치 없이 친구와 바로 한 판 즐겨요.",
+    href: "/games",
+    action: "웹게임 둘러보기",
+  },
+  {
+    id: "stories",
+    title: "이야기",
+    description: "예능 이야기부터 모임 후기까지 함께 나눠요.",
+    href: "/stories",
+    action: "이야기 보러 가기",
+  },
+  {
+    id: "events",
+    title: MEETUP_TYPE_LABELS.event,
+    description: "미션 레이스와 추리 게임을 직접 체험해요.",
     href: EVENT_RECRUITMENTS_HREF,
-    action: `${MEETUP_TYPE_LABELS.event} 보기`,
+    action: "이벤트·행사 찾아보기",
   },
   {
-    key: "intro-mystery",
-    scene: "mystery",
-    badge: "슬리퍼 모임",
-    open: false,
-    kicker: "추리 게임 · 실내",
-    title: "퇴근 후, 단서를 맞춰보는 두 시간",
-    meta: ["룰북으로 직접 열어볼 수도 있어요"],
-    href: "/archive?kind=rulebook",
-    action: "룰북 둘러보기",
-  },
-  {
-    key: "intro-party",
-    scene: "party",
-    badge: "슬리퍼 모임",
-    open: false,
-    kicker: "취향 파티 · 루프탑",
-    title: "자기소개 대신 취향 카드로 시작하는 밤",
-    meta: ["번개로 가볍게 모여도 좋아요"],
+    id: "lightning",
+    title: MEETUP_TYPE_LABELS.lightning,
+    description: "시간과 취향이 맞는 소규모 모임을 찾아요.",
     href: "/lightning",
-    action: `${MEETUP_TYPE_LABELS.lightning} 보기`,
+    action: "번개·모임 찾아보기",
   },
-];
+] as const;
 
-function slideFrom(post: CommunityPost, index: number): Slide {
-  const start = post.eventStartsAt ? new Date(post.eventStartsAt) : null;
-  const date =
-    start && !Number.isNaN(start.getTime()) ? startFormatter.format(start) : post.eventDate?.trim();
-  const amount = post.eventAmountKRW;
-  const fee =
-    post.meetupType === "lightning" && !post.applicationUrl
-      ? "현장 정산"
-      : typeof amount === "number" && Number.isFinite(amount) && amount >= 0
-        ? amount === 0
-          ? "무료"
-          : `${feeFormatter.format(amount)}원`
-        : post.eventFee?.trim();
-  const open = !!post.eventAvailable && !post.sample && !post.eventCancelledAt;
-  return {
-    key: post.id,
-    scene: sceneFor[post.category] ?? scenes[index % scenes.length]!,
-    image: post.image ?? post.images[0]?.src,
-    badge: post.sample
-      ? "모임 예시"
-      : post.featured
-        ? "추천 모임"
-        : open
-          ? "모집 중"
-          : post.eventCancelledAt
-            ? "모집 취소"
-            : "모집 마감",
-    open,
-    kicker: `${CATEGORIES.find((c) => c.slug === post.category)?.name ?? "모임"} · ${meetupTypeLabel(
-      post.meetupType,
-    )}`,
-    title: post.title,
-    meta: [date, post.location, fee].filter((value): value is string => !!value),
-    post,
-    href: postPath(post.id),
-    action: open ? "자세히 보고 신청하기" : "모집 내용 보기",
-  };
-}
-
-/** Promoted first, then open recruitments, then the rest in their existing popularity order. */
-export function heroSlides(posts: CommunityPost[]): Slide[] {
-  const rank = (post: CommunityPost) =>
-    (post.featured && !post.sample ? 0 : 2) +
-    (post.eventAvailable && !post.sample && !post.eventCancelledAt ? 0 : 1);
-  const ordered = posts
-    .map((post, order) => ({ post, order }))
-    .sort((a, b) => rank(a.post) - rank(b.post) || a.order - b.order)
-    .slice(0, MAX_SLIDES)
-    .map(({ post }, index) => slideFrom(post, index));
-  return ordered.length ? ordered : fallbackSlides;
-}
-
-function SlideImage({ slide, eager }: { slide: Slide; eager: boolean }) {
-  const loading = eager ? "eager" : "lazy";
-  if (slide.image) return <img src={slide.image} alt="" loading={loading} />;
-  return (
-    <img
-      src={`/images/home/${slide.scene}-1200.webp`}
-      srcSet={`/images/home/${slide.scene}-640.webp 640w, /images/home/${slide.scene}-1200.webp 1200w`}
-      sizes="(max-width: 720px) 100vw, 600px"
-      alt=""
-      width={1200}
-      height={750}
-      loading={loading}
-      {...(eager ? { fetchPriority: "high" as const } : {})}
-    />
-  );
-}
-
-export function HeroCarousel({
-  posts,
-  onOpen,
-}: {
-  posts: CommunityPost[];
-  onOpen: (post: CommunityPost) => void;
-}) {
-  const slides = heroSlides(posts);
-  const count = slides.length;
-  const [index, setIndex] = useState(0);
+export function HeroCarousel() {
+  const count = POSTERS.length;
+  const [current, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -189,9 +48,7 @@ export function HeroCarousel({
   const [reducedMotion, setReducedMotion] = useState(false);
   const touch = useRef<{ x: number; y: number } | null>(null);
   const swiped = useRef(false);
-  const current = Math.min(index, count - 1);
-  const stopped =
-    count < 2 || !shouldAdvanceCarousel({ paused, hovered, focused, hidden, reducedMotion });
+  const stopped = !shouldAdvanceCarousel({ paused, hovered, focused, hidden, reducedMotion });
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -218,7 +75,7 @@ export function HeroCarousel({
     <section
       className={cn("sl-carousel", stopped && "is-stopped")}
       aria-roledescription="carousel"
-      aria-label="추천 모임"
+      aria-label="슬리퍼 둘러보기"
       style={{ "--sl-slide-ms": `${SLIDE_MS}ms` } as React.CSSProperties}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -252,103 +109,77 @@ export function HeroCarousel({
     >
       <div className="sl-carousel__viewport" aria-live={stopped ? "polite" : "off"}>
         <div className="sl-carousel__track" style={{ transform: `translateX(-${current * 100}%)` }}>
-          {slides.map((slide, i) => {
-            const active = i === current;
-            const content = (
-              <>
-                <SlideImage slide={slide} eager={i === 0} />
-                <span className="sl-carousel__shade" aria-hidden="true" />
-                <span className="sl-carousel__copy">
-                  <span className="sl-carousel__chips">
-                    <span className={cn("sl-carousel__badge", slide.open && "is-open")}>
-                      {slide.badge}
-                    </span>
-                    <span>{slide.kicker}</span>
-                  </span>
-                  <strong className="sl-carousel__title">{slide.title}</strong>
-                  {slide.meta.length > 0 && (
-                    <span className="sl-carousel__meta">
-                      {slide.meta.map((value, m) => (
-                        <span key={m}>
-                          {m === 0 && slide.post && <CalendarDays size={14} aria-hidden="true" />}
-                          {m === 1 && <MapPin size={14} aria-hidden="true" />}
-                          {value}
-                        </span>
-                      ))}
-                    </span>
-                  )}
-                  <span className="sl-carousel__action">
-                    {slide.action}
-                    <ArrowRight size={16} aria-hidden="true" />
-                  </span>
-                </span>
-              </>
-            );
+          {POSTERS.map((poster, i) => {
+            const image = `/images/home/posters/${poster.id}`;
             return (
               <div
-                key={slide.key}
+                key={poster.id}
                 className="sl-carousel__slide"
                 role="group"
                 aria-roledescription="slide"
-                aria-label={`${i + 1} / ${count}`}
-                inert={!active}
+                aria-label={`${count}개 중 ${i + 1}번째, ${poster.title}`}
+                inert={i !== current}
               >
-                {slide.post ? (
-                  <a
-                    href={slide.href}
-                    draggable={false}
-                    onClick={(event) => {
-                      if (!shouldOpenPostModal(event)) return;
-                      event.preventDefault();
-                      onOpen(slide.post!);
-                    }}
-                  >
-                    {content}
-                  </a>
-                ) : (
-                  <Link href={slide.href} draggable={false}>
-                    {content}
-                  </Link>
-                )}
+                <Link href={poster.href} data-poster={poster.id} draggable={false} prefetch={false}>
+                  <span className="sl-carousel__copy">
+                    <strong className="sl-carousel__title">{poster.title}</strong>
+                    <span className="sl-carousel__description">{poster.description}</span>
+                    <span className="sl-carousel__action">
+                      {poster.action}
+                      <ArrowRight size={16} aria-hidden="true" />
+                    </span>
+                  </span>
+                  <span className="sl-carousel__art">
+                    <img
+                      src={`${image}-1440.webp`}
+                      srcSet={`${image}-720.webp 720w, ${image}-1440.webp 1440w`}
+                      sizes="(max-width: 720px) 100vw, (max-width: 1600px) 63vw, 970px"
+                      alt=""
+                      width={1440}
+                      height={960}
+                      loading={i === 0 ? "eager" : "lazy"}
+                      fetchPriority={i === 0 ? "high" : "low"}
+                      draggable={false}
+                    />
+                  </span>
+                </Link>
               </div>
             );
           })}
         </div>
       </div>
-      {count > 1 && (
-        <div className="sl-carousel__controls">
-          <div className="sl-carousel__progress" role="group" aria-label="배너 선택">
-            {slides.map((slide, i) => (
-              <button
-                key={slide.key}
-                type="button"
-                aria-label={`${i + 1}번째 배너: ${slide.title}`}
-                aria-current={i === current ? "true" : undefined}
-                onClick={() => setIndex(i)}
-              >
-                {i === current && <i key={`${i}:${stopped}`} />}
-              </button>
-            ))}
-          </div>
-          <span className="sl-carousel__count" aria-hidden="true">
-            {String(current + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
-          </span>
-          <button type="button" aria-label="이전 배너" onClick={() => move(-1)}>
-            <ChevronLeft size={17} />
-          </button>
-          <button type="button" aria-label="다음 배너" onClick={() => move(1)}>
-            <ChevronRight size={17} />
-          </button>
-          <button
-            type="button"
-            aria-label={paused ? "배너 자동 넘김 재생" : "배너 자동 넘김 일시정지"}
-            aria-pressed={paused}
-            onClick={() => setPaused((value) => !value)}
-          >
-            {paused ? <Play size={14} /> : <Pause size={14} />}
-          </button>
+      <div className="sl-carousel__controls">
+        <div className="sl-carousel__progress" role="group" aria-label="배너 선택">
+          {POSTERS.map((poster, i) => (
+            <button
+              key={poster.id}
+              type="button"
+              aria-label={`${i + 1}번째 배너, ${poster.title}`}
+              aria-current={i === current ? "true" : undefined}
+              onClick={() => setIndex(i)}
+            >
+              {i === current && <i key={`${i}:${stopped}`} />}
+            </button>
+          ))}
         </div>
-      )}
+        <span className="sl-carousel__count" aria-hidden="true">
+          {String(current + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
+        </span>
+        <button type="button" aria-label="이전 배너" onClick={() => move(-1)}>
+          <ChevronLeft size={17} />
+        </button>
+        <button type="button" aria-label="다음 배너" onClick={() => move(1)}>
+          <ChevronRight size={17} />
+        </button>
+        <button
+          type="button"
+          aria-label={paused ? "배너 자동 넘김 재생" : "배너 자동 넘김 일시정지"}
+          aria-pressed={paused}
+          onClick={() => setPaused((value) => !value)}
+        >
+          {paused ? <Play size={14} /> : <Pause size={14} />}
+        </button>
+      </div>
     </section>
   );
 }

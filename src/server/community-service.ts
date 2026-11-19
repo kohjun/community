@@ -80,6 +80,7 @@ const booleanQuery = z.preprocess(
 );
 export const feedQuerySchema = z
   .strictObject({
+    board: z.literal("stories").optional(),
     category: categorySlugSchema.optional(),
     kind: z.enum(["모집", "후기", "이야기", "투표"]).optional(),
     discussionType: z.enum(DISCUSSION_TYPES).optional(),
@@ -178,6 +179,7 @@ export function feedCursorScope(
     q.minPriceKRW,
     q.maxPriceKRW,
     q.availableOnly,
+    ...(q.board ? [q.board] : []),
   ]);
 }
 // Shared by RSC, Route Handlers and future Server Actions. Never trusts client authors.
@@ -200,6 +202,11 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
       authorVisible(posts.authorId, actor),
     ];
     if (q.sort === "popular" && q.period !== "all") conditions.push(sql`${score}>0`);
+    if (q.board === "stories") {
+      conditions.push(inArray(posts.kind, ["이야기", "후기", "투표"]));
+      if (q.kind === "이야기" && !q.discussionType && q.focus !== "unanswered")
+        conditions.push(sql`${posts.discussionType} is distinct from 'question'`);
+    }
     if (q.category) conditions.push(eq(posts.categorySlug, q.category));
     if (q.kind)
       conditions.push(
@@ -309,6 +316,7 @@ export function communityService(db: Database, clock: () => Date = () => new Dat
     if (q.availableOnly === true) conditions.push(eventAvailable);
     if (
       q.view === "home" &&
+      !q.board &&
       !q.category &&
       !q.kind &&
       !q.search &&

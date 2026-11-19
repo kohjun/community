@@ -603,6 +603,13 @@
       "when": 1795059089206,
       "tag": "0085_lightning_room_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1795082320716,
+      "tag": "0086_general_post_category",
+      "breakpoints": true
     }
   ]
 }

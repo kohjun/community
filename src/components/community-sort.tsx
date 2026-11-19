@@ -14,11 +14,13 @@ export function CommunitySort({
   value,
   coordinates,
   contextKey,
+  allowNearest = true,
   onChange,
 }: {
   value: SortOrder;
   coordinates: GeoCoordinates | null;
   contextKey: string;
+  allowNearest?: boolean;
   onChange: (value: SortOrder, coordinates?: GeoCoordinates) => void;
 }) {
   const { requestLocation, cancelLocation } = useLocation();
@@ -112,7 +114,7 @@ export function CommunitySort({
         >
           <option value="latest">최신순</option>
           <option value="popular">인기순</option>
-          <option value="nearest">거리순</option>
+          {allowNearest && <option value="nearest">거리순</option>}
         </select>
         <span className="sort-select-label" aria-hidden="true">
           {label}

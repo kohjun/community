@@ -17,22 +17,39 @@ export function communityLocation(
   const discussion = params.get("discussionType"),
     focus = params.get("focus"),
     meetupType = params.get("meetupType");
+  const selectedKind =
+    kind && ["모집", "이야기", "후기", "투표"].includes(kind)
+      ? (kind as FeedQuery["kind"])
+      : undefined;
+  const eventType =
+    !stories && (meetupType === "event" || meetupType === "lightning") ? meetupType : undefined;
+  const discussionType =
+    !eventType &&
+    selectedKind !== "투표" &&
+    discussion &&
+    (DISCUSSION_TYPES as readonly string[]).includes(discussion)
+      ? (discussion as FeedQuery["discussionType"])
+      : undefined;
   return {
-    discussionType:
-      discussion && (DISCUSSION_TYPES as readonly string[]).includes(discussion)
-        ? (discussion as FeedQuery["discussionType"])
+    ...(stories ? { board: "stories" as const } : {}),
+    discussionType,
+    focus:
+      !eventType && (focus === "interests" || (focus === "unanswered" && selectedKind !== "투표"))
+        ? focus
         : undefined,
-    focus: focus === "unanswered" || focus === "interests" ? focus : undefined,
     ...(category && (CATEGORY_SLUGS as readonly string[]).includes(category)
       ? { category: category as FeedQuery["category"] }
       : {}),
-    kind:
-      kind && ["모집", "이야기", "후기", "투표"].includes(kind)
-        ? (kind as FeedQuery["kind"])
-        : stories
-          ? "이야기"
-          : undefined,
-    ...(meetupType === "event" || meetupType === "lightning" ? { meetupType } : {}),
+    kind: eventType
+      ? "모집"
+      : stories && (discussionType || (focus === "unanswered" && selectedKind !== "투표"))
+        ? "이야기"
+        : stories && selectedKind === "모집"
+          ? undefined
+          : stories && selectedKind === "후기"
+            ? "이야기"
+            : selectedKind,
+    ...(eventType ? { meetupType: eventType } : {}),
     sort: sort === "popular" || (!sort && view === "popular") ? "popular" : "latest",
     period: period === "week" || period === "month" || period === "all" ? period : "today",
     ...(at &&

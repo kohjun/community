@@ -34,7 +34,12 @@ import { homeRecruitments } from "@/domain/home-discovery";
 import { HotStories } from "./home-stage";
 import { HomeHero } from "./home-hero";
 import { RecruitmentTypeDialog } from "./recruitment-type-dialog";
-import { MEETUP_TYPE_LABELS, type MeetupType } from "@/domain/meetup-types";
+import {
+  EVENT_RECRUITMENTS_HREF,
+  LIGHTNING_COMPOSE_HREF,
+  MEETUP_TYPE_LABELS,
+  type MeetupType,
+} from "@/domain/meetup-types";
 import { SiteHeader } from "./site-header";
 import { SiteFooter } from "./site-footer";
 import { useMediaQuery } from "@/lib/use-media-query";
@@ -71,6 +76,7 @@ const WriteDialog = dynamic(() => import("./write-dialog").then((module) => modu
 
 const icons = CATEGORY_ICONS;
 const kinds = ["전체", "이야기", "모집", "투표"] as const;
+const storyKinds = ["전체", "이야기", "질문", "투표"] as const;
 type View = "home" | "stories" | "popular" | "bookmarks" | "mine";
 type Sheet = "categories" | "guide" | null;
 const label = (category: CategorySlug) => CATEGORIES.find((item) => item.slug === category)!.name;
@@ -87,6 +93,8 @@ export function SliperCommunity({
   initialComposeTopic?: TopicSlug;
 }) {
   const router = useRouter();
+  const storyBoard = initialView === "stories";
+  const meetupBoard = initialQuery.meetupType;
   function startWriting() {
     if (!store.canWrite) {
       router.push(
@@ -101,9 +109,7 @@ export function SliperCommunity({
   );
   const [category, setCategory] = useState<CategorySlug | "all">(initialQuery.category ?? "all");
   const [kind, setKind] = useState<(typeof kinds)[number]>(
-    initialQuery.kind === "후기"
-      ? "이야기"
-      : (initialQuery.kind ?? (initialView === "stories" ? "이야기" : "전체")),
+    initialQuery.kind === "후기" ? "이야기" : (initialQuery.kind ?? "전체"),
   );
   const [recruitmentLayout, setRecruitmentLayout] = useState<RecruitmentLayout>("list");
   useEffect(() => {
@@ -132,7 +138,7 @@ export function SliperCommunity({
   const [sheet, setSheet] = useState<Sheet>(null);
   const [composeTopic, setComposeTopic] = useState(initialComposeTopic ?? null);
   const [writing, setWriting] = useState(!!initialComposeTopic && initialState.canWrite);
-  const [composeKind, setComposeKind] = useState<"모집" | null>(null);
+  const [composeKind, setComposeKind] = useState<"모집" | "투표" | null>(null);
   const [choosingRecruitment, setChoosingRecruitment] = useState(false);
   const [audience] = useAudience();
   const [searchOpen, setSearchOpen] = useState(!!initialQuery.search);
@@ -155,6 +161,7 @@ export function SliperCommunity({
   const store = useCommunity(
     initialState,
     {
+      board: storyBoard ? "stories" : undefined,
       category: category === "all" ? undefined : category,
       kind: kind === "전체" ? undefined : kind,
       search: query || undefined,
@@ -167,7 +174,8 @@ export function SliperCommunity({
       period,
       rankingAt: sort === "popular" && period !== "all" ? rankingAt : undefined,
       eventOnly: discovery.eventOnly || undefined,
-      meetupType: discovery.meetupType === "all" ? undefined : discovery.meetupType,
+      meetupType:
+        meetupBoard ?? (discovery.meetupType === "all" ? undefined : discovery.meetupType),
       latitude: (sort === "nearest" ? sortCoordinates : discovery.coordinates)?.latitude,
       longitude: (sort === "nearest" ? sortCoordinates : discovery.coordinates)?.longitude,
       radiusKm: discovery.radiusKm ?? undefined,
@@ -246,8 +254,12 @@ export function SliperCommunity({
       }).catch(() => {});
   }, []);
   const active = store.detailPost?.id === activeId ? store.detailPost : null;
-  const discoveryActive = hasDiscoveryFilters(discovery);
+  const activeFilters = meetupBoard
+    ? { ...discovery, eventOnly: false, meetupType: "all" as const }
+    : discovery;
+  const discoveryActive = hasDiscoveryFilters(activeFilters);
   const isHome =
+    !storyBoard &&
     view === "home" &&
     category === "all" &&
     kind === "전체" &&
@@ -276,6 +288,17 @@ export function SliperCommunity({
   useAdSenseContentGuard(advertisingBlocked);
   const recruitmentCards = kind === "모집" && recruitmentLayout === "card";
   const PostPreview = recruitmentCards ? CommunityRecruitmentCard : CommunityPostRow;
+  const questionTab = storyBoard && kind === "이야기" && discussionType === "question";
+  function writeForBoard() {
+    if (meetupBoard === "lightning") {
+      router.push(LIGHTNING_COMPOSE_HREF);
+      return;
+    }
+    setComposeKind(
+      meetupBoard === "event" ? "모집" : storyBoard && kind === "투표" ? "투표" : null,
+    );
+    startWriting();
+  }
   function changeRecruitmentLayout(layout: RecruitmentLayout) {
     setRecruitmentLayout(layout);
     writeRecruitmentLayout(layout);
@@ -284,45 +307,41 @@ export function SliperCommunity({
     setCategory(value);
     setTopic("");
     setTag("");
-    setView(view === "stories" ? "stories" : "home");
-    setKind(
-      sort === "nearest" && sortCoordinates
-        ? "모집"
-        : view === "stories"
-          ? kind === "모집"
-            ? "모집"
-            : "이야기"
-          : discovery.eventOnly
-            ? "모집"
-            : "전체",
-    );
+    setView(storyBoard ? "stories" : "home");
+    if (!storyBoard) {
+      setKind(
+        meetupBoard || (sort === "nearest" && sortCoordinates) || discovery.eventOnly
+          ? "모집"
+          : "전체",
+      );
+    }
     setSort((current) => (current === "nearest" && sortCoordinates ? "nearest" : "latest"));
     setQuery("");
     setSheet(null);
   }
   function resetDiscovery() {
-    setDiscovery({ ...DEFAULT_DISCOVERY_FILTERS });
+    setDiscovery({ ...DEFAULT_DISCOVERY_FILTERS, meetupType: meetupBoard ?? "all" });
     setSort((current) => (current === "nearest" ? "latest" : current));
-    setKind(view === "stories" ? (kind === "모집" ? "모집" : "이야기") : "전체");
+    setKind(meetupBoard ? "모집" : "전체");
   }
   function updateDiscovery(next: EventDiscoveryFilters) {
-    setDiscovery(next);
+    setDiscovery({ ...next, meetupType: meetupBoard ?? next.meetupType });
     if (hasDiscoveryFilters(next)) {
       setFocus("all");
       setDiscussionType(undefined);
     }
     if (!next.eventOnly && sort !== "nearest")
-      setKind(view === "stories" ? (kind === "모집" ? "모집" : "이야기") : "전체");
+      setKind(meetupBoard || next.meetupType !== "all" ? "모집" : "전체");
   }
   function navigate(value: View) {
-    setView(value);
+    setView(value === "home" && storyBoard ? "stories" : value);
     setFocus("all");
     setDiscussionType(undefined);
-    setDiscovery({ ...DEFAULT_DISCOVERY_FILTERS });
+    setDiscovery({ ...DEFAULT_DISCOVERY_FILTERS, meetupType: meetupBoard ?? "all" });
     setTopic("");
     setTag("");
     setCategory("all");
-    setKind(value === "stories" ? "이야기" : "전체");
+    setKind(meetupBoard ? "모집" : "전체");
     setSort(value === "popular" ? "popular" : "latest");
     if (value === "popular") {
       setPeriod("today");
@@ -397,11 +416,13 @@ export function SliperCommunity({
           ? "검색된 글"
           : kind === "모집"
             ? "모집글"
-            : kind === "이야기"
-              ? "이야기"
-              : kind === "투표"
-                ? "투표"
-                : "최근 올라온 글";
+            : questionTab
+              ? "질문"
+              : kind === "이야기" || kind === "투표"
+                ? kind
+                : storyBoard
+                  ? "전체 이야기"
+                  : "최근 올라온 글";
   const recruitments = homeRecruitments(store.upcoming, store.featured, filtered);
   const homeLanding = isHome && view === "home";
   // The landing page carries its own sections, so the side rail is for list views only.
@@ -413,10 +434,7 @@ export function SliperCommunity({
     ...filtered.filter((post) => post.kind !== "모집" && !hotStoryIds.has(post.id)),
   ];
   function browseRecruitments() {
-    chooseCategory("all");
-    setKind("모집");
-    setView("home");
-    feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    router.push(EVENT_RECRUITMENTS_HREF);
   }
   function startHosting() {
     if (!store.canWrite) {
@@ -493,12 +511,7 @@ export function SliperCommunity({
 
       <main className="sl-page" id="main-content" tabIndex={-1}>
         {homeLanding ? (
-          <HomeHero
-            audience={audience}
-            recruitments={recruitments}
-            onHost={startHosting}
-            onOpen={openPost}
-          />
+          <HomeHero audience={audience} onHost={startHosting} />
         ) : (
           <div className="sl-page-head">
             <h1>{heading}</h1>
@@ -530,14 +543,15 @@ export function SliperCommunity({
                   </span>
                 </h2>
                 <div className="sl-feed__tools">
-                  <EventDiscoveryButton
-                    active={discoveryActive}
-                    onClick={() => {
-                      setDiscoveryOpen(true);
-                    }}
-                  />
+                  {!storyBoard && (
+                    <EventDiscoveryButton
+                      active={discoveryActive}
+                      onClick={() => setDiscoveryOpen(true)}
+                    />
+                  )}
                   <CommunitySort
                     value={sort}
+                    allowNearest={!storyBoard}
                     coordinates={sortCoordinates}
                     contextKey={`${view}|${category}|${kind}|${query}|${focus}|${discussionType ?? ""}|${topic}|${tag}`}
                     onChange={(next, coordinates) => {
@@ -550,48 +564,48 @@ export function SliperCommunity({
                       }
                       setSort(next);
                       if (next === "popular") setRankingAt(undefined);
-                      if (view === "popular") setView("home");
+                      if (view === "popular") setView(storyBoard ? "stories" : "home");
                     }}
                   />
                   <button
                     type="button"
                     className="sl-button sl-button--primary sl-feed__write"
                     disabled={store.busy}
-                    onClick={() => {
-                      setComposeKind(null);
-                      startWriting();
-                    }}
+                    onClick={writeForBoard}
                   >
                     <Pencil size={15} aria-hidden="true" />
-                    글쓰기
+                    {meetupBoard ? "모집글 쓰기" : "글쓰기"}
                   </button>
                 </div>
               </div>
 
               <div className="sl-tabs" role="group" aria-label="글 유형">
-                {kinds.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={kind === value}
-                    className={cn(kind === value && "active")}
-                    onClick={() => {
-                      setKind(value);
-                      if (value !== "이야기") {
-                        setDiscussionType(undefined);
-                        if (focus === "unanswered") setFocus("all");
-                      }
-                      if (view === "stories" && value !== "이야기" && value !== "모집")
-                        setView("home");
-                      if (value !== "모집" && sort === "nearest") setSort("latest");
-                      if (value !== "모집" && discoveryActive) {
-                        setDiscovery({ ...DEFAULT_DISCOVERY_FILTERS });
-                      }
-                    }}
-                  >
-                    {value}
-                  </button>
-                ))}
+                {(storyBoard ? storyKinds : meetupBoard ? (["모집"] as const) : kinds).map(
+                  (value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={(questionTab ? "질문" : kind) === value}
+                      className={cn((questionTab ? "질문" : kind) === value && "active")}
+                      onClick={() => {
+                        if (value === "모집" && !meetupBoard && !discoveryActive) {
+                          browseRecruitments();
+                          return;
+                        }
+                        setKind(value === "질문" ? "이야기" : value);
+                        setDiscussionType(value === "질문" ? "question" : undefined);
+                        if (focus === "unanswered" || value === "질문" || value === "투표")
+                          setFocus("all");
+                        if (value !== "모집" && sort === "nearest") setSort("latest");
+                        if (value !== "모집" && discoveryActive) {
+                          setDiscovery({ ...DEFAULT_DISCOVERY_FILTERS });
+                        }
+                      }}
+                    >
+                      {value}
+                    </button>
+                  ),
+                )}
                 {kind === "모집" && (
                   <div className="sl-layout-switch" role="group" aria-label="모집글 보기 방식">
                     <button
@@ -626,7 +640,7 @@ export function SliperCommunity({
               )}
 
               {/* Categories belong to 이야기; elsewhere the menu only stays to clear a linked filter. */}
-              {(view === "stories" || category !== "all") && (
+              {(storyBoard || category !== "all") && (
                 <CommunityCategoryMenu category={category} onSelect={chooseCategory} />
               )}
 
@@ -646,7 +660,28 @@ export function SliperCommunity({
                   ))}
                 </div>
               )}
-              {kind === "이야기" && (
+              {questionTab && (
+                <div className="sl-subfilter" role="group" aria-label="질문 탐색">
+                  <button
+                    type="button"
+                    aria-pressed={focus !== "unanswered"}
+                    onClick={() => setFocus("all")}
+                  >
+                    모든 질문
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={focus === "unanswered"}
+                    onClick={() => {
+                      setFocus("unanswered");
+                      setSort("latest");
+                    }}
+                  >
+                    답변 기다리는 질문
+                  </button>
+                </div>
+              )}
+              {kind === "이야기" && !questionTab && (
                 <div className="sl-subfilter" role="group" aria-label="이야기 탐색">
                   <button
                     aria-pressed={focus === "all" && !discussionType}
@@ -657,28 +692,32 @@ export function SliperCommunity({
                   >
                     모든 이야기
                   </button>
-                  {DISCUSSION_TYPES.map((value) => (
+                  {DISCUSSION_TYPES.filter((value) => !storyBoard || value !== "question").map(
+                    (value) => (
+                      <button
+                        key={value}
+                        aria-pressed={discussionType === value && focus !== "unanswered"}
+                        onClick={() => {
+                          setDiscussionType(value);
+                          if (focus === "unanswered") setFocus("all");
+                        }}
+                      >
+                        {DISCUSSION_LABELS[value]}
+                      </button>
+                    ),
+                  )}
+                  {!storyBoard && (
                     <button
-                      key={value}
-                      aria-pressed={discussionType === value && focus !== "unanswered"}
+                      aria-pressed={focus === "unanswered"}
                       onClick={() => {
-                        setDiscussionType(value);
-                        if (focus === "unanswered") setFocus("all");
+                        setFocus("unanswered");
+                        setDiscussionType("question");
+                        setSort("latest");
                       }}
                     >
-                      {DISCUSSION_LABELS[value]}
+                      답변 기다리는 질문
                     </button>
-                  ))}
-                  <button
-                    aria-pressed={focus === "unanswered"}
-                    onClick={() => {
-                      setFocus("unanswered");
-                      setDiscussionType("question");
-                      setSort("latest");
-                    }}
-                  >
-                    답변 기다리는 질문
-                  </button>
+                  )}
                   <button
                     aria-pressed={focus === "interests"}
                     onClick={() => {
@@ -712,7 +751,7 @@ export function SliperCommunity({
                 </button>
               )}
               <EventDiscoveryChips
-                value={discovery}
+                value={activeFilters}
                 onChange={updateDiscovery}
                 onReset={resetDiscovery}
                 onEdit={() => {
@@ -846,7 +885,7 @@ export function SliperCommunity({
                   <Button
                     variant="outline"
                     onClick={() => {
-                      if (view === "mine") setWriting(true);
+                      if (view === "mine") writeForBoard();
                       else if (savedMeetups) browseRecruitments();
                       else navigate("home");
                     }}
@@ -925,13 +964,10 @@ export function SliperCommunity({
         className={cn("mobile-compose", !feedVisible && "is-away")}
         aria-label={store.canWrite ? "새 글 쓰기" : "로그인하고 글쓰기"}
         disabled={store.busy}
-        onClick={() => {
-          setComposeKind(null);
-          startWriting();
-        }}
+        onClick={writeForBoard}
       >
         <Pencil size={19} />
-        <span>글쓰기</span>
+        <span>{meetupBoard ? "모집글 쓰기" : "글쓰기"}</span>
       </Button>
 
       <Dialog
@@ -986,21 +1022,24 @@ export function SliperCommunity({
         </DialogContent>
       </Dialog>
 
-      <EventDiscoveryDialog
-        open={discoveryOpen}
-        onOpenChange={setDiscoveryOpen}
-        value={discovery}
-        category={category}
-        onApply={(next, nextCategory) => {
-          setDiscovery(next);
-          setCategory(nextCategory);
-          setView((current) => (current === "stories" ? "stories" : "home"));
-          setKind("모집");
-          setTopic("");
-          setTag("");
-          feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
-      />
+      {!storyBoard && (
+        <EventDiscoveryDialog
+          open={discoveryOpen}
+          onOpenChange={setDiscoveryOpen}
+          value={discovery}
+          category={category}
+          fixedMeetupType={meetupBoard}
+          onApply={(next, nextCategory) => {
+            updateDiscovery(next);
+            setCategory(nextCategory);
+            setView("home");
+            setKind("모집");
+            setTopic("");
+            setTag("");
+            feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        />
+      )}
 
       <RecruitmentTypeDialog
         open={choosingRecruitment}
@@ -1019,9 +1058,10 @@ export function SliperCommunity({
           onOpenChange={changeWriting}
           initialCategory={
             (composeTopic && topicForSlug(composeTopic)?.category) ||
-            (category === "all" ? "party" : category)
+            (category === "all" ? (composeKind === "모집" ? "party" : "general") : category)
           }
           initialKind={composeKind ?? "이야기"}
+          initialDiscussionType={questionTab ? "question" : undefined}
           {...(composeTopic ? { initialTopic: composeTopic } : {})}
           post={null}
           upload={store.upload}
@@ -1033,7 +1073,9 @@ export function SliperCommunity({
             setToast(
               input.kind === "모집"
                 ? "이벤트·행사 모집글을 등록했어요."
-                : "새 이야기를 등록했어요.",
+                : input.kind === "투표"
+                  ? "새 투표를 등록했어요."
+                  : "새 이야기를 등록했어요.",
             );
             return true;
           }}

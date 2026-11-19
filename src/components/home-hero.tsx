@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { ArrowRight, BookOpen, ClipboardList, Handshake, Lightbulb } from "lucide-react";
-import type { CommunityPost } from "@/domain/community";
 import type { Audience } from "@/lib/audience";
 import { HeroCarousel } from "./hero-carousel";
 
@@ -12,23 +11,13 @@ const HOST_LINKS = [
   { href: "/hosting-guide", label: "호스트 가이드", icon: Lightbulb },
 ];
 
-export function HomeHero({
-  audience,
-  recruitments,
-  onHost,
-  onOpen,
-}: {
-  audience: Audience;
-  recruitments: CommunityPost[];
-  onHost: () => void;
-  onOpen: (post: CommunityPost) => void;
-}) {
+export function HomeHero({ audience, onHost }: { audience: Audience; onHost: () => void }) {
   return (
     <section className="sl-hero" aria-labelledby="sl-hero-title">
       <header className="sl-hero__heading">
         <h1 id="sl-hero-title">슬쩍 나와서 리얼하게 노는 퍼블릭 커뮤니티</h1>
       </header>
-      <HeroCarousel posts={recruitments} onOpen={onOpen} />
+      <HeroCarousel />
       {audience === "host" && (
         <div className="sl-quick" role="group" aria-label="호스트 바로가기">
           <button type="button" className="sl-quick__primary" onClick={onHost}>

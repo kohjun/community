@@ -132,7 +132,7 @@ export const categories = sliper
       name: varchar("name", { length: 24 }).notNull(),
       sortOrder: smallint("sort_order").notNull().unique(),
     },
-    (t) => [check("categories_sort_order_range", sql`${t.sortOrder} between 0 and 11`)],
+    (t) => [check("categories_sort_order_range", sql`${t.sortOrder} between 0 and 12`)],
   )
   .enableRLS();
 

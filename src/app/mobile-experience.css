@@ -385,23 +385,6 @@
     padding: 9px 13px;
     font-size: 12px;
   }
-  .recruitment-card h3 {
-    font-size: 17px;
-    line-height: 1.5;
-  }
-  .recruitment-card-body {
-    padding: 17px;
-  }
-  .recruitment-card-facts {
-    font-size: 13px;
-  }
-  .recruitment-card-footer {
-    padding: 10px 16px;
-  }
-  .recruitment-card-footer button,
-  .recruitment-card-footer .apply-button {
-    min-height: 44px;
-  }
   .community-pagination {
     width: 100%;
     padding: 22px 0 14px;

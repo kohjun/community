@@ -11,6 +11,7 @@ export const CATEGORY_SLUGS = [
   "knowledge",
   "lab",
   "crew",
+  "general",
 ] as const;
 
 export type CategorySlug = (typeof CATEGORY_SLUGS)[number];
@@ -28,4 +29,5 @@ export const CATEGORIES = [
   { slug: "knowledge", name: "지식", sortOrder: 9 },
   { slug: "lab", name: "콘텐츠 연구소", sortOrder: 10 },
   { slug: "crew", name: "함께 만드는 크루", sortOrder: 11 },
+  { slug: "general", name: "자유", sortOrder: 12 },
 ] as const satisfies readonly { slug: CategorySlug; name: string; sortOrder: number }[];

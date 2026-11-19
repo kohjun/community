@@ -9,7 +9,6 @@ import {
   MapPin,
   MessageCircle,
   UserRound,
-  UsersRound,
   Wallet,
   Zap,
 } from "lucide-react";
@@ -85,50 +84,43 @@ export function CommunityRecruitmentCard({
   return (
     <article className={cn("recruitment-card", cancelled && "recruitment-card-cancelled")}>
       <a className="recruitment-card-open" href={href} onClick={open}>
-        <div className={cn("recruitment-card-media", !image && "recruitment-card-media-empty")}>
-          {image ? (
-            <img src={image} alt="" loading="lazy" className="recruitment-card-image" />
-          ) : (
-            <UsersRound size={44} strokeWidth={1.4} aria-hidden="true" />
-          )}
-          <span
-            className={cn(
-              "recruitment-card-status",
-              cancelled && "recruitment-card-status-cancelled",
-              !cancelled && closed && "recruitment-card-status-closed",
-            )}
-          >
-            {status}
-          </span>
-          {post.meetupType === "lightning" && (
-            <span className="recruitment-card-lightning">
-              <Zap size={12} aria-hidden="true" />
-              번개
-            </span>
-          )}
-        </div>
+        {image && (
+          <img
+            src={image}
+            alt=""
+            width={88}
+            height={88}
+            loading="lazy"
+            className="recruitment-card-image"
+          />
+        )}
         <div className="recruitment-card-body">
           <div className="recruitment-card-overline">
-            <span className="recruitment-card-category">{category}</span>
-            {post.topic && <span className="recruitment-card-topic">{post.topic}</span>}
-            <span className="recruitment-card-time">{post.time}</span>
+            <span
+              className={cn(
+                "recruitment-card-status",
+                cancelled && "recruitment-card-status-cancelled",
+                !cancelled && closed && "recruitment-card-status-closed",
+              )}
+            >
+              {status}
+            </span>
+            {category && <span className="recruitment-card-category">{category}</span>}
+            {post.meetupType === "lightning" && (
+              <span className="recruitment-card-lightning">
+                <Zap size={12} aria-hidden="true" />
+                번개
+              </span>
+            )}
           </div>
           <h3 className={cn("recruitment-card-title", isRead && "title-is-read")}>
             {post.title}
             {isRead && <span className="sr-only"> (읽은 글)</span>}
           </h3>
-          <p className="recruitment-card-excerpt">{post.excerpt}</p>
           <dl className="recruitment-card-facts">
             <div>
               <dt>
-                <MapPin size={15} aria-hidden="true" />
-                <span className="sr-only">장소</span>
-              </dt>
-              <dd>{post.location?.trim() || "장소 확인 필요"}</dd>
-            </div>
-            <div>
-              <dt>
-                <CalendarDays size={15} aria-hidden="true" />
+                <CalendarDays size={13} aria-hidden="true" />
                 <span className="sr-only">일정 · 한국 시간</span>
               </dt>
               <dd>
@@ -141,12 +133,23 @@ export function CommunityRecruitmentCard({
             </div>
             <div>
               <dt>
-                <Wallet size={15} aria-hidden="true" />
+                <Wallet size={13} aria-hidden="true" />
                 <span className="sr-only">참가 비용</span>
               </dt>
               <dd className="recruitment-card-fee">{fee}</dd>
             </div>
+            <div className="recruitment-card-place">
+              <dt>
+                <MapPin size={13} aria-hidden="true" />
+                <span className="sr-only">장소</span>
+              </dt>
+              <dd>{post.location?.trim() || "장소 확인 필요"}</dd>
+            </div>
           </dl>
+        </div>
+      </a>
+      <footer className="recruitment-card-footer">
+        <div className="recruitment-card-meta">
           <div className="recruitment-card-author">
             <UserRound size={13} aria-hidden="true" />
             <span>{post.anonymous ? "익명" : post.author}</span>
@@ -159,18 +162,16 @@ export function CommunityRecruitmentCard({
               </span>
             )}
           </div>
-        </div>
-      </a>
-      <div className="recruitment-card-footer">
-        <div className="recruitment-card-stats">
-          <span aria-label={`조회 ${post.views}회`}>
-            <Eye size={14} aria-hidden="true" />
-            {post.views}
-          </span>
-          <span aria-label={`댓글 ${post.comments}개`}>
-            <MessageCircle size={14} aria-hidden="true" />
-            {post.comments}
-          </span>
+          <div className="recruitment-card-stats">
+            <span aria-label={`조회 ${post.views}회`}>
+              <Eye size={13} aria-hidden="true" />
+              {post.views}
+            </span>
+            <span aria-label={`댓글 ${post.comments}개`}>
+              <MessageCircle size={13} aria-hidden="true" />
+              {post.comments}
+            </span>
+          </div>
         </div>
         <div className="recruitment-card-actions">
           <RecruitmentApplyButton
@@ -215,7 +216,7 @@ export function CommunityRecruitmentCard({
             </button>
           </div>
         </div>
-      </div>
+      </footer>
     </article>
   );
 }

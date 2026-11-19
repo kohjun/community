@@ -6,6 +6,7 @@ import {
   FlaskConical,
   Handshake,
   Heart,
+  MessageCircle,
   Music2,
   PartyPopper,
   Plane,
@@ -28,4 +29,5 @@ export const CATEGORY_ICONS: Record<CategorySlug, LucideIcon> = {
   knowledge: BookOpen,
   lab: FlaskConical,
   crew: Handshake,
+  general: MessageCircle,
 };

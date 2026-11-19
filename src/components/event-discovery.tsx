@@ -83,6 +83,7 @@ export function EventDiscoveryDialog({
   onOpenChange,
   value,
   category,
+  fixedMeetupType,
   requireLocation = false,
   onApply,
 }: {
@@ -90,6 +91,7 @@ export function EventDiscoveryDialog({
   onOpenChange: (open: boolean) => void;
   value: EventDiscoveryFilters;
   category: CategorySlug | "all";
+  fixedMeetupType?: Exclude<EventDiscoveryFilters["meetupType"], "all"> | undefined;
   requireLocation?: boolean;
   onApply: (value: EventDiscoveryFilters, category: CategorySlug | "all") => void;
 }) {
@@ -137,7 +139,11 @@ export function EventDiscoveryDialog({
     setDraft((current) => ({ ...current, ...next }));
   function reset() {
     setLocationFieldVersion((current) => current + 1);
-    setDraft({ ...DEFAULT_DISCOVERY_FILTERS, eventOnly: true });
+    setDraft({
+      ...DEFAULT_DISCOVERY_FILTERS,
+      eventOnly: true,
+      meetupType: fixedMeetupType ?? "all",
+    });
     setDraftCategory("all");
     setDateChoice("언제든");
     setCustomPrice(false);
@@ -193,29 +199,31 @@ export function EventDiscoveryDialog({
         </div>
         <form className="discovery-form" onSubmit={submit}>
           <div className="discovery-scroll">
-            <section className="discovery-section" aria-label="모임 종류">
-              <h3>어떤 모임을 찾나요?</h3>
-              <div className="discovery-kind-options">
-                {(
-                  [
-                    { value: "all", label: "전체" },
-                    { value: "lightning", label: "번개·모임" },
-                    { value: "event", label: "이벤트·행사" },
-                  ] as const
-                ).map((item) => (
-                  <button
-                    type="button"
-                    key={item.value}
-                    aria-pressed={draft.meetupType === item.value}
-                    className={draft.meetupType === item.value ? "selected" : ""}
-                    onClick={() => update({ meetupType: item.value })}
-                  >
-                    {item.value === "lightning" && <Zap size={14} aria-hidden="true" />}
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </section>
+            {!fixedMeetupType && (
+              <section className="discovery-section" aria-label="모임 종류">
+                <h3>어떤 모임을 찾나요?</h3>
+                <div className="discovery-kind-options">
+                  {(
+                    [
+                      { value: "all", label: "전체" },
+                      { value: "lightning", label: "번개·모임" },
+                      { value: "event", label: "이벤트·행사" },
+                    ] as const
+                  ).map((item) => (
+                    <button
+                      type="button"
+                      key={item.value}
+                      aria-pressed={draft.meetupType === item.value}
+                      className={draft.meetupType === item.value ? "selected" : ""}
+                      onClick={() => update({ meetupType: item.value })}
+                    >
+                      {item.value === "lightning" && <Zap size={14} aria-hidden="true" />}
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
             <section className="discovery-section" aria-label="관심 분야">
               <h3>
                 무엇을 하고 싶나요?<small>하나 선택</small>

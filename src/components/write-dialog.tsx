@@ -30,6 +30,7 @@ export function WriteDialog({
   initialCategory,
   initialTopic,
   initialKind,
+  initialDiscussionType,
   post,
   onPublish,
   upload,
@@ -39,6 +40,7 @@ export function WriteDialog({
   initialCategory: CategorySlug;
   initialTopic?: TopicSlug | undefined;
   initialKind?: "이야기" | "모집" | "투표" | undefined;
+  initialDiscussionType?: DiscussionType | undefined;
   post: CommunityPost | null;
   onPublish: (input: CreatePostInput) => Promise<boolean>;
   upload: (file: File) => Promise<PublicImage>;
@@ -50,7 +52,7 @@ export function WriteDialog({
     post?.kind === "후기" ? "이야기" : (post?.kind ?? initialKind ?? "이야기"),
   );
   const [discussionType, setDiscussionType] = useState<DiscussionType>(
-    post?.discussionType ?? "free",
+    post?.discussionType ?? initialDiscussionType ?? "free",
   );
   const [spoiler, setSpoiler] = useState(post?.spoiler ?? false);
   const [spoilerTitle, setSpoilerTitle] = useState(post?.spoilerTitle ?? "");
@@ -273,7 +275,9 @@ export function WriteDialog({
             ? (lightning ? MEETUP_TYPE_LABELS.lightning : MEETUP_TYPE_LABELS.event) +
               (post ? " 수정하기" : " 모집글 쓰기")
             : kind === "투표"
-              ? "투표 수정하기"
+              ? post
+                ? "투표 수정하기"
+                : "투표 쓰기"
               : post
                 ? "이야기 수정하기"
                 : "이야기 쓰기"}
