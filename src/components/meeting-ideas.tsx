@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { MEETING_IDEA_DISTRICTS, MEETING_IDEA_REGION_GROUPS } from "@/domain/meeting-idea-regions";
 import { meetingIdeaState } from "@/domain/meeting-idea-state";
 import { useState, useRef } from "react";
 import { appRequest } from "@/lib/api-client";
@@ -14,15 +16,13 @@ export function MeetingIdeas({
 }) {
   const [data, setData] = useState(initial),
     [page, setPage] = useState(1),
-    [region, setRegion] = useState(""),
+    [province, setProvince] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [message, setMessage] = useState("");
   const gate = useRef(false);
-  async function load(p = page, r = region) {
-    setData(
-      await appRequest("/api/growth/ideas?" + new URLSearchParams({ page: String(p), region: r })),
-    );
+  async function load(p = page) {
+    setData(await appRequest("/api/growth/ideas?" + new URLSearchParams({ page: String(p) })));
     setPage(p);
   }
   async function work(fn: () => Promise<unknown>) {
@@ -48,10 +48,12 @@ export function MeetingIdeas({
           해보고 싶은 활동을 제안하고 관심을 모아보세요. 관심 표시는 참가 신청이나 결제가 아니에요.
         </p>
       </header>
-      <details className="maturity-panel" open={!!sourceEventId}>
-        <summary>새 모임 제안하기</summary>
+      <section className="maturity-panel meeting-idea-compose">
+        <h2 id="meeting-idea-form-title">새 모임 제안하기</h2>
         <form
           className="growth-form"
+          aria-labelledby="meeting-idea-form-title"
+          method="post"
           onSubmit={(e) => {
             e.preventDefault();
             const form = e.currentTarget,
@@ -61,15 +63,15 @@ export function MeetingIdeas({
                 title: f.get("title"),
                 body: f.get("body"),
                 category: f.get("category"),
-                region: f.get("region"),
+                region: [f.get("province"), f.get("district")].join(" "),
                 dateFrom: f.get("dateFrom"),
                 dateTo: f.get("dateTo"),
                 sourceEventId,
               });
               form.reset();
+              setProvince("");
               setMessage("제안을 등록했어요. 이야기에서도 댓글을 나눌 수 있어요.");
-              await load(1, "");
-              setRegion("");
+              await load(1);
             });
           }}
         >
@@ -83,10 +85,7 @@ export function MeetingIdeas({
               placeholder="수원에서 초보자 크라임씬을 해보고 싶어요"
             />
           </label>
-          <label>
-            활동 지역
-            <input name="region" required maxLength={60} />
-          </label>
+
           <label>
             취향
             <select name="category">
@@ -97,6 +96,50 @@ export function MeetingIdeas({
               ))}
             </select>
           </label>
+          <fieldset className="growth-wide meeting-idea-region">
+            <legend>활동 지역</legend>
+            <div className="meeting-idea-region-fields">
+              <div>
+                <label htmlFor="meeting-idea-province">광역 지역</label>
+                <select
+                  id="meeting-idea-province"
+                  name="province"
+                  value={province}
+                  onChange={(event) => setProvince(event.currentTarget.value)}
+                  required
+                >
+                  <option value="" disabled>
+                    광역 지역 선택
+                  </option>
+                  {MEETING_IDEA_REGION_GROUPS.map(({ label, regions }) => (
+                    <optgroup key={label} label={label}>
+                      {regions.map((region) => (
+                        <option key={region}>{region}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="meeting-idea-district">시·군·구</label>
+                <select
+                  key={province}
+                  id="meeting-idea-district"
+                  name="district"
+                  defaultValue=""
+                  required
+                  disabled={!province}
+                >
+                  <option value="" disabled>
+                    {province ? "시·군·구 선택" : "광역 지역을 먼저 선택하세요"}
+                  </option>
+                  {MEETING_IDEA_DISTRICTS[province]?.map((district) => (
+                    <option key={district}>{district}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </fieldset>
           <label>
             가능한 날짜부터
             <input type="date" name="dateFrom" required />
@@ -116,32 +159,16 @@ export function MeetingIdeas({
               placeholder="기대하는 활동, 초보 여부, 선호하는 분위기를 알려주세요."
             />
           </label>
-          <p className="form-note">
-            제안은 공개 이야기 글로 등록됩니다. 연락처나 참가자 개인정보는 적지 마세요.
-          </p>
-          <button className="participation-primary" disabled={busy}>
-            제안 등록
-          </button>
+          <div className="growth-wide meeting-idea-submit">
+            <p className="form-note">
+              제안은 공개 이야기 글로 등록됩니다. 연락처나 참가자 개인정보는 적지 마세요.
+            </p>
+            <button type="submit" className="participation-primary" disabled={busy}>
+              제안 등록
+            </button>
+          </div>
         </form>
-      </details>
-      <form
-        className="maturity-actions growth-search"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void work(() => load(1));
-        }}
-      >
-        <label>
-          지역 찾기
-          <input
-            value={region}
-            onChange={(e) => setRegion(e.target.value)}
-            maxLength={60}
-            placeholder="전체 지역"
-          />
-        </label>
-        <button disabled={busy}>찾기</button>
-      </form>
+      </section>
       {error && <p role="alert">{error}</p>}
       {message && <p role="status">{message}</p>}
       <div className="growth-list">
@@ -254,15 +281,31 @@ export function MeetingIdeas({
         ))}
       </div>
       {!data.items.length && <p>아직 제안이 없어요. 원하는 모임을 먼저 남겨보세요.</p>}
-      <nav className="maturity-actions" aria-label="모임 제안 페이지">
-        <button disabled={busy || page === 1} onClick={() => void work(() => load(page - 1))}>
-          이전
-        </button>
-        <span>{page}페이지</span>
-        <button disabled={busy || !data.hasMore} onClick={() => void work(() => load(page + 1))}>
-          다음
-        </button>
-      </nav>
+      {(page > 1 || data.hasMore) && (
+        <nav className="meeting-idea-pagination" aria-label="모임 제안 페이지">
+          <button
+            type="button"
+            className="participation-secondary"
+            disabled={busy || page === 1}
+            onClick={() => void work(() => load(page - 1))}
+          >
+            <ChevronLeft size={16} aria-hidden="true" />
+            이전
+          </button>
+          <span aria-current="page" aria-live="polite">
+            {page}페이지
+          </span>
+          <button
+            type="button"
+            className="participation-secondary"
+            disabled={busy || !data.hasMore}
+            onClick={() => void work(() => load(page + 1))}
+          >
+            다음
+            <ChevronRight size={16} aria-hidden="true" />
+          </button>
+        </nav>
+      )}
     </>
   );
 }

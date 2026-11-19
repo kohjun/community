@@ -209,6 +209,9 @@ function RoomMembers({
                     </small>
                   )}
                 </div>
+                {member.role !== "participant" && !member.isMe && (
+                  <EventPrivateContact postId={room.postId} compact />
+                )}
               </li>
             ))}
           </ul>
@@ -398,6 +401,14 @@ export function AnnouncementRoom({ initial }: { initial: RoomView }) {
               ? "참가자 전용 채팅방 · 승인된 참가자끼리 대화할 수 있어요."
               : "참가자 전용 공지방 · 담당자만 메시지를 보낼 수 있어요."}
           </p>
+          {room && (
+            <Link
+              className="participation-secondary room-participation-link"
+              href={`/events/${postId}`}
+            >
+              참가 정보 확인
+            </Link>
+          )}
         </header>
         {error && (
           <p className="participation-error" role="alert">
@@ -538,6 +549,24 @@ export function AnnouncementRoom({ initial }: { initial: RoomView }) {
                       const value = event.currentTarget.value;
                       setDrafts((prev) => ({ ...prev, [draftKey]: value }));
                     }}
+                    onKeyDown={
+                      chatEnabled
+                        ? (event) => {
+                            const { isComposing, keyCode } = event.nativeEvent;
+                            if (
+                              event.key !== "Enter" ||
+                              event.shiftKey ||
+                              isComposing ||
+                              keyCode === 229
+                            )
+                              return;
+                            event.preventDefault();
+                            if (!event.repeat && !busy && body.trim())
+                              event.currentTarget.form?.requestSubmit();
+                          }
+                        : undefined
+                    }
+                    enterKeyHint={chatEnabled ? "send" : undefined}
                     readOnly={busy}
                     placeholder={
                       chatEnabled
@@ -545,23 +574,21 @@ export function AnnouncementRoom({ initial }: { initial: RoomView }) {
                         : "참가자에게 전달할 준비물과 행사 안내를 적어주세요"
                     }
                   />
-                  <button className="participation-primary" disabled={busy || !body.trim()}>
+                  <button
+                    type="submit"
+                    className="participation-primary"
+                    disabled={busy || !body.trim()}
+                  >
                     <Send size={16} />
                     {chatEnabled ? "메시지 보내기" : "공지 보내기"}
                   </button>
                 </form>
               ) : (
                 <footer className="announcement-readonly">
-                  <LockKeyhole size={16} />이 방은 읽기 전용입니다. 문의는 담당자에게 문의하기를
-                  이용해주세요.
+                  <LockKeyhole size={16} aria-hidden="true" />이 방은 읽기 전용입니다. 행사 문의는
+                  멤버 목록에서 할 수 있어요.
                 </footer>
               )}
-            </section>
-            <section className="participation-card event-room-footer">
-              <EventPrivateContact postId={postId} />
-              <Link className="participation-secondary" href={`/events/${postId}`}>
-                참가 정보 확인
-              </Link>
             </section>
           </>
         )}

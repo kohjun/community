@@ -16,7 +16,7 @@
   gap: 12px;
   margin-bottom: 18px;
   font-size: 13px;
-  color: #8b95a1;
+  color: #606e83;
 }
 .post-page-breadcrumb a {
   display: inline-flex;
@@ -31,8 +31,10 @@
   padding: 32px;
 }
 .post-page-card .detail-title {
-  font-size: 26px;
-  line-height: 1.45;
+  font-size: clamp(1.375rem, 1.2rem + 0.85vw, 1.75rem);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 .post-page-card .detail-title-row {
   padding-right: 0;
@@ -50,10 +52,9 @@
 }
 .post-page-card .detail-support-actions > button,
 .post-dialog .detail-support-actions > button {
-  min-height: 36px;
-  height: 36px;
-  padding: 0 10px;
-  font-size: 12px;
+  min-block-size: 2.25rem;
+  padding: 6px 10px;
+  font-size: 0.8125rem;
 }
 .post-page-card .detail-footer,
 .post-dialog .detail-footer {
@@ -175,9 +176,7 @@ a.post-body-open:focus-visible {
     padding: 20px 16px;
     border-radius: 13px;
   }
-  .post-page-card .detail-title {
-    font-size: 21px;
-  }
+
   .post-page-card .detail-title-row {
     gap: 12px;
     align-items: flex-start;
@@ -263,5 +262,13 @@ a.post-body-open:focus-visible {
   .post-dialog > .post-mobile-apply {
     flex: none;
     padding-bottom: calc(10px + var(--mobile-safe-bottom));
+  }
+}
+
+@media (pointer: coarse) {
+  :is(.post-page-card, .post-dialog) :is(.detail-support-actions, .detail-reactions) > button {
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    height: auto;
   }
 }

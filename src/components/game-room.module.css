@@ -4,10 +4,16 @@
   padding: 20px 0 40px;
   color: #20242c;
 }
+.screen.catalogScreen {
+  inline-size: 100%;
+}
 .screen button,
 .screen input,
 .screen select {
   font: inherit;
+}
+.screen.catalogScreen {
+  inline-size: 100%;
 }
 .screen button,
 .screen a,

@@ -6,7 +6,7 @@ import type { EventPrivateContactView } from "@/domain/event-contact";
 import { eventPrivateContactPutSchema } from "@/domain/event-contact";
 import { participationRequest as request } from "@/lib/participation-client";
 import { RequestError } from "@/lib/api-client";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "./ui/dialog";
 
 type Contact = NonNullable<EventPrivateContactView["contact"]>;
 const emptyDraft: Contact = { channel: "phone", value: "", note: "" };
@@ -32,21 +32,25 @@ function contactHref(contact: Contact) {
 export function EventPrivateContact({
   postId,
   manage = false,
+  compact = false,
 }: {
   postId: string;
   manage?: boolean;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="event-private-contact-entry">
-      <button type="button" className="participation-secondary" onClick={() => setOpen(true)}>
-        <LockKeyhole size={15} aria-hidden="true" />
-        {manage ? "담당자 연락처 설정" : "담당자에게 문의하기"}
-      </button>
-      {manage && <small>확정 참가자와 지정 담당자에게만 보여요.</small>}
+    <div className={compact ? "room-member-contact" : "event-private-contact-entry"}>
       <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <button type="button" className="participation-secondary">
+            {!compact && <LockKeyhole size={15} aria-hidden="true" />}
+            {compact ? "행사 문의" : manage ? "담당자 연락처 설정" : "담당자에게 문의하기"}
+          </button>
+        </DialogTrigger>
         {open && <ContactDialog key={postId} postId={postId} />}
       </Dialog>
+      {manage && <small>확정 참가자와 지정 담당자에게만 보여요.</small>}
     </div>
   );
 }

@@ -11,7 +11,7 @@ export function PeopleDirectory({
   children: ReactNode;
 }) {
   return (
-    <ParticipationShell>
+    <ParticipationShell wide>
       <header className="people-directory-header">
         <span className="player-eyebrow">함께할 사람을 만나는 곳</span>
         <h1>플레이어·크루</h1>

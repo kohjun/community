@@ -1,35 +1,5 @@
 .site-ad-layout {
-  position: relative;
-  min-height: 100dvh;
-  --site-ad-content-width: 1184px;
-}
-.site-ad-layout:has(.page-layout--categories) {
-  --site-ad-content-width: 1360px;
-}
-.site-ad-layout > .sidebar-ad-rail {
-  display: none;
-  position: absolute;
-  top: 150px;
-  bottom: 72px;
-  width: 160px;
-}
-.site-ad-layout > .sidebar-ad-rail--left {
-  left: auto;
-  right: calc(50% + var(--site-ad-content-width) / 2 + 16px);
-}
-.site-ad-layout > .sidebar-ad-rail--right {
-  right: auto;
-  left: calc(50% + var(--site-ad-content-width) / 2 + 16px);
-}
-@media (min-width: 1568px) {
-  .site-ad-layout:not(:has(.page-layout--categories)) > .sidebar-ad-rail {
-    display: block;
-  }
-}
-@media (min-width: 1760px) {
-  .site-ad-layout > .sidebar-ad-rail {
-    display: block;
-  }
+  min-block-size: 100dvh;
 }
 .ad-slot--compact {
   min-height: 156px;

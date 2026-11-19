@@ -26,12 +26,12 @@
 }
 .playbook-completeness,
 .playbook-section-heading > span {
-  color: #748399;
+  color: #54647a;
   font-size: 12px;
 }
 .playbook-tabs {
-  display: flex;
-  overflow-x: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
   gap: 4px;
   padding: 5px;
   margin-bottom: 20px;
@@ -43,7 +43,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 1 0 auto;
+  min-inline-size: 0;
   gap: 7px;
   min-height: 44px;
   padding: 9px 16px;
@@ -55,10 +55,11 @@
   font-weight: 650;
   background: transparent;
   cursor: pointer;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.45;
 }
 .playbook-tabs > button[aria-selected="true"] {
-  color: #0a74df;
+  color: #0868cc;
   background: #fff;
   box-shadow: 0 1px 5px #172e5110;
 }
@@ -105,7 +106,7 @@
 }
 .playbook-note {
   margin: 13px 0 0;
-  color: #7d8a9b;
+  color: #54647a;
   font-size: 12px;
   line-height: 1.7;
 }
@@ -124,19 +125,19 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #8190a2;
+  color: #54647a;
   font-size: 12px;
   margin-bottom: 6px;
 }
 .playbook-facts dd {
   margin: 0;
-  font-size: 14px;
+  font-size: 0.9375rem;
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 .playbook-facts small {
   display: inline-block;
-  color: #8190a2;
+  color: #54647a;
   font-size: 10px;
   font-weight: 400;
   margin-left: 5px;

@@ -402,13 +402,16 @@ export function SliperCommunity({
               : kind === "투표"
                 ? "투표"
                 : "최근 올라온 글";
-  const recruitments = homeRecruitments(store.upcoming, store.featured);
+  const recruitments = homeRecruitments(store.upcoming, store.featured, filtered);
   const homeLanding = isHome && view === "home";
   // The landing page carries its own sections, so the side rail is for list views only.
   const showRail = wide !== false && !homeLanding;
-  const sectionStories = store.hot?.length
-    ? store.hot
-    : filtered.filter((post) => post.kind !== "모집");
+  const hotStories = store.hot ?? [];
+  const hotStoryIds = new Set(hotStories.map((post) => post.id));
+  const sectionStories = [
+    ...hotStories,
+    ...filtered.filter((post) => post.kind !== "모집" && !hotStoryIds.has(post.id)),
+  ];
   function browseRecruitments() {
     chooseCategory("all");
     setKind("모집");
@@ -488,7 +491,7 @@ export function SliperCommunity({
         }
       />
 
-      <div className="sl-page">
+      <main className="sl-page" id="main-content" tabIndex={-1}>
         {homeLanding ? (
           <HomeHero
             audience={audience}
@@ -517,7 +520,7 @@ export function SliperCommunity({
         )}
 
         <div className={cn("sl-layout", homeLanding && "sl-layout--home", showRail && "has-rail")}>
-          <main id="main-content" className="sl-feed">
+          <div className="sl-feed">
             <section ref={feedRef} className="sl-feed__section" aria-labelledby="feed-title">
               <div className="sl-feed__head">
                 <h2 id="feed-title">
@@ -867,7 +870,7 @@ export function SliperCommunity({
                 />
               )}
             </section>
-          </main>
+          </div>
 
           {showRail && (
             <aside className="sl-rail" aria-label="커뮤니티 소식">
@@ -915,7 +918,7 @@ export function SliperCommunity({
             </aside>
           )}
         </div>
-      </div>
+      </main>
       <SiteFooter />
 
       <Button

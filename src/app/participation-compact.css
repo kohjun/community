@@ -709,7 +709,7 @@
 }
 .participation-flow .participation-flow-summary {
   padding: 20px;
-  background: #fafbfd;
+  background: #fff;
 }
 .participation-flow-summary dl {
   display: grid;
@@ -724,14 +724,14 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #738095;
-  font-size: 11px;
+  color: #56647a;
+  font-size: 0.8125rem;
   margin-bottom: 6px;
 }
 .participation-flow-summary dd {
   margin: 0;
   color: #263345;
-  font-size: 13px;
+  font-size: 0.9375rem;
   font-weight: 600;
   line-height: 1.6;
   overflow-wrap: anywhere;
@@ -892,9 +892,12 @@
   .participation-flow .participation-flow-steps li {
     justify-content: center;
     padding: 11px 5px;
-    font-size: 10px;
+    font-size: 0.75rem;
+    line-height: 1.5;
     gap: 4px;
-    white-space: nowrap;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
   .participation-flow .participation-flow-steps li > svg {
     display: none;
@@ -906,6 +909,22 @@
   }
   .participation-flow-form-heading {
     margin-bottom: 18px;
+  }
+}
+
+@media (max-width: 24rem) {
+  .participation-flow-summary dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .participation-flow-summary dl > div {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 8px;
+  }
+  .participation-flow-summary dt {
+    margin: 0;
   }
 }
 
@@ -1063,9 +1082,11 @@
   min-width: 0;
   margin: 0;
 }
-.event-room-footer {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+.participation-workspace .room-heading > .room-participation-link {
+  margin-block-start: 12px;
+}
+@media (pointer: coarse) {
+  .participation-workspace .room-heading > .room-participation-link {
+    min-block-size: 44px;
+  }
 }

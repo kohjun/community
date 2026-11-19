@@ -527,7 +527,7 @@ export function EventMapCommunity({
   const website = publicWebsite(selectedVenue?.websiteUrl ?? null);
 
   return (
-    <ParticipationShell>
+    <ParticipationShell wide>
       <section className="event-map-page">
         <header className="event-map-heading">
           <div>

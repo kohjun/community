@@ -73,7 +73,7 @@ export function RecruitStrip({
         </button>
       </header>
       <RecruitTrack
-        posts={posts}
+        posts={posts.slice(0, 8)}
         onOpen={onOpen}
         onSave={onSave}
         bookmarked={bookmarked}
@@ -103,7 +103,7 @@ export function RecruitTrack({
   const readPosts = useReadPosts();
   return (
     <div className="sl-recruits__track">
-      {posts.slice(0, 8).map((post) => {
+      {posts.map((post) => {
         const status = recruitStatus(post);
         const image = post.image ?? post.images[0]?.src;
         const saved = bookmarked.includes(post.id);

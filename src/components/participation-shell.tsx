@@ -7,10 +7,12 @@ import type { SiteNavigationOverride } from "@/domain/navigation";
 export function ParticipationShell({
   children,
   advertising = true,
+  wide = false,
   activeSection,
 }: {
   children: React.ReactNode;
   advertising?: boolean;
+  wide?: boolean;
   activeSection?: SiteNavigationOverride;
 }) {
   return (
@@ -19,7 +21,10 @@ export function ParticipationShell({
         본문으로 바로가기
       </a>
       <SiteHeader {...(activeSection ? { activeSection } : {})} />
-      <main className="participation-page" id="participation-content">
+      <main
+        className={wide ? "participation-page participation-page--wide" : "participation-page"}
+        id="participation-content"
+      >
         {children}
         {/* Below the content so each page opens with its own title, not a banner. */}
         {advertising && <AdSlot compact />}

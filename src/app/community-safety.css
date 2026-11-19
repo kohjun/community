@@ -6,6 +6,7 @@
 }
 .safety-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
@@ -18,7 +19,7 @@
   margin: 0 0 8px;
 }
 .safety-heading h1 {
-  font-size: 27px;
+  font-size: clamp(1.5rem, 1.3rem + 1vw, 2rem);
   font-weight: 750;
   margin: 0 0 10px;
   letter-spacing: -0.04em;
@@ -59,7 +60,7 @@
 }
 .safety-page small {
   font-size: 12px;
-  color: #738196;
+  color: #54647a;
 }
 .safety-page fieldset,
 .safety-dialog fieldset {
@@ -123,8 +124,8 @@
 }
 .safety-page .safety-primary,
 .safety-dialog .safety-primary {
-  background: #0a84fe;
-  border-color: #0a84fe;
+  background: #0868cc;
+  border-color: #0868cc;
   color: white;
   justify-self: start;
   font-weight: 650;
@@ -463,4 +464,14 @@
   font-size: 14px;
   font-weight: 650;
   text-decoration: none;
+}
+
+.policy-content .safety-card :is(p, li) {
+  max-inline-size: 68ch;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+.policy-content .safety-card h2:not(:first-child) {
+  margin-block-start: 1.75rem;
 }

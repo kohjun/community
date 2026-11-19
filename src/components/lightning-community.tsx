@@ -256,7 +256,7 @@ export function LightningCommunity({
   const browseTags = [...new Set([...suggestions, ...(tag ? [tag] : [])])];
   const selectedActivity = draftActivity ? lightningCategory(draftActivity) : null;
   return (
-    <ParticipationShell advertising={!advertisingBlocked}>
+    <ParticipationShell wide advertising={!advertisingBlocked}>
       <section className="lightning-hero">
         <div>
           <span className="lightning-kicker">

@@ -6,5 +6,9 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <ParticipationShell advertising={false}>{children}</ParticipationShell>;
+  return (
+    <ParticipationShell wide advertising={false}>
+      {children}
+    </ParticipationShell>
+  );
 }

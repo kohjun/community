@@ -58,6 +58,7 @@
   font-size: 12px;
 }
 .participation-workspace .room-members-panel {
+  container: room-member-panel / inline-size;
   padding: 0 18px 15px;
   border-top: 1px solid #edf1f6;
 }
@@ -141,6 +142,22 @@
   color: #6b829b;
   font-size: 10px;
 }
+.participation-workspace .room-member-contact {
+  flex: none;
+  margin-inline-start: auto;
+}
+.participation-workspace .room-member-contact > button {
+  min-block-size: 30px;
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+@media (pointer: coarse) {
+  .participation-workspace .room-member-contact > button {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+}
 .participation-workspace .room-members-status,
 .participation-workspace .room-members-error {
   margin: 10px 0 0;
@@ -205,6 +222,11 @@
   }
   .participation-workspace .room-member-list > li {
     gap: 8px;
+  }
+}
+@container room-member-panel (width < 22rem) {
+  .participation-workspace .room-member-list {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (prefers-reduced-motion: reduce) {

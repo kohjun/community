@@ -141,10 +141,11 @@
 .inbox-item-meta {
   display: flex;
   align-items: center;
-  gap: 7px;
+  flex-wrap: wrap;
+  gap: 3px 8px;
   margin-bottom: 5px;
-  font-size: 10px;
-  color: #8a95a5;
+  font-size: 0.75rem;
+  color: #606e83;
   line-height: 1.6;
 }
 .inbox-item-meta > span:first-child {

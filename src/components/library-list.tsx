@@ -119,7 +119,7 @@ export function LibraryList({
   ].filter(Boolean);
 
   return (
-    <ParticipationShell advertising={!advertisingBlocked}>
+    <ParticipationShell wide advertising={!advertisingBlocked}>
       <ArchiveHeading canWrite={data.canWrite} kind={query.kind} />
       <ArchiveNavigation
         active={appliedQuery.kind}

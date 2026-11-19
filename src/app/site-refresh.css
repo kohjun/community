@@ -14,7 +14,7 @@
   --sl-ink: #121d30;
   --sl-ink-2: #2a3850;
   --sl-ink-3: #56647a;
-  --sl-ink-4: #8592a5;
+  --sl-ink-4: #606e83;
   --sl-ink-5: #b2bccb;
   --sl-signature: #0a84fe;
   --sl-signature-hover: #0874dc;
@@ -27,8 +27,8 @@
   --sl-navy-2: #0e1729;
   --sl-shadow: 0 1px 2px rgb(18 29 48 / 4%), 0 10px 28px -18px rgb(18 29 48 / 28%);
   --sl-shadow-lg: 0 2px 6px rgb(18 29 48 / 5%), 0 22px 48px -20px rgb(18 29 48 / 32%);
-  --sl-container: 1200px;
-  --sl-gutter: 24px;
+  --sl-container: 96rem;
+  --sl-gutter: clamp(1rem, 2vw, 2rem);
   /* Older component styles read these; align them with the palette. */
   --primary: var(--sl-signature);
   --soft-blue: #e7f2ff;
@@ -321,7 +321,7 @@ body {
     color 0.15s ease;
 }
 .sl-button--primary {
-  background: var(--sl-signature);
+  background: var(--sl-accent-2);
   color: #fff;
 }
 .sl-button--primary:hover:not(:disabled) {
@@ -348,9 +348,7 @@ body {
 .sl-page {
   background: var(--sl-paper);
 }
-.site-ad-layout:has(.sl-page) {
-  --site-ad-content-width: var(--sl-container);
-}
+
 .sl-page-head {
   max-width: calc(var(--sl-container) + var(--sl-gutter) * 2);
   margin: 0 auto;
@@ -373,38 +371,53 @@ body {
 }
 
 /* Hero --------------------------------------------------------------------------------------- */
-/* The banner runs edge to edge; the role shortcuts below it sit on the page container. */
 .sl-hero {
-  display: block;
+  max-inline-size: calc(var(--sl-container) + var(--sl-gutter) * 2);
+  margin-inline: auto;
+  padding: clamp(1.125rem, 2.5vw, 2.25rem) var(--sl-gutter) 0;
+}
+.sl-hero__heading {
+  margin-block-end: 1.125rem;
+}
+.sl-hero__heading h1 {
+  margin: 0;
+  color: var(--sl-ink);
+  font-size: clamp(1.375rem, 1.125rem + 0.95vw, 2rem);
+  font-weight: 780;
+  line-height: 1.28;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  word-break: keep-all;
 }
 .sl-carousel {
   position: relative;
   overflow: hidden;
   touch-action: pan-y;
+  border-radius: clamp(0.875rem, 1.4vw, 1.25rem);
   background: var(--sl-navy);
   isolation: isolate;
 }
 .sl-carousel__viewport {
-  height: 100%;
   overflow: hidden;
 }
 .sl-carousel__track {
   display: flex;
-  height: 100%;
   transition: transform 0.6s cubic-bezier(0.22, 0.8, 0.24, 1);
   will-change: transform;
 }
 .sl-carousel__slide {
+  display: flex;
   flex: 0 0 100%;
-  height: 100%;
-  min-width: 0;
+  min-inline-size: 0;
 }
 .sl-carousel__slide > a {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: flex-end;
+  inline-size: 100%;
+  min-block-size: clamp(15rem, 21vw, 21rem);
+  padding: 1.25rem var(--sl-gutter) 4.75rem;
   overflow: hidden;
-  height: 100%;
-  min-height: 360px;
   color: #fff;
   text-decoration: none;
   -webkit-user-drag: none;
@@ -427,13 +440,11 @@ body {
   inset: 0;
   background:
     linear-gradient(180deg, rgb(14 23 41 / 0%) 30%, rgb(14 23 41 / 78%) 100%),
-    linear-gradient(90deg, rgb(14 23 41 / 32%), rgb(14 23 41 / 0%) 60%);
+    linear-gradient(90deg, rgb(14 23 41 / 80%) 0%, rgb(14 23 41 / 44%) 46%, transparent 78%);
 }
 .sl-carousel__copy {
-  position: absolute;
-  right: 24px;
-  bottom: 64px;
-  left: 24px;
+  position: relative;
+  min-inline-size: 0;
   display: grid;
   gap: 8px;
   justify-items: start;
@@ -460,7 +471,7 @@ body {
   font-weight: 700;
 }
 .sl-carousel__badge.is-open {
-  background: var(--sl-signature);
+  background: var(--sl-accent-2);
   color: #fff;
 }
 .sl-carousel__badge.is-open::before {
@@ -471,17 +482,14 @@ body {
   content: "";
 }
 .sl-carousel__title {
-  display: -webkit-box;
-  max-width: 24em;
-  overflow: hidden;
-  font-size: clamp(21px, 2vw, 27px);
+  max-inline-size: 28ch;
+  font-size: clamp(1.25rem, 1rem + 1.3vw, 2rem);
   font-weight: 750;
   letter-spacing: -0.035em;
   line-height: 1.32;
   text-shadow: 0 1px 12px rgb(14 23 41 / 30%);
   word-break: keep-all;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
 }
 .sl-carousel__meta {
   display: flex;
@@ -513,9 +521,8 @@ body {
 }
 .sl-carousel__controls {
   position: absolute;
-  right: 20px;
-  bottom: 18px;
-  left: 24px;
+  inset-inline: var(--sl-gutter);
+  inset-block-end: 0.875rem;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -537,7 +544,7 @@ body {
 .sl-carousel__progress button::before,
 .sl-carousel__progress i {
   position: absolute;
-  top: 7px;
+  inset-block-start: calc(50% - 1.5px);
   left: 0;
   height: 3px;
   border-radius: 3px;
@@ -596,7 +603,7 @@ body {
 /* Feed layout -------------------------------------------------------------------------------- */
 .sl-layout {
   display: grid;
-  grid-template-columns: minmax(0, 820px);
+  grid-template-columns: minmax(0, 1fr);
   justify-content: center;
   align-items: start;
   gap: 40px;
@@ -1388,7 +1395,7 @@ body {
   content: "";
 }
 .sl-host-card .sl-button--primary {
-  background: var(--sl-signature);
+  background: var(--sl-accent-2);
   color: #fff;
 }
 .sl-host-card .sl-button--primary:hover:not(:disabled) {
@@ -1471,6 +1478,30 @@ body {
   font-size: 19px;
 }
 
+/* Shared reading and exploration surfaces. */
+.participation-page--wide {
+  max-inline-size: calc(var(--sl-container) + var(--sl-gutter) * 2);
+  padding-inline: var(--sl-gutter);
+}
+
+:is(.participation-heading, .marketplace-detail-header, .safety-heading, .record-heading) h1 {
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+@media (pointer: coarse) {
+  :is(.sl-section__actions > a, .sl-section__actions > button, .sl-carousel__controls > button),
+  :is(.inbox-tools > button, .inbox-tabs > button) {
+    min-block-size: 44px;
+  }
+  .sl-carousel__controls > button {
+    min-inline-size: 44px;
+  }
+  .sl-carousel__progress button {
+    min-block-size: 44px;
+  }
+}
+
 /* Shared calls to action on other pages, aligned to the palette ---------------------------- */
 .participation-primary,
 .account-primary,
@@ -1482,8 +1513,8 @@ body {
 .library-purchase-card .library-purchase-button.is-primary,
 .recruitment-card-footer .apply-button,
 .error-page button {
-  border-color: var(--sl-signature);
-  background: var(--sl-signature);
+  border-color: var(--sl-accent-2);
+  background: var(--sl-accent-2);
   color: #fff;
 }
 .participation-primary:hover:not(:disabled),
@@ -1496,8 +1527,8 @@ body {
 .library-purchase-card .library-purchase-button.is-primary:hover:not(:disabled),
 .recruitment-card-footer .apply-button:hover,
 .error-page button:hover {
-  border-color: var(--sl-signature-hover);
-  background: var(--sl-signature-hover);
+  border-color: #0756a4;
+  background: #0756a4;
 }
 .participation-primary,
 .participation-secondary {
@@ -1738,15 +1769,6 @@ body {
     left: auto;
     right: var(--sl-gutter);
   }
-  .sl-carousel__viewport,
-  .sl-carousel__track,
-  .sl-carousel__slide {
-    height: auto;
-  }
-  .sl-carousel__slide > a {
-    height: 340px;
-    min-height: 0;
-  }
 }
 @media (max-width: 720px) {
   :root {
@@ -1828,13 +1850,9 @@ body {
   }
 
   .sl-carousel__slide > a {
-    height: auto;
-    aspect-ratio: 4 / 3.3;
+    padding-block-end: 4.5rem;
   }
   .sl-carousel__copy {
-    right: 16px;
-    bottom: 54px;
-    left: 16px;
     gap: 6px;
   }
   .sl-carousel__chips {
@@ -1845,9 +1863,7 @@ body {
     padding: 0 8px;
     font-size: 11px;
   }
-  .sl-carousel__title {
-    font-size: 19px;
-  }
+
   .sl-carousel__meta {
     font-size: 12px;
   }
@@ -1857,11 +1873,7 @@ body {
   .sl-carousel__action {
     display: none;
   }
-  .sl-carousel__controls {
-    right: 12px;
-    bottom: 12px;
-    left: 16px;
-  }
+
   .sl-carousel__controls > button:not(:last-child) {
     display: none;
   }
@@ -2016,27 +2028,6 @@ body {
   }
 }
 
-/* Home landing: full-bleed banner, role toggle, shortcuts and sections ---------------------- */
-/* 70% of the earlier clamp(380px, 34vw, 500px) banner, so the sections start higher up. */
-.sl-carousel__slide > a {
-  height: clamp(266px, 23.8vw, 350px);
-  min-height: 0;
-}
-.sl-carousel__copy,
-.sl-carousel__controls {
-  /* Line the banner copy up with the page container while the image fills the width. */
-  right: max(var(--sl-gutter), calc((100% - var(--sl-container)) / 2));
-  left: max(var(--sl-gutter), calc((100% - var(--sl-container)) / 2));
-}
-.sl-carousel__copy {
-  bottom: 76px;
-}
-.sl-carousel__controls {
-  bottom: 26px;
-}
-.sl-carousel__title {
-  font-size: clamp(24px, 2.4vw, 34px);
-}
 .sl-audience-toggle {
   display: inline-flex;
   flex: none;
@@ -2077,9 +2068,7 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr));
   gap: 10px;
-  max-width: calc(var(--sl-container) + var(--sl-gutter) * 2);
-  margin: 0 auto;
-  padding: 20px var(--sl-gutter) 8px;
+  padding-block: 1.25rem 0.5rem;
 }
 .sl-quick__primary {
   display: grid;
@@ -2087,7 +2076,7 @@ body {
   min-width: 0;
   padding: 16px 20px;
   border-radius: 16px;
-  background: var(--sl-signature);
+  background: var(--sl-accent-2);
   color: #fff;
   text-align: left;
   transition: background-color 0.15s ease;
@@ -2162,7 +2151,8 @@ body {
 }
 .sl-section__head {
   display: flex;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
@@ -2183,9 +2173,9 @@ body {
 }
 .sl-section__actions {
   display: flex;
-  flex: none;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
 }
 .sl-chip-link {
   display: inline-flex;
@@ -2220,27 +2210,30 @@ body {
   font-weight: 650;
 }
 .sl-section__grid {
+  --sl-section-columns: 1;
+  --sl-section-card-min: 0px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(var(--sl-section-columns), minmax(var(--sl-section-card-min), 1fr));
+  gap: 14px;
+  min-width: 0;
 }
-.sl-section__track,
+.sl-section__grid:has(> :nth-child(3)) {
+  --sl-section-columns: 2;
+}
+.sl-section__grid:has(> :nth-child(5)) {
+  --sl-section-columns: 3;
+}
+.sl-section__grid:has(> :nth-child(7)) {
+  --sl-section-columns: 4;
+}
 .sl-section .sl-recruits__track {
-  display: grid;
-  grid-auto-columns: calc((100% - 36px) / 4);
-  grid-auto-flow: column;
-  gap: 12px;
-  padding: 0 0 4px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
+  grid-auto-columns: min(232px, 100%);
+  justify-content: start;
+  min-inline-size: 0;
+  padding-inline: 0;
 }
-.sl-section__track::-webkit-scrollbar {
-  display: none;
-}
-.sl-section__track > * {
-  scroll-snap-align: start;
+.sl-section .sl-recruits__track:has(> :nth-child(2)) {
+  grid-template-rows: repeat(2, auto);
 }
 .sl-story-card,
 .sl-crew-card,
@@ -2467,28 +2460,16 @@ body {
     grid-column: 1 / -1;
   }
   .sl-section__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    --sl-section-card-min: calc((100% - 28px) / 3);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: inline proximity;
   }
-  .sl-section__track,
-  .sl-section .sl-recruits__track {
-    grid-auto-columns: calc((100% - 24px) / 3);
+  .sl-section__grid > * {
+    scroll-snap-align: start;
   }
 }
 @media (max-width: 720px) {
-  /* 70% of the earlier 4 / 3.4 banner height. */
-  .sl-carousel__slide > a {
-    height: auto;
-    aspect-ratio: 4 / 2.38;
-  }
-  .sl-carousel__copy {
-    bottom: 52px;
-  }
-  .sl-carousel__controls {
-    bottom: 12px;
-  }
-  .sl-carousel__title {
-    font-size: 20px;
-  }
   .sl-audience-toggle {
     margin: 0 auto;
   }
@@ -2499,7 +2480,7 @@ body {
   }
   .sl-quick {
     gap: 8px;
-    padding: 14px var(--sl-gutter) 4px;
+    padding-block: 0.875rem 0.25rem;
   }
   .sl-quick__primary {
     padding: 14px 16px;
@@ -2541,23 +2522,12 @@ body {
   .sl-section__empty {
     margin: 0 var(--sl-gutter);
   }
-  .sl-section__grid,
-  .sl-section__track,
-  .sl-section .sl-recruits__track {
-    grid-template-columns: none;
-    grid-auto-columns: 74%;
-    grid-auto-flow: column;
+  .sl-section__grid {
+    --sl-section-card-min: calc((100% - 14px) / 2);
+  }
+  :is(.sl-section__grid, .sl-section .sl-recruits__track) {
     padding: 0 var(--sl-gutter) 4px;
-    overflow-x: auto;
-    scroll-padding-left: var(--sl-gutter);
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-  }
-  .sl-section__grid > * {
-    scroll-snap-align: start;
-  }
-  .sl-section__grid::-webkit-scrollbar {
-    display: none;
+    scroll-padding-inline: var(--sl-gutter);
   }
   .sl-chips {
     margin-right: var(--sl-gutter);

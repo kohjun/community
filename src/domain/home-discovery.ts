@@ -1,9 +1,16 @@
 import type { CommunityPost } from "./community";
 /** Preserve editorial samples without presenting them as active recruitment. */
-export function homeRecruitments(upcoming: CommunityPost[], featured: CommunityPost[]) {
+export function homeRecruitments(
+  upcoming: CommunityPost[],
+  featured: CommunityPost[],
+  feed: CommunityPost[] = [],
+) {
+  const additional = feed.filter((post) => post.eventAvailable || post.sample);
   return [
     ...new Map(
-      [...upcoming, ...featured].filter((p) => p.kind === "모집").map((p) => [p.id, p]),
+      [...additional, ...upcoming, ...featured]
+        .filter((p) => p.kind === "모집")
+        .map((p) => [p.id, p]),
     ).values(),
   ]
     .sort(

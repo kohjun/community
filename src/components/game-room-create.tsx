@@ -176,7 +176,7 @@ export function GameRoomCreate() {
     }
   }
   return (
-    <div className={styles.screen}>
+    <div className={showSetup ? styles.screen : styles.screen + " " + styles.catalogScreen}>
       <header className={catalog.hero} hidden={showSetup}>
         <div>
           <span className={styles.eyebrow}>

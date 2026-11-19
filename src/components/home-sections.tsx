@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { GameCover } from "./game-cover";
 import { RecruitTrack } from "./home-stage";
 
+const HOME_SECTION_LIMIT = 8;
 const categoryName = (slug: string) => CATEGORIES.find((c) => c.slug === slug)?.name ?? "";
 
 function Section({
@@ -78,13 +79,13 @@ function StoriesSection({
   return (
     <Section
       id="sl-section-stories"
-      title="요즘 다들 이 얘기해요"
-      description="반응이 몰린 후기와 질문, 투표를 모았어요."
+      title="인기 이야기"
+      description="반응이 모인 글과 최근 이야기를 살펴보세요."
       action={<MoreLink href="/stories?sort=popular">이야기 더 보기</MoreLink>}
     >
       {posts.length ? (
         <div className="sl-section__grid">
-          {posts.slice(0, 4).map((post, index) => (
+          {posts.slice(0, HOME_SECTION_LIMIT).map((post, index) => (
             <a
               key={post.id}
               className="sl-story-card"
@@ -145,7 +146,7 @@ function RecruitSection({
   return (
     <Section
       id="sl-section-recruits"
-      title="마감 전에 잡아야 할 모임"
+      title="모집 중인 모임"
       description="이벤트·행사와 번개·모임의 날짜와 장소, 참가비를 비교하고 바로 신청하세요."
       action={
         <>
@@ -183,12 +184,12 @@ function GamesSection({ audience }: { audience: Audience }) {
   return (
     <Section
       id="sl-section-games"
-      title={audience === "host" ? "모임에 바로 꺼내 쓰는 웹게임" : "오늘 밤 한 판, 웹게임"}
+      title={audience === "host" ? "모임에 바로 쓰는 웹게임" : "친구와 즐기는 웹게임"}
       description="링크 하나로 모이고, 설치나 가입 없이 휴대폰으로 함께해요."
       action={<MoreLink href="/games">웹게임 전체</MoreLink>}
     >
-      <div className="sl-section__track">
-        {GAME_CATALOG.map((game) => {
+      <div className="sl-section__grid">
+        {GAME_CATALOG.slice(0, HOME_SECTION_LIMIT).map((game) => {
           const isSaved = saved.includes(game.id);
           return (
             <div key={game.id} className="sl-game-card">
@@ -242,7 +243,7 @@ function CrewsSection() {
               Number(b.recruiting) - Number(a.recruiting) ||
               b.memberCount + b.eventCount - (a.memberCount + a.eventCount),
           );
-        setCrews(ranked.slice(0, 6));
+        setCrews(ranked.slice(0, HOME_SECTION_LIMIT));
       })
       .catch(() => {
         if (!controller.signal.aborted) setCrews([]);
@@ -261,7 +262,7 @@ function CrewsSection() {
           크루를 불러오고 있어요.
         </p>
       ) : crews.length ? (
-        <div className="sl-section__track">
+        <div className="sl-section__grid">
           {crews.map((crew) => (
             <Link key={crew.id} href={`/crews/${crew.id}`} className="sl-crew-card">
               <span className="sl-crew-card__avatar" aria-hidden="true">
@@ -312,7 +313,7 @@ function PlayersSection({ signedIn }: { signedIn: boolean }) {
             Number(!!b.preferredRole) - Number(!!a.preferredRole) ||
             (b.careerVisible ? b.summary.attended : 0) - (a.careerVisible ? a.summary.attended : 0),
         );
-        setPlayers(ranked.slice(0, 6));
+        setPlayers(ranked.slice(0, HOME_SECTION_LIMIT));
       })
       .catch(() => {
         if (!controller.signal.aborted) setPlayers([]);
@@ -339,7 +340,7 @@ function PlayersSection({ signedIn }: { signedIn: boolean }) {
           플레이어를 불러오고 있어요.
         </p>
       ) : players.length ? (
-        <div className="sl-section__track">
+        <div className="sl-section__grid">
           {players.map((player) => (
             <Link
               key={player.publicId}
@@ -397,7 +398,7 @@ function TemplatesSection() {
               (a, b) =>
                 b.recordedEvents - a.recordedEvents || b.recordedPlayers - a.recordedPlayers,
             )
-            .slice(0, 6),
+            .slice(0, HOME_SECTION_LIMIT),
         );
       })
       .catch(() => {
@@ -417,7 +418,7 @@ function TemplatesSection() {
           템플릿을 불러오고 있어요.
         </p>
       ) : items.length ? (
-        <div className="sl-section__track">
+        <div className="sl-section__grid">
           {items.map((item) => (
             <Link key={item.id} href={`/archive/${item.id}`} className="sl-template-card">
               <span className="sl-template-card__top">

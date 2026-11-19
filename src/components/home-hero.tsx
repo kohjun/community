@@ -25,11 +25,10 @@ export function HomeHero({
 }) {
   return (
     <section className="sl-hero" aria-labelledby="sl-hero-title">
-      <h1 id="sl-hero-title" className="sr-only">
-        Sliper 모임 커뮤니티
-      </h1>
+      <header className="sl-hero__heading">
+        <h1 id="sl-hero-title">슬쩍 나와서 리얼하게 노는 퍼블릭 커뮤니티</h1>
+      </header>
       <HeroCarousel posts={recruitments} onOpen={onOpen} />
-      {/* Participants go straight from the banner to the sections; categories live in 이야기. */}
       {audience === "host" && (
         <div className="sl-quick" role="group" aria-label="호스트 바로가기">
           <button type="button" className="sl-quick__primary" onClick={onHost}>

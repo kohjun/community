@@ -216,6 +216,7 @@
 }
 .event-aftercare-pagination {
   display: flex;
+  justify-content: center;
   align-items: center;
   flex-wrap: wrap;
   gap: 5px;

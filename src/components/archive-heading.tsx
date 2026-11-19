@@ -9,9 +9,8 @@ export function ArchiveHeading({
   kind?: LibraryKind | "";
 }) {
   return (
-    <section className="marketplace-hero">
+    <header className="marketplace-hero">
       <div>
-        <span className="marketplace-kicker">SLIPER PLAY ARCHIVE</span>
         <h1>아카이브</h1>
         <p>
           함께 놀 방법과 실제로 함께한 경험을 한곳에. 룰북·이벤트 템플릿과 완료된 행사의 기록을
@@ -27,6 +26,6 @@ export function ArchiveHeading({
           자료 올리기
         </Link>
       )}
-    </section>
+    </header>
   );
 }

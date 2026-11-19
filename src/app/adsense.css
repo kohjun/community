@@ -14,32 +14,8 @@
   line-height: 18px;
   color: #7b8795;
 }
-.adsense-unit--left,
-.adsense-unit--right {
-  width: 160px;
-  padding: 0;
-  margin: 0;
-}
-.site-ad-layout > .sidebar-ad-rail--adsense {
-  bottom: auto;
-}
-.sidebar-ad-rail--adsense .adsense-unit {
-  position: static;
-  animation: none;
-  transform: none;
-}
 .adsense-unit .adsbygoogle {
   text-decoration: none;
-}
-@media (min-width: 1568px) {
-  .site-ad-layout--adsense:not(:has(.page-layout--categories)) {
-    min-height: max(100dvh, 850px);
-  }
-}
-@media (min-width: 1760px) {
-  .site-ad-layout--adsense {
-    min-height: max(100dvh, 850px);
-  }
 }
 @media (max-width: 720px) {
   .adsense-unit--inline {

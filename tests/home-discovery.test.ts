@@ -24,3 +24,17 @@ test("home recruitment preserves existing editorial samples, prioritizes real op
   assert.equal(result[1]!.sample, true);
   assert.equal(result[1]!.eventAvailable, false);
 });
+
+test("home recruitment fills both rows from the feed with eligible distinct cards", () => {
+  const active = post({ id: "active", eventAvailable: true });
+  const closed = post({ id: "closed", likes: 200 });
+  const samples = Array.from({ length: 12 }, (_, index) =>
+    post({ id: `sample-${index}`, sample: true }),
+  );
+  const result = homeRecruitments([active], [samples[0]!], [active, closed, ...samples]);
+
+  assert.equal(result.length, 12);
+  assert.equal(result[0]?.id, active.id);
+  assert.equal(new Set(result.map(({ id }) => id)).size, 12);
+  assert.ok(result.slice(1).every(({ sample }) => sample));
+});

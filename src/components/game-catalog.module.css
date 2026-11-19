@@ -6,7 +6,7 @@
   padding: 22px 0 34px;
 }
 .hero h1 {
-  font-size: clamp(27px, 3.6vw, 38px);
+  font-size: clamp(1.6875rem, 1.3rem + 1.9vw, 2.375rem);
   font-weight: 800;
   line-height: 1.35;
   letter-spacing: -1.6px;
@@ -116,7 +116,7 @@
 .filters button[aria-pressed="true"] {
   background: #eaf4ff;
   border-color: #c5e1ff;
-  color: #0879ea;
+  color: #095eac;
   font-weight: 700;
 }
 .gameGrid {
@@ -509,8 +509,12 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 0.875rem;
+  line-height: 1.5;
   color: #526174;
+}
+.detailFacts svg {
+  flex: none;
 }
 .detailBody h3 {
   font-size: 14px;

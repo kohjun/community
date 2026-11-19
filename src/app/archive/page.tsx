@@ -33,7 +33,7 @@ export default async function Page({
   if (incoming.tab === "records") {
     const libraryId = typeof incoming.libraryId === "string" ? incoming.libraryId : undefined;
     return (
-      <ParticipationShell advertising={false}>
+      <ParticipationShell wide advertising={false}>
         <ArchiveHeading canWrite={!!actor} />
         <ArchiveNavigation active="records" />
         {actor ? (
