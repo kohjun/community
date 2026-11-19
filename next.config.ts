@@ -3,6 +3,9 @@ import { WORKSPACE_REDIRECTS } from "./src/domain/workspace-navigation";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  experimental: {
+    agentUpgrade: "security",
+  },
   // FFmpeg is loaded only by the dedicated video worker, never by web routes.
   // Credentials and mutable development data must never travel in server bundles.
   outputFileTracingExcludes: {
