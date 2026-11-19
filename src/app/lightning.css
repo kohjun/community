@@ -1039,6 +1039,18 @@
   border-radius: 16px;
   background: #fff;
 }
+.lightning-search-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.lightning-filter-toggle {
+  display: none;
+}
+.lightning-activity-filters {
+  margin-top: 18px;
+}
 .lightning-browse-tags {
   display: flex;
   align-items: center;
@@ -1078,6 +1090,7 @@
 .lightning-browse-tags button:focus-visible,
 .lightning-tag-suggestions button:focus-visible,
 .lightning-selected-tags button:focus-visible,
+.lightning-filter-toggle:focus-visible,
 .lightning-active-filters button:focus-visible {
   outline: 2px solid #0a84fe;
   outline-offset: 3px;
@@ -1086,7 +1099,6 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 18px;
   padding: 5px 6px 5px 13px;
   border: 1px solid #dfe5ed;
   border-radius: 10px;
@@ -1224,7 +1236,46 @@
 }
 @media (max-width: 640px) {
   .lightning-discovery-panel {
-    padding: 16px 13px;
+    margin-bottom: 16px;
+    padding: 10px;
+  }
+  .lightning-search-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .lightning-filter-toggle {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    inline-size: 48px;
+    block-size: 48px;
+    border: 1px solid #dfe5ed;
+    border-radius: 10px;
+    background: #fff;
+    color: #46566c;
+  }
+  .lightning-filter-toggle[aria-expanded="true"],
+  .lightning-filter-toggle[data-filtered="true"] {
+    border-color: #c7e3ff;
+    background: #edf6ff;
+    color: #0964bd;
+  }
+  .lightning-filter-toggle[data-filtered="true"]::after {
+    position: absolute;
+    inset-block-start: 7px;
+    inset-inline-end: 7px;
+    inline-size: 6px;
+    block-size: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    content: "";
+  }
+  .lightning-activity-filters[data-open="false"] {
+    display: none;
+  }
+  .lightning-activity-filters {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e9ef;
   }
   .lightning-browse-tags {
     gap: 6px;

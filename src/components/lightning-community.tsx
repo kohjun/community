@@ -4,7 +4,7 @@ import { ParticipantGuideEditor } from "./participant-guide";
 import type { ParticipantGuide } from "@/domain/participant-guide";
 import { useAdSenseContentGuard } from "./adsense-provider";
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -16,6 +16,7 @@ import {
   Minus,
   Plus,
   Search,
+  SlidersHorizontal,
   X,
   Users,
   Zap,
@@ -100,6 +101,9 @@ export function LightningCommunity({
     [capacity, setCapacity] = useState("6"),
     [created, setCreated] = useState<CreatedMeetup | null>(null);
   const [participantGuide, setParticipantGuide] = useState<ParticipantGuide | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersId = useId();
+  const hasActivityFilter = Boolean(category || tag);
   const advertisingBlocked = open || feed.posts.length === 0;
   useAdSenseContentGuard(advertisingBlocked);
   const readPosts = useReadPosts();
@@ -321,46 +325,39 @@ export function LightningCommunity({
         <small>최신 등록순</small>
       </div>
       <section className="lightning-discovery-panel" aria-label="번개 활동 검색">
-        <LightningCategoryPicker
-          value={category}
-          onChange={(value) => void load(value, "", search)}
-          disabled={loading}
-        />
-        <div className="lightning-browse-tags" aria-label="세부 활동 필터">
-          <span>{category ? "이런 활동은 어때요?" : "많이 찾는 활동"}</span>
-          {browseTags.map((item) => (
-            <button
-              key={item}
-              type="button"
-              aria-pressed={tag === item}
-              className={tag === item ? "is-selected" : ""}
+        <div className="lightning-search-bar">
+          <form
+            className="lightning-search-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void load(category, tag, searchDraft);
+            }}
+          >
+            <Search size={18} aria-hidden="true" />
+            <input
+              aria-label="번개 제목·소개·활동 태그 검색"
+              placeholder="활동이나 모임 검색"
+              maxLength={100}
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
               disabled={loading}
-              onClick={() => void load(category, tag === item ? "" : item, search)}
-            >
-              #{item}
+            />
+            <button type="submit" disabled={loading}>
+              검색
             </button>
-          ))}
-        </div>
-        <form
-          className="lightning-search-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void load(category, tag, searchDraft);
-          }}
-        >
-          <Search size={18} aria-hidden="true" />
-          <input
-            aria-label="번개 제목·소개·활동 태그 검색"
-            placeholder="활동 이름이나 번개 제목으로 검색해보세요"
-            maxLength={100}
-            value={searchDraft}
-            onChange={(event) => setSearchDraft(event.target.value)}
-            disabled={loading}
-          />
-          <button type="submit" disabled={loading}>
-            검색
+          </form>
+          <button
+            className="lightning-filter-toggle"
+            type="button"
+            aria-label="활동 필터"
+            aria-expanded={filtersOpen}
+            aria-controls={filtersId}
+            data-filtered={hasActivityFilter}
+            onClick={() => setFiltersOpen((current) => !current)}
+          >
+            <SlidersHorizontal size={19} aria-hidden="true" />
           </button>
-        </form>
+        </div>
         {(category || tag || search) && (
           <div className="lightning-active-filters" aria-label="적용된 검색 조건">
             <span>
@@ -380,6 +377,28 @@ export function LightningCommunity({
             </button>
           </div>
         )}
+        <div id={filtersId} className="lightning-activity-filters" data-open={filtersOpen}>
+          <LightningCategoryPicker
+            value={category}
+            onChange={(value) => void load(value, "", search)}
+            disabled={loading}
+          />
+          <div className="lightning-browse-tags" role="group" aria-label="세부 활동 필터">
+            <span>{category ? "이런 활동은 어때요?" : "많이 찾는 활동"}</span>
+            {browseTags.map((item) => (
+              <button
+                key={item}
+                type="button"
+                aria-pressed={tag === item}
+                className={tag === item ? "is-selected" : ""}
+                disabled={loading}
+                onClick={() => void load(category, tag === item ? "" : item, search)}
+              >
+                #{item}
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
       {loadError && (
         <p className="participation-error" role="alert">

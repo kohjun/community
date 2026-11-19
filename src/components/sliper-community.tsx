@@ -15,8 +15,8 @@ import {
   BellRing,
   Bookmark,
   Check,
-  Grid2X2,
   Home,
+  ImageIcon,
   List,
   Pencil,
   Search,
@@ -65,6 +65,7 @@ import { DISCUSSION_TYPES, DISCUSSION_LABELS } from "@/domain/discussions";
 import { useCommunity } from "@/lib/use-community";
 import { cn } from "@/lib/utils";
 import {
+  DEFAULT_RECRUITMENT_LAYOUT,
   readRecruitmentLayout,
   writeRecruitmentLayout,
   type RecruitmentLayout,
@@ -111,7 +112,9 @@ export function SliperCommunity({
   const [kind, setKind] = useState<(typeof kinds)[number]>(
     initialQuery.kind === "후기" ? "이야기" : (initialQuery.kind ?? "전체"),
   );
-  const [recruitmentLayout, setRecruitmentLayout] = useState<RecruitmentLayout>("list");
+  const [recruitmentLayout, setRecruitmentLayout] = useState<RecruitmentLayout>(
+    DEFAULT_RECRUITMENT_LAYOUT,
+  );
   useEffect(() => {
     setRecruitmentLayout(readRecruitmentLayout());
   }, []);
@@ -286,8 +289,8 @@ export function SliperCommunity({
     discoveryOpen ||
     filtered.length === 0;
   useAdSenseContentGuard(advertisingBlocked);
-  const recruitmentCards = kind === "모집" && recruitmentLayout === "card";
-  const PostPreview = recruitmentCards ? CommunityRecruitmentCard : CommunityPostRow;
+  const recruitmentCards = kind === "모집";
+  const showRecruitmentImages = recruitmentLayout === "card";
   const questionTab = storyBoard && kind === "이야기" && discussionType === "question";
   function writeForBoard() {
     if (meetupBoard === "lightning") {
@@ -528,7 +531,6 @@ export function SliperCommunity({
             bookmarked={store.bookmarked}
             busy={store.busy}
             canWrite={store.canWrite}
-            onAllRecruits={browseRecruitments}
           />
         )}
 
@@ -610,21 +612,19 @@ export function SliperCommunity({
                   <div className="sl-layout-switch" role="group" aria-label="모집글 보기 방식">
                     <button
                       type="button"
-                      aria-pressed={recruitmentLayout === "list"}
-                      aria-label="목록형"
-                      title="목록형"
-                      onClick={() => changeRecruitmentLayout("list")}
+                      aria-pressed={showRecruitmentImages}
+                      onClick={() => changeRecruitmentLayout("card")}
                     >
-                      <List size={16} aria-hidden="true" />
+                      <ImageIcon size={15} aria-hidden="true" />
+                      사진형
                     </button>
                     <button
                       type="button"
-                      aria-pressed={recruitmentLayout === "card"}
-                      aria-label="카드형"
-                      title="카드형"
-                      onClick={() => changeRecruitmentLayout("card")}
+                      aria-pressed={!showRecruitmentImages}
+                      onClick={() => changeRecruitmentLayout("list")}
                     >
-                      <Grid2X2 size={16} aria-hidden="true" />
+                      <List size={15} aria-hidden="true" />
+                      간략형
                     </button>
                   </div>
                 )}
@@ -833,24 +833,27 @@ export function SliperCommunity({
               {filtered.length ? (
                 recruitmentCards ? (
                   <div className="recruitment-card-grid">
-                    {filtered.map((post) => (
-                      <PostPreview
-                        key={post.id}
-                        post={post}
-                        busy={store.busy}
-                        canWrite={store.canWrite}
-                        onOpen={() => openPost(post)}
-                        onLike={() => store.toggleLike(post.id)}
-                        onSave={() => savePost(post.id)}
-                        onTag={setTag}
-                      />
+                    {filtered.map((post, index) => (
+                      <Fragment key={post.id}>
+                        <CommunityRecruitmentCard
+                          post={post}
+                          showImage={showRecruitmentImages}
+                          busy={store.busy}
+                          canWrite={store.canWrite}
+                          onOpen={() => openPost(post)}
+                          onLike={() => store.toggleLike(post.id)}
+                          onSave={() => savePost(post.id)}
+                          onTag={setTag}
+                        />
+                        {!showRecruitmentImages && feedModule(index)}
+                      </Fragment>
                     ))}
                   </div>
                 ) : (
                   <div className="post-list sl-post-list">
                     {filtered.map((post, index) => (
                       <Fragment key={post.id}>
-                        <PostPreview
+                        <CommunityPostRow
                           post={post}
                           busy={store.busy}
                           canWrite={store.canWrite}

@@ -152,6 +152,40 @@ test("numbered totals preserve the home featured exclusion and story filter whil
   assert.equal(story.hot?.length, 0);
 });
 
+test("upcoming highlights reserve places for both meetup types and exclude crew recruitment", async () => {
+  const eventIds = await stories(9, { kind: "모집" });
+  const [lightningId] = await stories(1, { kind: "모집" });
+  const [crewId] = await stories(1, { kind: "모집", category: "crew" });
+  await pg.query("update sliper.posts set event_fee='현장 정산' where id=$1", [lightningId]);
+  const now = Date.now();
+  const eventStart = new Date(now + 86_400_000);
+  const lightningStart = new Date(now + 2 * 86_400_000);
+  await db.insert(schema.eventSettings).values([
+    ...[...eventIds, crewId!].map((postId) => ({
+      postId,
+      startsAt: eventStart,
+      amountKRW: 0,
+      capacity: 4,
+    })),
+    {
+      postId: lightningId!,
+      meetupType: "lightning",
+      approvalMode: "manual",
+      startsAt: lightningStart,
+      endsAt: new Date(lightningStart.getTime() + 3_600_000),
+      venueLatitude: 37.5,
+      venueLongitude: 127,
+      amountKRW: 0,
+      capacity: 4,
+    },
+  ]);
+
+  const { upcoming = [] } = await service.feed(null, pageQuery);
+  assert.equal(upcoming.filter((post) => post.meetupType === "event").length, 8);
+  assert.deepEqual(ids(upcoming.filter((post) => post.meetupType === "lightning")), [lightningId]);
+  assert.ok(upcoming.every((post) => post.category !== "crew"));
+});
+
 test("category, story and review, topic, tag and escaped search all contribute to numbered totals", async () => {
   const matching = await stories(7, {
     kind: "후기",

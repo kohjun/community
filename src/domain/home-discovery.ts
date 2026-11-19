@@ -1,25 +1,29 @@
 import type { CommunityPost } from "./community";
+import type { MeetupType } from "./meetup-types";
 /** Preserve editorial samples without presenting them as active recruitment. */
 export function homeRecruitments(
   upcoming: CommunityPost[],
   featured: CommunityPost[],
   feed: CommunityPost[] = [],
-) {
-  const additional = feed.filter((post) => post.eventAvailable || post.sample);
-  return [
+): Record<MeetupType, CommunityPost[]> {
+  const ordered = [
     ...new Map(
-      [...additional, ...upcoming, ...featured]
-        .filter((p) => p.kind === "모집")
+      [...feed, ...upcoming, ...featured]
+        .filter((p) => p.kind === "모집" && p.category !== "crew")
         .map((p) => [p.id, p]),
     ).values(),
   ]
+    .filter((post) => post.sample || (post.eventAvailable && !post.eventCancelledAt))
     .sort(
       (a, b) =>
-        Number(!!b.eventAvailable && !b.sample) - Number(!!a.eventAvailable && !a.sample) ||
+        Number(a.sample) - Number(b.sample) ||
         b.likes - a.likes ||
         b.createdAt.localeCompare(a.createdAt),
-    )
-    .slice(0, 12);
+    );
+  return {
+    event: ordered.filter((post) => post.meetupType !== "lightning").slice(0, 12),
+    lightning: ordered.filter((post) => post.meetupType === "lightning").slice(0, 12),
+  };
 }
 export const HOME_PERIODS = [
   { value: "today", label: "오늘" },

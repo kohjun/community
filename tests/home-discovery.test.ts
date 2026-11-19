@@ -16,7 +16,7 @@ test("home recruitment preserves existing editorial samples, prioritizes real op
   const sample = post({ id: "sample", sample: true, featured: true, likes: 999 }),
     active = post({ id: "active", eventAvailable: true, likes: 1 }),
     story = post({ id: "story", kind: "이야기" });
-  const result = homeRecruitments([active], [sample, active, story]);
+  const { event: result } = homeRecruitments([active], [sample, active, story]);
   assert.deepEqual(
     result.map((p) => p.id),
     ["active", "sample"],
@@ -25,16 +25,24 @@ test("home recruitment preserves existing editorial samples, prioritizes real op
   assert.equal(result[1]!.eventAvailable, false);
 });
 
-test("home recruitment fills both rows from the feed with eligible distinct cards", () => {
+test("home recruitment limits each meetup type independently and excludes crews and closed events", () => {
   const active = post({ id: "active", eventAvailable: true });
   const closed = post({ id: "closed", likes: 200 });
+  const cancelled = post({ id: "cancelled", eventAvailable: true, eventCancelledAt: "2026-01-01" });
+  const crew = post({ id: "crew", category: "crew", eventAvailable: true });
+  const lightning = post({ id: "lightning", meetupType: "lightning", eventAvailable: true });
   const samples = Array.from({ length: 12 }, (_, index) =>
     post({ id: `sample-${index}`, sample: true }),
   );
-  const result = homeRecruitments([active], [samples[0]!], [active, closed, ...samples]);
+  const result = homeRecruitments(
+    [active, crew],
+    [samples[0]!, closed, cancelled],
+    [active, ...samples, lightning],
+  );
 
-  assert.equal(result.length, 12);
-  assert.equal(result[0]?.id, active.id);
-  assert.equal(new Set(result.map(({ id }) => id)).size, 12);
-  assert.ok(result.slice(1).every(({ sample }) => sample));
+  assert.equal(result.event.length, 12);
+  assert.equal(result.event[0]?.id, active.id);
+  assert.equal(new Set(result.event.map(({ id }) => id)).size, 12);
+  assert.ok(result.event.slice(1).every(({ sample }) => sample));
+  assert.deepEqual(result.lightning, [lightning]);
 });

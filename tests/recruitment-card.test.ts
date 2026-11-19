@@ -39,13 +39,14 @@ const example: CommunityPost = {
 
 function render(
   post: Partial<CommunityPost> = {},
-  guards: { busy?: boolean; canWrite?: boolean } = {},
+  options: { busy?: boolean; canWrite?: boolean; showImage?: boolean } = {},
 ) {
   return renderToStaticMarkup(
     createElement(CommunityRecruitmentCard, {
       post: { ...example, ...post },
-      busy: guards.busy ?? false,
-      canWrite: guards.canWrite ?? true,
+      showImage: options.showImage ?? true,
+      busy: options.busy ?? false,
+      canWrite: options.canWrite ?? true,
       onOpen() {},
       onLike() {},
       onSave() {},
@@ -57,6 +58,7 @@ function render(
 test("recruitment card shows real image, location, price and the Korean calendar date", () => {
   const html = render({ image: "/api/media/cover" });
   assert.ok(html.includes('src="/api/media/cover"'));
+  assert.match(html, /recruitment-card-cover[^>]*><img/);
   assert.ok(html.includes("서울 성수동"));
   assert.ok(html.includes("15,000"));
   assert.ok(html.includes("10월 9일"));
@@ -70,6 +72,14 @@ test("image array is used when the lead image is missing and no fake image is in
   });
   assert.ok(html.includes('src="/api/media/picture"'));
   assert.ok(!/<img\b/.test(render()));
+});
+
+test("compact cards omit the entire cover and keep event details", () => {
+  const html = render({ image: "/api/media/cover" }, { showImage: false });
+  assert.doesNotMatch(html, /<img\b|recruitment-card-cover/);
+  assert.match(html, /서울 성수동/);
+  assert.match(html, /15,000원/);
+  assert.ok(html.includes(`href="/posts/${example.id}"`));
 });
 
 test("unknown fees never become free while known zero and author fee text are retained", () => {
@@ -86,17 +96,17 @@ test("an invalid structured date preserves the author's date instead of showing 
   assert.ok(!html.includes("Invalid Date"));
 });
 
-test("external applications preserve the new tab while cancelled cards show the cancellation route", () => {
+test("active and cancelled cards link to post details before any application action", () => {
   const external = render({ applicationUrl: "https://apply.example/event" });
-  assert.ok(external.includes('href="https://apply.example/event"'));
-  assert.ok(external.includes('target="_blank"'));
-  assert.ok(external.includes('rel="noopener noreferrer"'));
+  assert.ok(external.includes(`href="/posts/${example.id}"`));
+  assert.ok(!external.includes('href="https://apply.example/event"'));
+  assert.ok(!external.includes("신청하기"));
   const cancelled = render({
     applicationUrl: "https://apply.example/event",
     eventCancelledAt: "2026-10-01T00:00:00Z",
   });
   assert.ok(cancelled.includes("모집 취소"));
-  assert.ok(cancelled.includes("취소 안내 보기"));
+  assert.ok(cancelled.includes(`href="/posts/${example.id}"`));
   assert.ok(!cancelled.includes('href="https://apply.example/event"'));
 });
 
@@ -125,7 +135,7 @@ test("availability states reflect supplied values and cancellation takes priorit
   assert.ok(!cancelled.includes("모집 중"));
 });
 
-test("card tag and reaction controls preserve one application link and readonly guards without duplicate statistics", () => {
+test("card tag and reaction controls preserve readonly guards without duplicate statistics", () => {
   const html = render(
     {
       applicationUrl: "https://apply.example/one-event",
@@ -135,7 +145,6 @@ test("card tag and reaction controls preserve one application link and readonly 
     },
     { canWrite: false },
   );
-  assert.equal((html.match(/href="https:\/\/apply.example\/one-event"/g) ?? []).length, 1);
   assert.equal((html.match(/aria-label="조회 30회"/g) ?? []).length, 1);
   assert.equal((html.match(/aria-label="댓글 2개"/g) ?? []).length, 1);
   assert.match(html, /#아주 긴 모집 태그 이름/);

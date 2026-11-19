@@ -17,10 +17,10 @@ function memoryStorage() {
   };
 }
 
-test("new visitors and server rendering start with the same list layout", () => {
-  assert.equal(readRecruitmentLayout(memoryStorage()), "list");
-  assert.equal(readRecruitmentLayout(null), "list");
-  assert.equal(readRecruitmentLayout(), "list");
+test("new visitors and server rendering start with the same photo layout", () => {
+  assert.equal(readRecruitmentLayout(memoryStorage()), "card");
+  assert.equal(readRecruitmentLayout(null), "card");
+  assert.equal(readRecruitmentLayout(), "card");
   assert.doesNotThrow(() => writeRecruitmentLayout("card", null));
 });
 
@@ -35,11 +35,11 @@ test("card and list choices survive a later read without touching other preferen
   assert.equal(storage.values.get("unrelated-setting"), "keep");
 });
 
-test("unknown or obsolete stored values fall back to list", () => {
+test("unknown or obsolete stored values fall back to the photo layout", () => {
   const storage = memoryStorage();
   for (const value of ["", "grid", "CARD", "null", '{"layout":"card"}']) {
     storage.setItem(RECRUITMENT_LAYOUT_KEY, value);
-    assert.equal(readRecruitmentLayout(storage), "list");
+    assert.equal(readRecruitmentLayout(storage), "card");
   }
 });
 
@@ -52,7 +52,7 @@ test("blocked reads and full storage never interrupt layout selection", () => {
       throw new Error("Storage quota exceeded");
     },
   };
-  assert.equal(readRecruitmentLayout(storage), "list");
+  assert.equal(readRecruitmentLayout(storage), "card");
   assert.doesNotThrow(() => writeRecruitmentLayout("card", storage));
 });
 
@@ -67,7 +67,7 @@ test("browser storage access itself can be blocked before getItem is called", ()
     },
   });
   try {
-    assert.equal(readRecruitmentLayout(), "list");
+    assert.equal(readRecruitmentLayout(), "card");
     assert.doesNotThrow(() => writeRecruitmentLayout("card"));
   } finally {
     if (oldWindow) Object.defineProperty(globalThis, "window", oldWindow);

@@ -1,6 +1,6 @@
 "use client";
 
-import type { MouseEvent } from "react";
+import { useId, type MouseEvent } from "react";
 import {
   Bookmark,
   CalendarDays,
@@ -18,7 +18,6 @@ import { postPath } from "@/domain/post-sharing";
 import { shouldOpenPostModal } from "@/lib/post-sharing";
 import { usePostRead } from "@/lib/use-read-posts";
 import { cn } from "@/lib/utils";
-import { RecruitmentApplyButton } from "./recruitment-cta";
 
 const eventDateFormatter = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -33,6 +32,7 @@ const eventFeeFormatter = new Intl.NumberFormat("ko-KR");
 
 export function CommunityRecruitmentCard({
   post,
+  showImage,
   busy,
   canWrite,
   onOpen,
@@ -41,6 +41,7 @@ export function CommunityRecruitmentCard({
   onTag,
 }: {
   post: CommunityPost;
+  showImage: boolean;
   busy: boolean;
   canWrite: boolean;
   onOpen: () => void;
@@ -48,6 +49,7 @@ export function CommunityRecruitmentCard({
   onSave: () => void;
   onTag: (tag: string) => void;
 }) {
+  const titleId = useId();
   const isRead = usePostRead(post.id);
   const href = postPath(post.id);
   const image = post.image ?? post.images[0]?.src;
@@ -83,16 +85,23 @@ export function CommunityRecruitmentCard({
 
   return (
     <article className={cn("recruitment-card", cancelled && "recruitment-card-cancelled")}>
-      <a className="recruitment-card-open" href={href} onClick={open}>
-        {image && (
-          <img
-            src={image}
-            alt=""
-            width={88}
-            height={88}
-            loading="lazy"
-            className="recruitment-card-image"
-          />
+      <a className="recruitment-card-open" href={href} onClick={open} aria-labelledby={titleId}>
+        {showImage && (
+          <div className="recruitment-card-cover" aria-hidden="true">
+            {image ? (
+              <img
+                src={image}
+                alt=""
+                width={640}
+                height={360}
+                loading="lazy"
+                decoding="async"
+                className="recruitment-card-image"
+              />
+            ) : (
+              <CalendarDays size={32} strokeWidth={1.5} />
+            )}
+          </div>
         )}
         <div className="recruitment-card-body">
           <div className="recruitment-card-overline">
@@ -113,7 +122,7 @@ export function CommunityRecruitmentCard({
               </span>
             )}
           </div>
-          <h3 className={cn("recruitment-card-title", isRead && "title-is-read")}>
+          <h3 id={titleId} className={cn("recruitment-card-title", isRead && "title-is-read")}>
             {post.title}
             {isRead && <span className="sr-only"> (읽은 글)</span>}
           </h3>
@@ -174,11 +183,6 @@ export function CommunityRecruitmentCard({
           </div>
         </div>
         <div className="recruitment-card-actions">
-          <RecruitmentApplyButton
-            postId={post.id}
-            url={post.applicationUrl}
-            cancelledAt={post.eventCancelledAt}
-          />
           {post.tags.length > 0 && (
             <div className="recruitment-card-tags" role="group" aria-label="게시글 태그">
               {post.tags.map((tag) => (

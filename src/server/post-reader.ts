@@ -1,6 +1,6 @@
 import { previewPost } from "../domain/discussions";
 import { visibleAnswerId } from "./discussion-policy";
-import { and, asc, desc, eq, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, ne, sql, type SQL } from "drizzle-orm";
 import type { Database } from "../db/connection";
 import { eventLifecycle } from "../db/event-lifecycle-schema";
 import { eventSettings, posts, profiles } from "../db/schema";
@@ -283,6 +283,13 @@ export function createPostReader(db: Database) {
 
   function highlightSelections(): PostSelection[] {
     const score = periodLikeCount("today", new Date());
+    const upcoming = and(
+      eq(posts.kind, "모집"),
+      eq(posts.sample, false),
+      ne(posts.categorySlug, "crew"),
+      eventAvailable,
+      isNotNull(eventSettings.startsAt),
+    );
     return [
       { where: eq(posts.featured, true), limit: 12 },
       {
@@ -294,30 +301,25 @@ export function createPostReader(db: Database) {
         limit: 6,
         popular: score,
       },
-      {
-        where: and(
-          eq(posts.kind, "모집"),
-          eq(posts.sample, false),
-          eventAvailable,
-          sql`${eventSettings.startsAt} is not null`,
-        ),
+      ...["event", "lightning"].map((meetupType) => ({
+        where: and(upcoming, eq(eventSettings.meetupType, meetupType)),
         limit: 8,
         upcoming: true,
-      },
+      })),
     ];
   }
 
   async function highlights(actor: string | null) {
-    const [featured, hot, upcoming] = await projectGroups(actor, highlightSelections());
-    return { featured: featured!, hot: hot!, upcoming: upcoming! };
+    const [featured, hot, events, lightning] = await projectGroups(actor, highlightSelections());
+    return { featured: featured!, hot: hot!, upcoming: [...events!, ...lightning!] };
   }
 
   async function projectFeed(actor: string | null, selection: PostSelection) {
-    const [items, featured, hot, upcoming] = await projectGroups(actor, [
+    const [items, featured, hot, events, lightning] = await projectGroups(actor, [
       selection,
       ...highlightSelections(),
     ]);
-    return { posts: items!, featured: featured!, hot: hot!, upcoming: upcoming! };
+    return { posts: items!, featured: featured!, hot: hot!, upcoming: [...events!, ...lightning!] };
   }
   async function getPost(id: string, actor: string | null): Promise<CommunityPost> {
     const result = await projectPosts(

@@ -63,6 +63,10 @@
   margin-block-end: 20px;
 }
 
+.recruitment-card-grid > .ad-slot {
+  grid-column: 1 / -1;
+}
+
 .recruitment-card {
   display: flex;
   flex-direction: column;
@@ -82,10 +86,7 @@
 }
 
 .recruitment-card-open {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px;
+  display: block;
   border-radius: inherit;
   color: inherit;
   text-decoration: none;
@@ -95,19 +96,26 @@
   outline-offset: -3px;
 }
 
+.recruitment-card-cover {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  background: var(--sl-accent-soft, #edf6ff);
+  color: var(--sl-accent-2, #0767c9);
+}
+
 .recruitment-card-image {
-  flex: none;
-  inline-size: clamp(4rem, 6vw, 5.5rem);
-  block-size: auto;
-  aspect-ratio: 1;
-  border-radius: 9px;
-  background: #edf6ff;
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
   object-fit: cover;
 }
 
 .recruitment-card-body {
-  flex: 1;
-  min-inline-size: 0;
+  padding: 12px;
 }
 
 .recruitment-card-overline {
@@ -329,49 +337,7 @@
   opacity: 0.65;
 }
 
-.recruitment-card-footer .apply-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  flex: none;
-  inline-size: auto;
-  block-size: auto;
-  min-block-size: 34px;
-  margin: 0;
-  padding: 5px 9px;
-  white-space: nowrap;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  background: var(--sl-accent-2, #0767c9);
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1.4;
-  text-decoration: none;
-}
-
-.recruitment-card-footer .apply-button:hover {
-  background: #0856a4;
-}
-
-.recruitment-card-footer .apply-button.is-cancelled {
-  border-color: var(--sl-line, #dfe7f1);
-  background: var(--sl-paper-2, #f7f9fc);
-  color: var(--sl-ink-3, #52677f);
-}
-
-.recruitment-card-footer .apply-button.is-cancelled:hover {
-  background: #eef3f8;
-}
-
-.recruitment-card-footer .apply-button svg {
-  inline-size: 13px;
-  block-size: 13px;
-}
-
 @media (pointer: coarse) {
-  .recruitment-card-footer .apply-button,
   .recruitment-card-reactions > button,
   .recruitment-card-tags > button {
     min-block-size: 44px;

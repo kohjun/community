@@ -19,6 +19,11 @@ import { loginHref } from "@/domain/login-return";
 import { PLAYER_ROLE_LABELS, type PlayerCard, type PlayerDirectoryView } from "@/domain/player";
 import { CATEGORIES } from "@/domain/categories";
 import { GAME_CATALOG } from "@/domain/game-catalog";
+import {
+  EVENT_RECRUITMENTS_HREF,
+  MEETUP_TYPE_LABELS,
+  type MeetupType,
+} from "@/domain/meetup-types";
 import { postPath } from "@/domain/post-sharing";
 import type { Audience } from "@/lib/audience";
 import { appRequest } from "@/lib/api-client";
@@ -127,37 +132,44 @@ function StoriesSection({
 }
 
 function RecruitSection({
+  type,
   posts,
   onOpen,
   onSave,
   bookmarked,
   busy,
   canWrite,
-  onAll,
 }: {
+  type: MeetupType;
   posts: CommunityPost[];
   onOpen: (post: CommunityPost) => void;
   onSave: (id: string) => void;
   bookmarked: string[];
   busy: boolean;
   canWrite: boolean;
-  onAll: () => void;
 }) {
+  const isEvent = type === "event";
+  const label = MEETUP_TYPE_LABELS[type];
   return (
     <Section
-      id="sl-section-recruits"
-      title="모집 중인 모임"
-      description="이벤트·행사와 번개·모임의 날짜와 장소, 참가비를 비교하고 바로 신청하세요."
+      id={`sl-section-recruits-${type}`}
+      title={isEvent ? "예능 한 판, 주인공은 우리" : "슬쩍 나올 사람?"}
+      description={
+        isEvent
+          ? "이벤트·행사 · 미션 레이스, 추리 게임, 테마 파티에 참여해요."
+          : "번개·모임 · 시간과 취향이 맞는 사람들과 가볍게 만나요."
+      }
       action={
         <>
-          <Link className="sl-chip-link" href="/discover/saved">
-            <BellRing size={14} aria-hidden="true" />
-            조건 저장·모집 알림
-          </Link>
-          <button type="button" className="sl-text-link" onClick={onAll}>
-            전체 보기
-            <ArrowRight size={15} aria-hidden="true" />
-          </button>
+          {isEvent && (
+            <Link className="sl-chip-link" href="/discover/saved">
+              <BellRing size={14} aria-hidden="true" />
+              조건 저장·모집 알림
+            </Link>
+          )}
+          <MoreLink href={isEvent ? EVENT_RECRUITMENTS_HREF : "/lightning"}>
+            {label} 전체 보기
+          </MoreLink>
         </>
       }
     >
@@ -172,7 +184,7 @@ function RecruitSection({
         />
       ) : (
         <p className="sl-section__empty">
-          지금은 모집 중인 모임이 없어요. 조건을 저장해두면 새 모임이 열릴 때 알려드려요.
+          {isEvent ? "지금 모집 중인 이벤트·행사가 없어요." : "지금 모집 중인 번개·모임이 없어요."}
         </p>
       )}
     </Section>
@@ -465,17 +477,15 @@ export function HomeSections({
   bookmarked,
   busy,
   canWrite,
-  onAllRecruits,
 }: {
   audience: Audience;
   stories: CommunityPost[];
-  recruitments: CommunityPost[];
+  recruitments: Record<MeetupType, CommunityPost[]>;
   onOpen: (post: CommunityPost) => void;
   onSave: (id: string) => void;
   bookmarked: string[];
   busy: boolean;
   canWrite: boolean;
-  onAllRecruits: () => void;
 }) {
   const sections =
     audience === "host"
@@ -487,16 +497,18 @@ export function HomeSections({
         ]
       : [
           <StoriesSection key="stories" posts={stories} onOpen={onOpen} />,
-          <RecruitSection
-            key="recruits"
-            posts={recruitments}
-            onOpen={onOpen}
-            onSave={onSave}
-            bookmarked={bookmarked}
-            busy={busy}
-            canWrite={canWrite}
-            onAll={onAllRecruits}
-          />,
+          ...(["event", "lightning"] as const).map((type) => (
+            <RecruitSection
+              key={type}
+              type={type}
+              posts={recruitments[type]}
+              onOpen={onOpen}
+              onSave={onSave}
+              bookmarked={bookmarked}
+              busy={busy}
+              canWrite={canWrite}
+            />
+          )),
           <GamesSection key="games" audience={audience} />,
           <PlayersSection key="players" signedIn={canWrite} />,
         ];

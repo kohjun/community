@@ -698,23 +698,34 @@ body {
 .sl-layout-switch {
   display: flex;
   gap: 2px;
+  flex: none;
   margin-left: auto;
   padding: 3px;
   border-radius: 10px;
   background: var(--sl-paper-2);
 }
 .sl-layout-switch button {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 34px;
+  padding-inline: 9px;
   border-radius: 8px;
   color: var(--sl-ink-4);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .sl-layout-switch button[aria-pressed="true"] {
   background: var(--sl-surface);
   color: var(--sl-ink);
   box-shadow: 0 1px 2px rgb(18 29 48 / 10%);
+}
+@media (pointer: coarse) {
+  .sl-layout-switch button {
+    min-height: 44px;
+  }
 }
 .sl-chips {
   display: flex;
@@ -1494,7 +1505,6 @@ body {
 .safety-dialog .safety-primary,
 .profile-onboarding .onboarding-submit,
 .library-purchase-card .library-purchase-button.is-primary,
-.recruitment-card-footer .apply-button,
 .error-page button {
   border-color: var(--sl-accent-2);
   background: var(--sl-accent-2);
@@ -1508,7 +1518,6 @@ body {
 .safety-dialog .safety-primary:hover:not(:disabled),
 .profile-onboarding .onboarding-submit:hover:not(:disabled),
 .library-purchase-card .library-purchase-button.is-primary:hover:not(:disabled),
-.recruitment-card-footer .apply-button:hover,
 .error-page button:hover {
   border-color: #0756a4;
   background: #0756a4;
