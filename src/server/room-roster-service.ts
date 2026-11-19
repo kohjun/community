@@ -24,10 +24,13 @@ export async function authorizeRoom(tx: Tx, user: string, id: string) {
   const [post] = await tx
     .select()
     .from(posts)
-    .where(and(eq(posts.id, id), eq(posts.status, "published")))
+    .where(and(eq(posts.id, id), eq(posts.status, "published"), eq(posts.kind, "모집")))
     .for("update");
   const [settings] = await tx
-    .select({ postId: eventSettings.postId })
+    .select({
+      meetupType: eventSettings.meetupType,
+      participantChatEnabled: eventSettings.participantChatEnabled,
+    })
     .from(eventSettings)
     .where(eq(eventSettings.postId, id));
   if (!post || !settings) throw new AppError("NOT_FOUND", "공지방을 찾을 수 없어요.");
@@ -35,7 +38,13 @@ export async function authorizeRoom(tx: Tx, user: string, id: string) {
     .select({ userId: roomManagers.userId })
     .from(roomManagers)
     .where(and(eq(roomManagers.postId, id), eq(roomManagers.userId, user)));
-  const canWrite = post.authorId === user || !!manager;
+  const isOwner = post.authorId === user;
+  const canManage = isOwner || !!manager;
+  const supportsChat = settings.meetupType === "lightning";
+  const chatEnabled = supportsChat && settings.participantChatEnabled;
+  const room = { post, canManage, isOwner, supportsChat, chatEnabled };
+  if (canManage) return { ...room, canWrite: true };
+
   const [member] = await tx
     .select({ userId: roomMembers.userId })
     .from(roomMembers)
@@ -48,9 +57,8 @@ export async function authorizeRoom(tx: Tx, user: string, id: string) {
         eq(eventApplications.status, "confirmed"),
       ),
     );
-  if (!canWrite && !member)
-    throw new AppError("FORBIDDEN", "참가가 확정된 사람만 이 공지방을 볼 수 있어요.");
-  return { post, canWrite, isOwner: post.authorId === user };
+  if (!member) throw new AppError("FORBIDDEN", "참가가 확정된 사람만 이 방을 볼 수 있어요.");
+  return { ...room, canWrite: chatEnabled };
 }
 
 export async function readRoomRoster(

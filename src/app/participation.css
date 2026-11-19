@@ -439,6 +439,107 @@
   margin-bottom: 18px;
   overflow-wrap: anywhere;
 }
+.participation-page .room-chat-control {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 64px;
+  margin: 0;
+  padding: 10px 24px;
+  border-bottom: 1px solid #edf1f6;
+  cursor: pointer;
+}
+.room-chat-control strong,
+.room-chat-control small {
+  display: block;
+}
+.room-chat-control strong {
+  color: #233650;
+  font-size: 13px;
+}
+.room-chat-control small {
+  margin-top: 4px;
+  color: #63748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.room-chat-control input {
+  position: absolute;
+  inset-inline-end: 24px;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.room-chat-track {
+  display: flex;
+  align-items: center;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  padding: 3px;
+  border: 1px solid transparent;
+  border-radius: 99px;
+  background: #63748b;
+  pointer-events: none;
+}
+.room-chat-track::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+}
+.room-chat-control input:checked + .room-chat-track {
+  justify-content: flex-end;
+  background: #086ac9;
+}
+.room-chat-control input:focus-visible + .room-chat-track {
+  outline: 2px solid #086ac9;
+  outline-offset: 3px;
+}
+.room-chat-control:has(input[aria-disabled="true"]) {
+  cursor: wait;
+}
+.announcement-bubble.room-chat-message {
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 10px;
+  padding: 11px 15px;
+}
+.room-chat-message.is-mine {
+  margin-inline-start: auto;
+  border-radius: 14px 3px 14px 14px;
+  border-color: #cadff8;
+  background: #eaf4ff;
+}
+.room-chat-message .announcement-author {
+  margin-bottom: 5px;
+  flex-wrap: wrap;
+}
+.room-chat-text {
+  margin: 0;
+  color: #233650;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+@media (forced-colors: active) {
+  .room-chat-track {
+    border-color: ButtonText;
+  }
+  .room-chat-track::before {
+    background: ButtonText;
+  }
+  .room-chat-control input:focus-visible + .room-chat-track {
+    outline-color: Highlight;
+  }
+}
+
 .announcement-author {
   display: flex;
   align-items: center;

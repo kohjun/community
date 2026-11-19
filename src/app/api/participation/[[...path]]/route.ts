@@ -195,6 +195,8 @@ async function handle(request: Request, context: { params: Promise<{ path?: stri
     }
     if (resource === "rooms" && id && path.length === 2 && method === "GET")
       return service.room(actor, id, cursor);
+    if (resource === "rooms" && id && action === "mode" && path.length === 3 && method === "PUT")
+      return service.setRoomMode(actor, id, await readJson(request));
     if (
       resource === "rooms" &&
       id &&

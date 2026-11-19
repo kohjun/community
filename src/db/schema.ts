@@ -539,6 +539,7 @@ export const eventSettings = sliper
         .default(sql`'[]'::jsonb`),
       participantGuide: jsonb("participant_guide").$type<ParticipantGuide>(),
       meetupType: varchar("meetup_type", { length: 16 }).notNull().default("event"),
+      participantChatEnabled: boolean("participant_chat_enabled").notNull().default(false),
       activityCategory: varchar("activity_category", { length: 32 }).$type<LightningCategorySlug>(),
       venueLatitude: doublePrecision("venue_latitude"),
       venueLongitude: doublePrecision("venue_longitude"),
@@ -568,6 +569,10 @@ export const eventSettings = sliper
         sql`${t.participantGuide} is null or coalesce((jsonb_typeof(${t.participantGuide}) = 'object' and ${t.participantGuide}->>'version' = '1' and octet_length(${t.participantGuide}::text) <= 8192), false)`,
       ),
       check("event_meetup_type", sql`${t.meetupType} in ('event','lightning')`),
+      check(
+        "event_participant_chat_lightning_only",
+        sql`not ${t.participantChatEnabled} or ${t.meetupType} = 'lightning'`,
+      ),
       check(
         "event_activity_category",
         sql`${t.activityCategory} is null or (${t.meetupType} = 'lightning' and ${t.activityCategory} in (${sql.join(
@@ -758,6 +763,7 @@ export const roomMessages = sliper
         .references(() => eventSettings.postId, { onDelete: "cascade" }),
       authorId: uuid("author_id").references(() => profiles.id, { onDelete: "set null" }),
       body: text("body").notNull(),
+      isAnnouncement: boolean("is_announcement").notNull().default(true),
       createdAt: createdAt(),
     },
     (t) => [

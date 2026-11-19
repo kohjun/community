@@ -51,8 +51,10 @@ function ScheduleChange({ change }: { change: EventChangeView }) {
 export function EventLifecyclePanel({
   postId,
   onChanged,
+  inDialog = false,
 }: {
   postId: string;
+  inDialog?: boolean;
   onChanged?: (view: EventLifecycleView) => void | Promise<void>;
 }) {
   const [data, setData] = useState<EventLifecycleView | null>(null);
@@ -194,16 +196,19 @@ export function EventLifecyclePanel({
   }
   if (!data && !error)
     return <p className="lifecycle-loading">행사 일정 안내를 확인하고 있어요.</p>;
+  const Editor = inDialog ? "div" : "details";
   return (
     <section
-      className={`participation-card lifecycle-panel${data?.cancelledAt ? " is-cancelled" : ""}`}
+      className={`lifecycle-panel ${inDialog ? "lifecycle-panel--dialog" : "participation-card"}${data?.cancelledAt ? " is-cancelled" : ""}`}
     >
       <div className="lifecycle-heading">
         <div>
-          <h2>
-            <CalendarDays size={18} />
-            {data?.cancelledAt ? "취소된 행사" : "행사 일정과 변경 안내"}
-          </h2>
+          {!inDialog && (
+            <h2>
+              <CalendarDays size={18} />
+              {data?.cancelledAt ? "취소된 행사" : "행사 일정과 변경 안내"}
+            </h2>
+          )}
           {data && (
             <p>
               {data.cancelledAt ? "행사 접수와 QR 입장이 종료되었어요." : when(data.startsAt)}
@@ -271,8 +276,8 @@ export function EventLifecyclePanel({
         </details>
       ) : null}
       {data?.canManage && !data.cancelledAt && (
-        <details className="lifecycle-editor">
-          <summary>주최자 일정 변경·행사 취소</summary>
+        <Editor className="lifecycle-editor">
+          {!inDialog && <summary>주최자 일정 변경·행사 취소</summary>}
           <p className="lifecycle-help">
             행사 시작 전, 입장 확인된 참가자가 없을 때 변경할 수 있어요. 참가자에게 사유와 변경
             안내가 전달됩니다.
@@ -356,7 +361,7 @@ export function EventLifecyclePanel({
               </button>
             </fieldset>
           </form>
-        </details>
+        </Editor>
       )}
     </section>
   );

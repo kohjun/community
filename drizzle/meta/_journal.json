@@ -596,6 +596,13 @@
       "when": 1794657342057,
       "tag": "0084_creative_game_results",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1795059089206,
+      "tag": "0085_lightning_room_chat",
+      "breakpoints": true
     }
   ]
 }

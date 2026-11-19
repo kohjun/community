@@ -147,6 +147,135 @@ test("direct lightning applications wait without payment or room access until ma
   }
 });
 
+test("lightning managers can switch the existing room to chat and back without turning chat into announcements", async () => {
+  const { postId } = await lightning.create(owner, input());
+  const [member, pending, manager] = participants as [string, string, string];
+  const receipt = await participation.apply(member, postId, { consent: true }, null);
+  await participation.apply(pending, postId, { consent: true }, null);
+  await participation.decideSiteApplication(owner, receipt.application!.id, {
+    decision: "approve",
+  });
+  const [managerProfile] = await db
+    .select()
+    .from(schema.profiles)
+    .where(eq(schema.profiles.id, manager));
+  await participation.setManager(owner, postId, {
+    publicId: managerProfile!.publicId,
+    enabled: true,
+  });
+
+  const initial = await participation.send(owner, postId, { body: "모임 장소를 안내해요." });
+  assert.equal(initial.chatEnabled, false);
+  assert.equal(initial.messages[0]?.isAnnouncement, true);
+  await assert.rejects(
+    participation.setRoomMode(member, postId, { chatEnabled: true }),
+    code("FORBIDDEN"),
+  );
+
+  const enabled = await participation.setRoomMode(manager, postId, { chatEnabled: true });
+  assert.equal(enabled.chatEnabled, true);
+  assert.equal(enabled.canManage, true);
+  const memberRoom = await participation.room(member, postId);
+  assert.equal(memberRoom.canWrite, true);
+  assert.equal(memberRoom.canManage, false);
+  await assert.rejects(
+    participation.send(pending, postId, { body: "대기 중", isAnnouncement: false }),
+    code("FORBIDDEN"),
+  );
+  await assert.rejects(
+    participation.send(member, postId, { body: "위장 공지" }),
+    code("FORBIDDEN"),
+  );
+  await assert.rejects(
+    db
+      .insert(schema.roomMessages)
+      .values({ postId, authorId: pending, body: "대기 중", isAnnouncement: false }),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.cause instanceof Error &&
+      /confirmed member/.test(error.cause.message),
+  );
+
+  const chatted = await participation.send(member, postId, {
+    body: "반가워요. 같이 가실 분 계세요?",
+    isAnnouncement: false,
+  });
+  const message = chatted.messages.find((item) => !item.isAnnouncement)!;
+  assert.equal(message.isMine, true);
+  const jobs = await pg.query<{ source_id: string }>(
+    "select source_id from sliper.engagement_jobs where kind='announcement' and post_id=$1",
+    [postId],
+  );
+  assert.deepEqual(
+    jobs.rows.map((job) => job.source_id),
+    [initial.messages[0]!.id],
+  );
+
+  await participation.setRoomMode(owner, postId, { chatEnabled: false });
+  const closed = await participation.room(member, postId);
+  assert.equal(closed.canWrite, false);
+  assert.deepEqual(
+    closed.messages.map((item) => item.isAnnouncement),
+    [true, false],
+  );
+  await assert.rejects(
+    participation.send(member, postId, { body: "다시 보내기", isAnnouncement: false }),
+    code("FORBIDDEN"),
+  );
+  await assert.rejects(
+    db
+      .insert(schema.roomMessages)
+      .values({ postId, authorId: member, body: "닫힌 채팅", isAnnouncement: false }),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.cause instanceof Error &&
+      /open lightning room/.test(error.cause.message),
+  );
+  await assert.rejects(
+    db
+      .update(schema.roomMessages)
+      .set({ authorId: null, isAnnouncement: true })
+      .where(eq(schema.roomMessages.id, message.id)),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.cause instanceof Error &&
+      /immutable/.test(error.cause.message),
+  );
+
+  await participation.setRoomMode(owner, postId, { chatEnabled: true });
+  await participation.cancel(member, receipt.application!.id);
+  await assert.rejects(
+    participation.send(member, postId, { body: "참가 취소", isAnnouncement: false }),
+    code("FORBIDDEN"),
+  );
+
+  const [event] = await db
+    .insert(schema.posts)
+    .values({
+      authorId: owner,
+      kind: "모집",
+      categorySlug: "party",
+      title: "일반 행사",
+      bodyMarkdown: "일반 행사 공지방",
+    })
+    .returning({ id: schema.posts.id });
+  await db.insert(schema.eventSettings).values({ postId: event!.id, capacity: 8, amountKRW: 0 });
+  await assert.rejects(
+    participation.setRoomMode(owner, event!.id, { chatEnabled: true }),
+    code("CONFLICT"),
+  );
+  await assert.rejects(
+    db
+      .update(schema.eventSettings)
+      .set({ participantChatEnabled: true })
+      .where(eq(schema.eventSettings.postId, event!.id)),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.cause instanceof Error &&
+      /event_participant_chat_lightning_only/.test(error.cause.message),
+  );
+});
+
 test("owner settings preserve omitted location and committed locations cannot be replaced", async () => {
   const { postId } = await lightning.create(owner, input());
   const config = { amountKRW: 0, capacity: 2, open: true };

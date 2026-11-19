@@ -5,11 +5,11 @@ test("in-flight attendee responses cannot restore contacts after staff revocatio
   const access = new RoomAccess(true, false),
     oldRequest = access.ticket();
   access.update(false, false);
-  assert.equal(access.allows(oldRequest, "write"), false);
+  assert.equal(access.allows(oldRequest, "manage"), false);
   assert.equal(access.allows(oldRequest), false);
   const participantRequest = access.ticket();
   assert.equal(access.allows(participantRequest), true);
-  assert.equal(access.allows(participantRequest, "write"), false);
+  assert.equal(access.allows(participantRequest, "manage"), false);
 });
 test("refund or unmount discards pending room requests even if a new role is later granted", () => {
   const access = new RoomAccess(true, true),

@@ -803,14 +803,16 @@ export function participationService(db: Database) {
       id = idSchema.parse(postId),
       before = parseCursor(cursor);
     return db.transaction(async (tx) => {
-      const { post, canWrite, isOwner } = await authorizeRoom(tx, user, id);
+      const { post, ...permissions } = await authorizeRoom(tx, user, id);
       const roster = await readRoomRoster(tx, user, id, post.authorId, 8);
       const rows = await tx
         .select({
           id: roomMessages.id,
           body: roomMessages.body,
-          author: sql<string>`coalesce(${profiles.nickname},'담당자')`,
+          author: sql<string>`coalesce(${profiles.nickname}, '탈퇴한 회원')`,
           createdAt: preciseTimestamp(roomMessages.createdAt),
+          isAnnouncement: roomMessages.isAnnouncement,
+          isMine: sql<boolean>`coalesce(${roomMessages.authorId} = ${user}::uuid, false)`,
         })
         .from(roomMessages)
         .leftJoin(profiles, eq(profiles.id, roomMessages.authorId))
@@ -835,8 +837,7 @@ export function participationService(db: Database) {
       return {
         postId: id,
         title: post.title,
-        canWrite,
-        isOwner,
+        ...permissions,
         memberCount: roster.memberCount,
         memberPreview: roster.members,
         memberRevision: roster.memberRevision,
@@ -858,22 +859,44 @@ export function participationService(db: Database) {
       return readRoomRoster(tx, user, id, post.authorId, query.limit, query.cursor);
     });
   }
+  async function setRoomMode(actor: string | null, postId: string, input: unknown) {
+    const user = requireActor(actor),
+      id = idSchema.parse(postId),
+      { chatEnabled } = z.strictObject({ chatEnabled: z.boolean() }).parse(input);
+    const changed = await db.transaction(async (tx) => {
+      const room = await authorizeRoom(tx, user, id);
+      if (!room.canManage) throw new AppError("FORBIDDEN", "담당자만 방 모드를 바꿀 수 있어요.");
+      if (!room.supportsChat)
+        throw new AppError("CONFLICT", "번개·모임에서만 참가자 채팅을 열 수 있어요.");
+      if (room.chatEnabled === chatEnabled) return false;
+      await tx
+        .update(eventSettings)
+        .set({ participantChatEnabled: chatEnabled })
+        .where(eq(eventSettings.postId, id));
+      return true;
+    });
+    if (changed) await publishRoomWake(id);
+    return room(user, id);
+  }
   async function send(actor: string | null, postId: string, input: unknown) {
     const user = requireActor(actor),
+      id = idSchema.parse(postId),
       value = z
-        .object({ body: z.string().trim().min(1).max(10000) })
-        .strict()
+        .strictObject({
+          body: z.string().trim().min(1).max(10000),
+          isAnnouncement: z.boolean().default(true),
+        })
         .parse(input);
     await db.transaction(async (tx) => {
-      const { post, settings } = await lockEvent(tx, postId);
-      if (!settings) throw new AppError("NOT_FOUND", "공지방을 찾을 수 없어요.");
-      const [manager] = await tx
-        .select({ userId: roomManagers.userId })
-        .from(roomManagers)
-        .where(and(eq(roomManagers.postId, postId), eq(roomManagers.userId, user)));
-      if (post.authorId !== user && !manager)
-        throw new AppError("FORBIDDEN", "담당자만 공지를 보낼 수 있어요.");
-      assertContentAllowed(value);
+      const room = await authorizeRoom(tx, user, id);
+      if (!room.canWrite || (value.isAnnouncement && !room.canManage))
+        throw new AppError("FORBIDDEN", "이 방에서는 담당자만 공지를 보낼 수 있어요.");
+      if (value.isAnnouncement === room.chatEnabled)
+        throw new AppError(
+          "CONFLICT",
+          "방 모드가 변경되었어요. 현재 모드를 확인하고 다시 보내주세요.",
+        );
+      assertContentAllowed({ body: value.body });
       const [recent] = await tx
         .select({ id: roomMessages.id })
         .from(roomMessages)
@@ -888,17 +911,17 @@ export function participationService(db: Database) {
       if (recent) throw new AppError("RATE_LIMITED", "잠시 후 다음 공지를 보내주세요.");
       const [message] = await tx
         .insert(roomMessages)
-        .values({ postId, authorId: user, body: value.body })
+        .values({ postId: id, authorId: user, ...value })
         .returning({ id: roomMessages.id });
-      await enqueueAnnouncementPush(tx, {
-        postId,
-        messageId: message!.id,
-        actorId: user,
-      });
+      if (value.isAnnouncement)
+        await enqueueAnnouncementPush(tx, {
+          postId: id,
+          messageId: message!.id,
+          actorId: user,
+        });
     });
-    // Publish only after the announcement and its existing push outbox have committed.
-    await publishRoomWake(postId);
-    return room(actor, postId);
+    await publishRoomWake(id);
+    return room(user, id);
   }
   async function managers(actor: string | null, postId: string) {
     const user = requireActor(actor);
@@ -1047,6 +1070,7 @@ export function participationService(db: Database) {
     payment,
     room,
     members,
+    setRoomMode,
     send,
     managers,
     setManager,

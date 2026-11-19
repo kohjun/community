@@ -125,8 +125,18 @@ export interface RoomView {
   postId: string;
   title: string;
   canWrite: boolean;
+  canManage: boolean;
   isOwner: boolean;
-  messages: { id: string; body: string; author: string; createdAt: string }[];
+  supportsChat: boolean;
+  chatEnabled: boolean;
+  messages: {
+    id: string;
+    body: string;
+    author: string;
+    createdAt: string;
+    isAnnouncement: boolean;
+    isMine: boolean;
+  }[];
   nextCursor: string | null;
 }
 export interface ParticipationHome {
