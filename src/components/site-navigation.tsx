@@ -8,7 +8,7 @@ import {
   AUDIENCE_NAVIGATION,
   activeNavigationSection,
   type CommunityNavigationSection,
-  type CommunityNavigationActiveSection,
+  type SiteNavigationOverride,
 } from "@/domain/navigation";
 import { useAudience } from "@/lib/audience";
 
@@ -16,7 +16,7 @@ export function SiteNavigation({
   activeSection,
   onNavigate,
 }: {
-  activeSection?: CommunityNavigationActiveSection;
+  activeSection?: SiteNavigationOverride;
   onNavigate?: (section: CommunityNavigationSection) => void;
 }) {
   const pathname = usePathname();

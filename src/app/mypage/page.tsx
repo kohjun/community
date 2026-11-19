@@ -27,7 +27,10 @@ export default async function Page({
           ? HOSTED_EVENTS_HREF
           : MY_EVENTS_HREF;
     return (
-      <ParticipationShell advertising={false}>
+      <ParticipationShell
+        advertising={false}
+        {...(section === "hosting" ? { activeSection: "management" as const } : {})}
+      >
         <MyPageNavigation section={section} />
         <section className="account-page">
           <div className="account-empty">
@@ -49,7 +52,7 @@ export default async function Page({
       eventAftercareService(database).list(actor, { scope: "hosting", view: "pending" }),
     ]);
     return (
-      <ParticipationShell advertising={false}>
+      <ParticipationShell advertising={false} activeSection="management">
         <MyPageNavigation section={section} />
         <ManagedEvents initial={initial} initialAftercare={initialAftercare} embedded />
       </ParticipationShell>

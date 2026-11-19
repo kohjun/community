@@ -3,19 +3,22 @@ import { AdSlot } from "./ad-slot";
 import { SiteHeader } from "./site-header";
 import { SiteFooter } from "./site-footer";
 import { Megaphone } from "lucide-react";
+import type { SiteNavigationOverride } from "@/domain/navigation";
 export function ParticipationShell({
   children,
   advertising = true,
+  activeSection,
 }: {
   children: React.ReactNode;
   advertising?: boolean;
+  activeSection?: SiteNavigationOverride;
 }) {
   return (
     <>
       <a className="skip-link" href="#participation-content">
         본문으로 바로가기
       </a>
-      <SiteHeader />
+      <SiteHeader {...(activeSection ? { activeSection } : {})} />
       <main className="participation-page" id="participation-content">
         {children}
         {/* Below the content so each page opens with its own title, not a banner. */}

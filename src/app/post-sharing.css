@@ -200,3 +200,68 @@ a.post-body-open:focus-visible {
     gap: 12px;
   }
 }
+
+.post-mobile-apply {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  :root {
+    --post-mobile-apply-space: calc(3rem + 21px);
+  }
+  .post-title-apply {
+    display: none;
+  }
+  .post-mobile-apply {
+    display: flex;
+    justify-content: center;
+    padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px
+      max(16px, env(safe-area-inset-left, 0px));
+    border-top: 1px solid #e7ebf0;
+    background: #fff;
+  }
+  .post-mobile-apply > .apply-button {
+    width: min(100%, 36rem);
+    min-height: 3rem;
+    height: auto;
+    margin: 0;
+    padding-block: 8px;
+    font-size: 15px;
+    white-space: normal;
+  }
+  .post-page-card > .post-mobile-apply {
+    position: fixed;
+    inset-inline: 0;
+    bottom: calc(var(--mobile-nav-height) + var(--mobile-safe-bottom));
+    z-index: 39;
+  }
+  body:has(.post-page-card > .post-mobile-apply) {
+    padding-bottom: calc(
+      var(--post-mobile-apply-space) + var(--mobile-nav-height) + var(--mobile-safe-bottom) + 16px
+    );
+  }
+  html:has(.post-page-card > .post-mobile-apply) {
+    scroll-padding-bottom: calc(
+      var(--post-mobile-apply-space) + var(--mobile-nav-height) + var(--mobile-safe-bottom) + 20px
+    );
+  }
+  .dialog-content.post-dialog:has(> .post-mobile-apply) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+  }
+  .post-dialog > .post-detail-scroll {
+    min-height: 0;
+    margin: 0;
+    padding: 26px max(18px, env(safe-area-inset-right, 0px)) 20px
+      max(18px, env(safe-area-inset-left, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block: 16px;
+  }
+  .post-dialog > .post-mobile-apply {
+    flex: none;
+    padding-bottom: calc(10px + var(--mobile-safe-bottom));
+  }
+}

@@ -146,7 +146,15 @@ export function PostDetailContent({
     setCommentError("");
     setToast("댓글을 남겼어요.");
   }
-  return (
+  const applyButton =
+    active.kind === "모집" ? (
+      <RecruitmentApplyButton
+        postId={active.id}
+        url={active.applicationUrl}
+        cancelledAt={active.eventCancelledAt}
+      />
+    ) : null;
+  const detail = (
     <>
       <div className="detail-overline">
         <span>{label(active.category)}</span>
@@ -162,13 +170,7 @@ export function PostDetailContent({
       </div>
       <div className="detail-title-row">
         <Title className="detail-title">{concealed ? safePostTitle(active) : active.title}</Title>
-        {active.kind === "모집" && (
-          <RecruitmentApplyButton
-            postId={active.id}
-            url={active.applicationUrl}
-            cancelledAt={active.eventCancelledAt}
-          />
-        )}
+        {applyButton && <div className="post-title-apply">{applyButton}</div>}
       </div>
       <Description className="detail-author">
         <span className="avatar">
@@ -600,6 +602,14 @@ export function PostDetailContent({
           {toast}
         </p>
       )}
+    </>
+  );
+
+  if (!applyButton) return detail;
+  return (
+    <>
+      {presentation === "dialog" ? <div className="post-detail-scroll">{detail}</div> : detail}
+      <div className="post-mobile-apply">{applyButton}</div>
     </>
   );
 }

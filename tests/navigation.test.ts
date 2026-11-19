@@ -36,6 +36,8 @@ test("all main menus keep their active section on list and detail pages", () => 
     ["/players", "players"],
     ["/players/example", "players"],
     ["/players/review/example", "players"],
+    ["/management", "management"],
+    ["/management/events/example", "management"],
   ] as const;
   for (const [path, section] of routes) {
     assert.equal(activeNavigationSection(path), section, path);
@@ -54,8 +56,6 @@ test("partial route prefixes and unrelated activity pages do not select the wron
     "/managements",
     "/maps-other",
     "/mypage",
-    "/management",
-    "/management/events/example",
     "/participation",
     "/search",
     "/topics",
@@ -119,16 +119,20 @@ test("participant header separates scheduled events from lightning and keeps dis
   assert.equal(more[0].href, "/players");
 });
 
-test("host header opens the crew tab and places operations in more", () => {
+test("host header starts with hosted meetups and moves stories into more", () => {
   const { primary, more } = AUDIENCE_NAVIGATION.host;
   assert.deepEqual(
     primary.map((item) => item.label),
-    ["아카이브", "크루", "웹게임", "이야기"],
+    ["모임 관리", "아카이브", "크루", "웹게임"],
   );
-  assert.equal(primary[1].href, "/players?tab=crews");
+  assert.equal(primary[0].href, "/mypage?tab=events&view=hosting");
+  assert.equal(primary[2].href, "/players?tab=crews");
   assert.deepEqual(
     more.map((item) => item.label),
-    ["호스트 가이드", "모임 관리"],
+    ["호스트 가이드", "이야기"],
   );
-  assert.equal(more[1].href, "/management");
+  assert.equal(more[1].href, "/stories");
+  assert.equal(activeNavigationSection("/mypage", "management"), "management");
+  assert.equal(activeNavigationSection("/mypage"), null);
+  assert.equal(activeNavigationSection("/stories", "management"), "stories");
 });

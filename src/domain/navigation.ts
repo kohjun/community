@@ -1,4 +1,5 @@
 import { EVENT_RECRUITMENTS_HREF } from "./meetup-types";
+import { HOSTED_EVENTS_HREF } from "./workspace-navigation";
 
 // `primary` items stay in the header; the rest live under "더보기" so first-time visitors see a short menu.
 export const SITE_NAVIGATION = [
@@ -13,8 +14,8 @@ export const SITE_NAVIGATION = [
 
 export type NavigationSection = (typeof SITE_NAVIGATION)[number]["id"];
 export type CommunityNavigationSection = "home" | "stories";
-export type CommunityNavigationActiveSection = CommunityNavigationSection | "events";
-export type ActiveNavigationSection = NavigationSection | "events";
+export type SiteNavigationOverride = CommunityNavigationSection | "events" | "management";
+export type ActiveNavigationSection = NavigationSection | SiteNavigationOverride;
 
 // Viewing mode changes presentation; authorization remains on the server.
 export const AUDIENCE_NAVIGATION = {
@@ -33,26 +34,29 @@ export const AUDIENCE_NAVIGATION = {
   },
   host: {
     primary: [
+      { id: "management", label: "모임 관리", href: HOSTED_EVENTS_HREF },
       { id: "archive", label: "아카이브", href: "/archive" },
       { id: "players", label: "크루", href: "/players?tab=crews" },
       { id: "games", label: "웹게임", href: "/games" },
-      { id: "stories", label: "이야기", href: "/stories" },
     ],
     more: [
       { id: "hosting-guide", label: "호스트 가이드", href: "/hosting-guide" },
-      { id: "management", label: "모임 관리", href: "/management" },
+      { id: "stories", label: "이야기", href: "/stories" },
     ],
   },
 } as const;
 
 export function activeNavigationSection(
   pathname: string | null,
-  communitySection?: CommunityNavigationActiveSection,
+  override?: SiteNavigationOverride,
 ): ActiveNavigationSection | null {
   if (!pathname) return null;
   const path = pathname.replace(/\/+$/, "") || "/";
-  if ((path === "/" || path === "/stories") && communitySection) return communitySection;
+  if ((path === "/" || path === "/stories") && override && override !== "management")
+    return override;
   if (path === "/") return "home";
+  if (path === "/management" || path.startsWith("/management/")) return "management";
+  if (path === "/mypage" && override === "management") return "management";
   if (path.startsWith("/posts/")) return "stories";
   if (path === "/crews" || path.startsWith("/crews/")) return "players";
   if (path === "/records" || path.startsWith("/records/")) return "archive";
