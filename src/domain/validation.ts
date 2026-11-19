@@ -208,7 +208,7 @@ export const profileInputSchema = z.strictObject({
   avatar: z.enum(AVATARS).default("spark"),
   interests: z
     .array(categorySlugSchema)
-    .max(12)
+    .max(CATEGORY_SLUGS.length)
     .refine((values) => new Set(values).size === values.length)
     .default([]),
 });

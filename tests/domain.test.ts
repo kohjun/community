@@ -280,7 +280,7 @@ test("view input accepts only a post ID and rejects forged visitor hashes and da
   }
 });
 
-test("the nine original categories and three creative boards are accepted", () => {
+test("the original categories, creative boards and general board are accepted", () => {
   assert.deepEqual(
     CATEGORIES.map(({ name }) => name),
     [
@@ -296,14 +296,16 @@ test("the nine original categories and three creative boards are accepted", () =
       "지식",
       "콘텐츠 연구소",
       "함께 만드는 크루",
+      "자유",
     ],
   );
-  assert.equal(CATEGORY_SLUGS.length, 12);
-  assert.equal(new Set(CATEGORY_SLUGS).size, 12);
+  assert.equal(CATEGORY_SLUGS.length, 13);
+  assert.equal(new Set(CATEGORY_SLUGS).size, 13);
   for (const categorySlug of CATEGORY_SLUGS)
     assert.equal(categorySlugSchema.safeParse(categorySlug).success, true);
   for (const categorySlug of CATEGORY_SLUGS.slice(0, 9))
     assert.equal(createPostSchema.safeParse({ ...validPost, categorySlug }).success, true);
+  assert.equal(createPostSchema.safeParse({ ...validPost, categorySlug: "general" }).success, true);
   assert.equal(categorySlugSchema.safeParse("free-board").success, false);
   assert.equal(categorySlugSchema.safeParse("여행").success, false);
 });

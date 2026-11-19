@@ -23,7 +23,7 @@ export const inboxReadSchema = z.strictObject({ id: z.uuid().optional() });
 export const categorySubscriptionsSchema = z.strictObject({
   categories: z
     .array(z.enum(CATEGORY_SLUGS))
-    .max(12)
+    .max(CATEGORY_SLUGS.length)
     .refine(
       (values) => new Set(values).size === values.length,
       "관심 카테고리는 중복 선택할 수 없어요.",
