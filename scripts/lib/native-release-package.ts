@@ -74,7 +74,7 @@ export function nativeReleasePathAllowed(relative: string): boolean {
   if (components[0] === "public")
     return (
       relative === "public/sw.js" ||
-      ["images", "fonts"].includes(components[1] ?? "") ||
+      ["images", "fonts", "models"].includes(components[1] ?? "") ||
       [
         "public/guides/first-meeting-checklist.md",
         "public/guides/mc-opening-cues.md",

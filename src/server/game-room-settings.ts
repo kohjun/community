@@ -7,6 +7,13 @@ export function roomSettings(room: Room) {
     title: room.title,
     capacity: room.capacity,
     minPlayers: room.minPlayers,
+    ...(room.snapPang
+      ? {
+          snapPreset: room.snapPang.settings.preset,
+          snapRounds: room.snapPang.settings.rounds,
+          snapSeconds: room.snapPang.settings.seconds,
+        }
+      : {}),
     ...(room.drawing
       ? {
           drawingMode: room.drawing.settings.mode,
@@ -23,23 +30,25 @@ export function roomSettings(room: Room) {
           clueSource: room.clue.settings.source,
         }
       : {}),
-    gameType: room.drawing
-      ? "drawing"
-      : room.clue
-        ? "clue"
-        : room.temperature
-          ? "temperature"
-          : room.toast
-            ? "toast"
-            : room.auction
-              ? "auction"
-              : room.intro
-                ? "mbti-intro"
-                : room.mbti?.words
-                  ? "word-liar"
-                  : room.mbti
-                    ? "mbti"
-                    : "lobby",
+    gameType: room.snapPang
+      ? "snap-pang"
+      : room.drawing
+        ? "drawing"
+        : room.clue
+          ? "clue"
+          : room.temperature
+            ? "temperature"
+            : room.toast
+              ? "toast"
+              : room.auction
+                ? "auction"
+                : room.intro
+                  ? "mbti-intro"
+                  : room.mbti?.words
+                    ? "word-liar"
+                    : room.mbti
+                      ? "mbti"
+                      : "lobby",
     ...(room.temperature
       ? {
           temperatureMode: room.temperature.settings.mode,

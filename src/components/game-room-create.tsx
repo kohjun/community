@@ -1,4 +1,6 @@
 "use client";
+import { SnapPangSettingsFields } from "./snap-pang-settings-fields";
+import { DEFAULT_SNAP_PANG_SETTINGS, type SnapPangSettings } from "@/domain/snap-pang";
 import {
   CreativeSettingsFields,
   DEFAULT_CREATIVE_OPTIONS,
@@ -80,7 +82,7 @@ export function GameRoomCreate() {
   function chooseGame(id: CatalogGameId) {
     const next = GAME_CATALOG.find((game) => game.id === id)!;
     setGameType(id);
-    if (id === "drawing" || id === "clue") {
+    if (id === "drawing" || id === "clue" || id === "snap-pang") {
       const min = id === "drawing" ? DRAWING_MODES[creative.drawingMode].minimum : 2;
       setCapacity((v) => Math.min(12, Math.max(min, v)));
       setMinPlayers(min);
@@ -94,6 +96,7 @@ export function GameRoomCreate() {
     setShowSetup(true);
     reveal(setupHeading);
   }
+  const [snapPang, setSnapPang] = useState<SnapPangSettings>(DEFAULT_SNAP_PANG_SETTINGS);
   const [temperature, setTemperature] = useState(DEFAULT_TEMPERATURE_SETTINGS);
   const [creative, setCreative] = useState<
     Pick<GameRoomSettings, keyof typeof DEFAULT_CREATIVE_OPTIONS>
@@ -101,10 +104,11 @@ export function GameRoomCreate() {
   const minimum =
     gameType === "drawing"
       ? DRAWING_MODES[creative.drawingMode].minimum
-      : gameType === "clue" || gameType === "lobby"
+      : gameType === "clue" || gameType === "lobby" || gameType === "snap-pang"
         ? 2
         : 3;
-  const maximum = gameType === "drawing" || gameType === "clue" ? 12 : 30;
+  const maximum =
+    gameType === "drawing" || gameType === "clue" || gameType === "snap-pang" ? 12 : 30;
   const changeCreative = (next: Partial<CreativeOptions>) => {
     const { capacity: cap, minPlayers: min, ...fields } = next;
     if (cap !== undefined) setCapacity(cap);
@@ -149,6 +153,13 @@ export function GameRoomCreate() {
       const room = await appRequest<{ id: string }>("/api/games", "POST", {
         gameType,
         ...creative,
+        ...(gameType === "snap-pang"
+          ? {
+              snapPreset: snapPang.preset,
+              snapRounds: snapPang.rounds,
+              snapSeconds: snapPang.seconds,
+            }
+          : {}),
         ...(gameType === "temperature"
           ? {
               temperatureMode: temperature.mode,
@@ -396,6 +407,13 @@ export function GameRoomCreate() {
                 aria-labelledby="game-settings-heading"
                 className={styles.form}
               >
+                {gameType === "snap-pang" && (
+                  <SnapPangSettingsFields
+                    value={snapPang}
+                    disabled={busy}
+                    onChange={(next) => setSnapPang((prev) => ({ ...prev, ...next }))}
+                  />
+                )}
                 {(gameType === "drawing" || gameType === "clue") && (
                   <CreativeSettingsFields
                     kind={gameType}
@@ -683,21 +701,23 @@ export function GameRoomCreate() {
             여러 탭은 한 참가자로 연결돼요.
           </p>
           <p className={styles.templateNote}>
-            {gameType === "drawing"
-              ? "그림은 게임 참가자끼리만 공유해요. 완료된 결과와 개인 자료는 종료 후 24시간 동안 볼 수 있어요."
-              : gameType === "clue"
-                ? "현재 위치를 수집하지 않아요. 문제의 정답을 지도에서 선택해요. 개인 사진은 해당 게임 참가자만 볼 수 있어요."
-                : gameType === "temperature"
-                  ? "상황과 제출 결과는 이 게임의 참가자와 진행자가 결과 화면에서 확인해요."
-                  : gameType === "toast"
-                    ? "건배 버튼은 질문에 대한 선택이에요. 음주는 자유이며 물이나 음료로도 함께할 수 있어요."
-                    : gameType === "mbti-intro"
-                      ? "참가자가 입력한 MBTI는 게임 종료 후 해당 게임 참가자들에게 공개돼요."
-                      : gameType === "auction"
-                        ? "게임 머니는 현금으로 교환할 수 없어요. 판매자는 음수 잔액으로 진행할 수 있고, 유찰이면 매입금을 환급해요."
-                        : gameType === "word-liar"
-                          ? "제시어를 직접 말하지 말고 특징이나 경험으로 설명해보세요. 실제 개인 MBTI는 입력하지 않아요."
-                          : "호스트가 규칙을 직접 안내하는 대기실이에요. 자동 문제·점수·승패 집계는 제공하지 않아요."}
+            {gameType === "snap-pang"
+              ? "카메라 영상은 내 기기 안에서만 분석하며 서버로 전송하거나 저장하지 않아요. 카메라를 쓸 수 없어도 대체 모드로 끝까지 함께할 수 있어요."
+              : gameType === "drawing"
+                ? "그림은 게임 참가자끼리만 공유해요. 완료된 결과와 개인 자료는 종료 후 24시간 동안 볼 수 있어요."
+                : gameType === "clue"
+                  ? "현재 위치를 수집하지 않아요. 문제의 정답을 지도에서 선택해요. 개인 사진은 해당 게임 참가자만 볼 수 있어요."
+                  : gameType === "temperature"
+                    ? "상황과 제출 결과는 이 게임의 참가자와 진행자가 결과 화면에서 확인해요."
+                    : gameType === "toast"
+                      ? "건배 버튼은 질문에 대한 선택이에요. 음주는 자유이며 물이나 음료로도 함께할 수 있어요."
+                      : gameType === "mbti-intro"
+                        ? "참가자가 입력한 MBTI는 게임 종료 후 해당 게임 참가자들에게 공개돼요."
+                        : gameType === "auction"
+                          ? "게임 머니는 현금으로 교환할 수 없어요. 판매자는 음수 잔액으로 진행할 수 있고, 유찰이면 매입금을 환급해요."
+                          : gameType === "word-liar"
+                            ? "제시어를 직접 말하지 말고 특징이나 경험으로 설명해보세요. 실제 개인 MBTI는 입력하지 않아요."
+                            : "호스트가 규칙을 직접 안내하는 대기실이에요. 자동 문제·점수·승패 집계는 제공하지 않아요."}
           </p>
         </section>
       )}

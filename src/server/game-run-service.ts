@@ -5,6 +5,7 @@ import { memberSafety } from "../db/safety-schema";
 import { membershipActive } from "../domain/safety";
 import { drawingView } from "./drawing-game";
 import { clueView } from "./clue-game";
+import { snapPangView } from "./snap-pang-game";
 import type { GamePrincipal } from "./game-room-service";
 import type { GameRoomView } from "../domain/game-room";
 import { AppError } from "./errors";
@@ -29,8 +30,8 @@ export async function readGameRun(
     const [state] = await db.select().from(memberSafety).where(eq(memberSafety.userId, who.actor!));
     if (!membershipActive(state, now)) throw new AppError("FORBIDDEN", "계정 상태를 확인해주세요.");
   }
-  const { drawing, clue } = run.content,
-    roster = drawing?.roster ?? clue?.roster ?? [];
+  const { drawing, clue, snapPang } = run.content,
+    roster = drawing?.roster ?? clue?.roster ?? snapPang?.roster ?? [];
   return {
     id: roomId,
     title: run.title,
@@ -54,7 +55,8 @@ export async function readGameRun(
     },
     players: roster.map((p) => ({ id: p.id, nickname: p.nickname, ready: false, online: false })),
     waiting: [],
-    gameType: drawing ? "drawing" : "clue",
+    gameType: snapPang ? "snap-pang" : drawing ? "drawing" : "clue",
+    snapPang: snapPang ? snapPangView(snapPang, playerId, now.getTime()) : null,
     drawing: drawing ? drawingView(drawing, playerId, now.getTime()) : null,
     clue: clue ? clueView(clue, playerId, now.getTime()) : null,
   };

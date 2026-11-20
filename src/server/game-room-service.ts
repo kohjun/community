@@ -1,3 +1,13 @@
+import { snapPangSettingsFrom } from "../domain/snap-pang";
+import {
+  newSnapPang,
+  startSnapPang,
+  tickSnapPang,
+  actSnapPang,
+  controlSnapPang,
+  abortSnapPang,
+  snapPangView,
+} from "./snap-pang-game";
 import { drawingSettingsFrom, clueSettingsFrom } from "../domain/creative-games";
 import {
   newDrawing,
@@ -241,9 +251,13 @@ export function gameRoomService(
       if (room.phase === "playing" && room.drawing && tickDrawing(room.drawing, now.getTime()))
         changed();
       if (room.phase === "playing" && room.clue && tickClue(room.clue, now.getTime())) changed();
+      if (room.phase === "playing" && room.snapPang && tickSnapPang(room.snapPang, now.getTime()))
+        changed();
       if (
         room.phase === "playing" &&
-        (room.drawing?.stage === "result" || room.clue?.stage === "result")
+        (room.drawing?.stage === "result" ||
+          room.clue?.stage === "result" ||
+          room.snapPang?.stage === "result")
       ) {
         room.phase = "finished";
         room.expiresAt = new Date(now.getTime() + GAME_ROOM_TTL_MS);
@@ -287,19 +301,25 @@ export function gameRoomService(
       await reconcile();
       if (
         room.phase === "playing" &&
-        (room.drawing?.stage === "result" || room.clue?.stage === "result")
+        (room.drawing?.stage === "result" ||
+          room.clue?.stage === "result" ||
+          room.snapPang?.stage === "result")
       ) {
         room.phase = "finished";
         changed();
       }
       if (
         dirty &&
-        (room.drawing || room.clue) &&
+        (room.drawing || room.clue || room.snapPang) &&
         room.phase === "finished" &&
         initialPhase !== "finished"
       ) {
-        const endedAt = room.drawing?.finishedAt ?? room.clue?.finishedAt ?? now.getTime(),
-          runId = room.drawing?.runId ?? room.clue?.runId;
+        const endedAt =
+            room.drawing?.finishedAt ??
+            room.clue?.finishedAt ??
+            room.snapPang?.finishedAt ??
+            now.getTime(),
+          runId = room.drawing?.runId ?? room.clue?.runId ?? room.snapPang?.runId;
         room.expiresAt = new Date(endedAt + GAME_ROOM_TTL_MS);
         await tx
           .update(gameAssets)
@@ -321,11 +341,17 @@ export function gameRoomService(
               members: Object.fromEntries(
                 players
                   .filter((p) =>
-                    (room.drawing?.roster ?? room.clue?.roster ?? []).some((r) => r.id === p.id),
+                    (room.drawing?.roster ?? room.clue?.roster ?? room.snapPang?.roster ?? []).some(
+                      (r) => r.id === p.id,
+                    ),
                   )
                   .map((p) => [p.id, p.identityHash]),
               ),
-              content: { drawing: room.drawing, clue: room.clue },
+              content: {
+                drawing: room.drawing,
+                clue: room.clue,
+                snapPang: room.snapPang,
+              },
               startedAt: room.startedAt ?? now,
               endedAt: new Date(endedAt),
               expiresAt: room.expiresAt,
@@ -340,6 +366,7 @@ export function gameRoomService(
             title: room.title,
             capacity: room.capacity,
             minPlayers: room.minPlayers,
+            snapPang: room.snapPang,
             drawing: room.drawing,
             clue: room.clue,
             expiresAt: room.expiresAt,
@@ -393,6 +420,10 @@ export function gameRoomService(
       }
       return {
         settings: access ? settings : null,
+        snapPang:
+          room.snapPang && (host || me?.status === "admitted") && room.phase !== "closed"
+            ? snapPangView(room.snapPang, playerId, now.getTime())
+            : null,
         drawing:
           room.drawing && (host || me?.status === "admitted") && room.phase !== "closed"
             ? drawingView(room.drawing, playerId, now.getTime())
@@ -495,7 +526,7 @@ export function gameRoomService(
       const hostId = await active(db, actor);
       const value = createGameRoomSchema.parse(input);
       if (
-        !["lobby", "drawing", "clue"].includes(value.gameType) &&
+        !["lobby", "drawing", "clue", "snap-pang"].includes(value.gameType) &&
         (value.minPlayers < 3 || value.capacity < 3)
       )
         throw new AppError("VALIDATION", "이 게임은 최소 3명으로 설정해주세요.");
@@ -507,6 +538,8 @@ export function gameRoomService(
           title: value.title,
           capacity: value.capacity,
           minPlayers: value.minPlayers,
+          snapPang:
+            value.gameType === "snap-pang" ? newSnapPang(snapPangSettingsFrom(value)) : null,
           drawing: value.gameType === "drawing" ? newDrawing(drawingSettingsFrom(value)) : null,
           clue: value.gameType === "clue" ? newClue(clueSettingsFrom(value)) : null,
           temperature:
@@ -630,6 +663,18 @@ export function gameRoomService(
         }
         if (room.phase === "closed") throw new AppError("CONFLICT", "종료된 게임방이에요.");
         await limit(tx, room.id, who.identityHash, 50, now);
+        if (
+          value.action === "snap-color" ||
+          value.action === "snap-object" ||
+          value.action === "snap-face-copy" ||
+          value.action === "snap-tension"
+        ) {
+          if (room.phase !== "playing" || !room.snapPang || me.status !== "admitted")
+            throw new AppError("FORBIDDEN", "진행 중인 스냅 팡 3D 참가자만 제출할 수 있어요.");
+          actSnapPang(room.snapPang, me.id, value, now.getTime());
+          changed();
+          return;
+        }
         if (
           value.action === "drawing-text" ||
           value.action === "drawing-image" ||
@@ -871,7 +916,7 @@ export function gameRoomService(
             );
           const joined = players.filter((p) => p.status === "admitted").length;
           if (
-            !["lobby", "drawing", "clue"].includes(config.gameType) &&
+            !["lobby", "drawing", "clue", "snap-pang"].includes(config.gameType) &&
             (config.capacity < 3 || config.minPlayers < 3)
           )
             throw new AppError("VALIDATION", "이 게임은 최소 3명으로 설정해주세요.");
@@ -885,6 +930,7 @@ export function gameRoomService(
             capacity: config.capacity,
             minPlayers: config.minPlayers,
           };
+          if (room.snapPang) candidate.snapPang = newSnapPang(snapPangSettingsFrom(config));
           if (room.drawing) candidate.drawing = newDrawing(drawingSettingsFrom(config));
           if (room.clue) {
             candidate.clue = newClue(clueSettingsFrom(config));
@@ -1036,6 +1082,13 @@ export function gameRoomService(
           changed();
           return;
         }
+        if (value.action === "snap-control") {
+          if (!room.snapPang || room.phase !== "playing" || room.snapPang.phaseId !== value.phaseId)
+            throw new AppError("CONFLICT", "현재 단계에서 진행해주세요.");
+          controlSnapPang(room.snapPang, value.command, now.getTime());
+          changed();
+          return;
+        }
         if (value.action === "creative-control") {
           const state = room.drawing ?? room.clue;
           if (!state || room.phase !== "playing" || state.phaseId !== value.phaseId)
@@ -1059,6 +1112,12 @@ export function gameRoomService(
             throw new AppError(
               "CONFLICT",
               "최소 인원이 모이고 입장한 참가자 모두 준비되어야 시작할 수 있어요.",
+            );
+          if (room.snapPang)
+            startSnapPang(
+              room.snapPang,
+              joined.map((p) => ({ id: p.id, nickname: p.nickname! })),
+              now.getTime(),
             );
           if (room.drawing)
             startDrawing(
@@ -1118,6 +1177,7 @@ export function gameRoomService(
         } else if (value.action === "finish") {
           if (room.phase !== "playing")
             throw new AppError("CONFLICT", "진행 중인 라운드가 없어요.");
+          if (room.snapPang) abortSnapPang(room.snapPang, now.getTime());
           if (room.drawing) {
             room.drawing.stage = "aborted";
             room.drawing.endsAt = null;
@@ -1140,6 +1200,7 @@ export function gameRoomService(
         } else if (value.action === "reset") {
           if (room.phase !== "finished")
             throw new AppError("CONFLICT", "라운드를 종료한 후 다음 게임을 준비해주세요.");
+          if (room.snapPang) room.snapPang = newSnapPang(room.snapPang.settings);
           if (room.drawing) room.drawing = newDrawing(room.drawing.settings);
           if (room.clue) room.clue = newClue(room.clue.settings);
           if (room.temperature) room.temperature = newTemperature(room.temperature.settings);
@@ -1172,6 +1233,8 @@ export function gameRoomService(
             .set({ status: "kicked", ready: false })
             .where(eq(gamePlayers.id, target.id));
         } else {
+          if (room.snapPang && room.phase === "playing")
+            abortSnapPang(room.snapPang, now.getTime());
           if (room.temperature && room.phase === "playing") abortTemperature(room.temperature);
           if (room.toast && room.phase === "playing") abortToast(room.toast);
           if (room.auction && room.phase === "playing") abortAuction(room.auction);

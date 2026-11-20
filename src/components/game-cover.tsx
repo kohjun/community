@@ -1,4 +1,5 @@
 import {
+  Camera,
   Pencil,
   MapPin,
   GlassWater,
@@ -13,21 +14,23 @@ import type { CatalogGameId } from "@/domain/game-catalog";
 import styles from "./game-catalog.module.css";
 export function GameCover({ game, large = false }: { game: CatalogGameId; large?: boolean }) {
   const Icon =
-    game === "drawing"
-      ? Pencil
-      : game === "clue"
-        ? MapPin
-        : game === "temperature"
-          ? Thermometer
-          : game === "toast"
-            ? GlassWater
-            : game === "auction"
-              ? Gavel
-              : game === "word-liar"
-                ? ScanFace
-                : game === "lobby"
-                  ? Gamepad2
-                  : MessageCircle;
+    game === "snap-pang"
+      ? Camera
+      : game === "drawing"
+        ? Pencil
+        : game === "clue"
+          ? MapPin
+          : game === "temperature"
+            ? Thermometer
+            : game === "toast"
+              ? GlassWater
+              : game === "auction"
+                ? Gavel
+                : game === "word-liar"
+                  ? ScanFace
+                  : game === "lobby"
+                    ? Gamepad2
+                    : MessageCircle;
   return (
     <div
       className={`${styles.cover} ${large ? styles.largeCover : ""}`}
@@ -40,41 +43,45 @@ export function GameCover({ game, large = false }: { game: CatalogGameId; large?
         <Sparkles size={12} /> SLIPER ORIGINAL
       </span>
       <span className={styles.tileBack}>
-        {game === "drawing"
-          ? "문장 →"
-          : game === "clue"
-            ? "WHERE?"
-            : game === "temperature"
-              ? "0 → 100"
-              : game === "toast"
-                ? "건배?"
-                : game === "mbti-intro"
-                  ? "ISTJ"
-                  : game === "auction"
-                    ? "VALUE ?"
-                    : game === "word-liar"
-                      ? "진짜?"
-                      : "LET’S"}
+        {game === "snap-pang"
+          ? "3D CAM"
+          : game === "drawing"
+            ? "문장 →"
+            : game === "clue"
+              ? "WHERE?"
+              : game === "temperature"
+                ? "0 → 100"
+                : game === "toast"
+                  ? "건배?"
+                  : game === "mbti-intro"
+                    ? "ISTJ"
+                    : game === "auction"
+                      ? "VALUE ?"
+                      : game === "word-liar"
+                        ? "진짜?"
+                        : "LET’S"}
       </span>
       <span className={styles.iconTile}>
         <Icon strokeWidth={1.65} />
       </span>
       <span className={styles.tileFront}>
-        {game === "drawing"
-          ? "그림!"
-          : game === "clue"
-            ? "PIN!"
-            : game === "temperature"
-              ? "77?"
-              : game === "toast"
-                ? "몇 명?"
-                : game === "mbti-intro"
-                  ? "ENFP"
-                  : game === "auction"
-                    ? "140 G"
-                    : game === "word-liar"
-                      ? "의심 +1"
-                      : "PLAY"}
+        {game === "snap-pang"
+          ? "팡! 3D"
+          : game === "drawing"
+            ? "그림!"
+            : game === "clue"
+              ? "PIN!"
+              : game === "temperature"
+                ? "77?"
+                : game === "toast"
+                  ? "몇 명?"
+                  : game === "mbti-intro"
+                    ? "ENFP"
+                    : game === "auction"
+                      ? "140 G"
+                      : game === "word-liar"
+                        ? "의심 +1"
+                        : "PLAY"}
       </span>
       <span className={styles.coverDot} />
     </div>

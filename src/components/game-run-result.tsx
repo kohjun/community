@@ -5,6 +5,7 @@ import type { GameRoomView } from "@/domain/game-room";
 import { appRequest } from "@/lib/api-client";
 import { DrawingGameStage } from "./drawing-game-stage";
 import { ClueGameStage } from "./clue-game-stage";
+import { SnapPangStage } from "./snap-pang-stage";
 import styles from "./creative-games.module.css";
 export function GameRunResult({ roomId, runId }: { roomId: string; runId: string }) {
   const [room, setRoom] = useState<GameRoomView | null>(null),
@@ -40,6 +41,15 @@ export function GameRunResult({ roomId, runId }: { roomId: string; runId: string
         <p className={styles.error} role="alert">
           {error}
         </p>
+      )}
+      {room?.snapPang && (
+        <SnapPangStage
+          room={room}
+          game={room.snapPang}
+          busy={false}
+          onAction={async () => false}
+          onRefresh={() => {}}
+        />
       )}
       {room?.drawing && (
         <DrawingGameStage

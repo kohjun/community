@@ -1,4 +1,5 @@
 "use client";
+import { SnapPangStage } from "./snap-pang-stage";
 import { DrawingGameStage } from "./drawing-game-stage";
 import { ClueGameStage } from "./clue-game-stage";
 import { ClueQuestionPreparation } from "./clue-question-preparation";
@@ -293,6 +294,19 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
           act({ action: "settings", settings, settingsVersion }, true)
         }
       />
+      {room.snapPang && room.snapPang.stage !== "lobby" && (
+        <SnapPangStage
+          room={room}
+          game={room.snapPang}
+          busy={busy}
+          onAction={act}
+          onRefresh={() => {
+            void appRequest<GameRoomView>(base + suffix)
+              .then(apply)
+              .catch(() => {});
+          }}
+        />
+      )}
       {room.clue && <ClueQuestionPreparation room={room} busy={busy} onAction={act} />}
       {room.drawing && room.drawing.stage !== "lobby" && (
         <DrawingGameStage
@@ -379,14 +393,15 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
           }}
         />
       )}
-      {room.phase === "finished" && (room.drawing?.runId || room.clue?.runId) && (
-        <Link
-          className={styles.primary}
-          href={`/games/${room.id}/results/${room.drawing?.runId ?? room.clue?.runId}${room.isHost ? "?host=1" : ""}`}
-        >
-          이 게임 결과 다시 보기 · 24시간 보관
-        </Link>
-      )}
+      {room.phase === "finished" &&
+        (room.drawing?.runId || room.clue?.runId || room.snapPang?.runId) && (
+          <Link
+            className={styles.primary}
+            href={`/games/${room.id}/results/${room.drawing?.runId ?? room.clue?.runId ?? room.snapPang?.runId}${room.isHost ? "?host=1" : ""}`}
+          >
+            이 게임 결과 다시 보기 · 24시간 보관
+          </Link>
+        )}
       <div className={styles.stats}>
         <span>
           <UsersRound size={18} />

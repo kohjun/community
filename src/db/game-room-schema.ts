@@ -1,3 +1,4 @@
+import type { SnapPangState } from "../domain/snap-pang";
 import type { DrawingState, ClueState } from "../domain/creative-games";
 import type { TemperatureState } from "../domain/temperature-game";
 import type { ToastState } from "../domain/toast-game";
@@ -28,6 +29,7 @@ export const gameRooms = sliper
       hostId: uuid("host_id")
         .notNull()
         .references(() => profiles.id, { onDelete: "cascade" }),
+      snapPang: jsonb("snap_pang").$type<SnapPangState>(),
       drawing: jsonb("drawing").$type<DrawingState>(),
       clue: jsonb("clue").$type<ClueState>(),
       temperature: jsonb("temperature").$type<TemperatureState>(),
@@ -124,7 +126,11 @@ export const gameRuns = sliper
       title: varchar("title", { length: 60 }).notNull(),
       members: jsonb("members").$type<Record<string, string>>().notNull(),
       content: jsonb("content")
-        .$type<{ drawing: DrawingState | null; clue: ClueState | null }>()
+        .$type<{
+          drawing: DrawingState | null;
+          clue: ClueState | null;
+          snapPang?: SnapPangState | null;
+        }>()
         .notNull(),
       startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
       endedAt: timestamp("ended_at", { withTimezone: true }).notNull(),

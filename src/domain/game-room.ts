@@ -1,4 +1,11 @@
 import {
+  snapPangSettingsFields,
+  snapPangPlayerActions,
+  snapPangHostActionSchema,
+  SNAP_PANG_MAX_PLAYERS,
+  type SnapPangView,
+} from "./snap-pang";
+import {
   DEFAULT_TEMPERATURE_SETTINGS,
   TEMPERATURE_MODES,
   TEMPERATURE_SECONDS,
@@ -35,9 +42,11 @@ const cleanText = (min: number, max: number) =>
     );
 export const createGameRoomSchema = z
   .object({
+    ...snapPangSettingsFields,
     ...creativeSettingsFields,
     gameType: z
       .enum([
+        "snap-pang",
         "lobby",
         "mbti",
         "mbti-intro",
@@ -76,8 +85,8 @@ export const createGameRoomSchema = z
   .refine((v) => v.minPlayers <= v.capacity, "최소 인원은 정원 이하여야 해요.")
   .refine(
     (v) =>
-      !["drawing", "clue"].includes(v.gameType) ||
-      (v.capacity <= 12 &&
+      !["drawing", "clue", "snap-pang"].includes(v.gameType) ||
+      (v.capacity <= SNAP_PANG_MAX_PLAYERS &&
         (v.gameType !== "drawing" || v.minPlayers >= DRAWING_MODES[v.drawingMode].minimum)),
     "새 게임은 최대 12명이며 선택한 모드의 최소 인원이 필요해요.",
   )
@@ -98,6 +107,7 @@ const temperatureTurn = z.number().int().min(1).max(300);
 const temperatureValue = z.number().int().min(0).max(100);
 const temperatureSubmission = { turn: temperatureTurn, runId: gameRoomId };
 export const gamePlayerActionSchema = z.discriminatedUnion("action", [
+  ...snapPangPlayerActions,
   ...creativePlayerActions,
   z.strictObject({
     action: z.literal("temperature-guess"),
@@ -197,6 +207,7 @@ export const gamePlayerActionSchema = z.discriminatedUnion("action", [
 ]);
 const revision = z.number().int().nonnegative();
 export const gameHostActionSchema = z.discriminatedUnion("action", [
+  snapPangHostActionSchema,
   z.strictObject({
     action: z.literal("creative-control"),
     revision,
@@ -245,6 +256,7 @@ export const gameHostActionSchema = z.discriminatedUnion("action", [
 export type GamePhase = "lobby" | "playing" | "finished" | "closed";
 export type GamePlayerStatus = "waiting" | "admitted" | "left" | "kicked";
 export type GameRoomView = {
+  snapPang?: SnapPangView | null;
   drawing?: DrawingView | null;
   clue?: ClueView | null;
   settings?: GameRoomSettings | null;

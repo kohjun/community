@@ -1,6 +1,7 @@
 import { creativeTutorial } from "./creative-tutorial";
 import type { WordMode } from "./word-liar";
 export type TutorialGame =
+  | "snap-pang"
   | "mbti-intro"
   | "word-liar"
   | "auction"
@@ -371,11 +372,75 @@ const temperature: GameTutorialCopy = {
     },
   ],
 };
+const snapPang: GameTutorialCopy = {
+  title: "스냅 팡 3D",
+  summary: "테이블 모임에서 카메라로 색깔·사물·3D 아바타 표정을 겨루는 3D 물리 파티 게임이에요.",
+  goal: "라운드마다 높은 정확도와 빠른 반응, 포커페이스로 점수를 모아 최종 3D 시상대에 오르세요.",
+  facts: ["참가자 2~12명", "영상 서버 전송 없음", "얼굴 비노출 모드 지원"],
+  player: [
+    {
+      title: "카메라가 없어도 참여할 수 있어요",
+      body: "컬러 스나이퍼와 테이블 헌터는 후면 카메라를, 3D 포커페이스는 전면 카메라를 쓰지만 원본 얼굴 대신 3D 아바타가 가려줘요. 카메라 권한이 없어도 대체 모드로 끝까지 함께해요.",
+      action: "닉네임 저장 → 준비 완료 → 카메라 허용 또는 대체 모드 선택",
+    },
+    {
+      title: "라운드 1 · 컬러 스나이퍼",
+      body: "3D 크리스탈이 제시하는 목표 색상과 가장 비슷한 색을 테이블 소품이나 친구 옷·가방에서 찾아 셔터를 눌러요. 실제 찍은 색의 3D 페인트 구슬이 무대에 발사돼 정확도 순으로 점수를 받아요.",
+      action: "조준경으로 색깔 맞추기 → 셔터 누르기 (1~3위 차등 득점)",
+    },
+    {
+      title: "라운드 2 · 테이블 헌터",
+      body: "컵, 병, 남의 휴대폰, 컵 2개 동시 포착 등 테이블 사물 미션을 카메라에 담아 0.6초 유지하면 3D 자석 빔으로 캡처해요. 빠르게 성공할수록 높은 점수를 얻어요.",
+      action: "미션 사물을 화면에 담기 → 0.6초 락온 완료",
+    },
+    {
+      title: "라운드 3 · 3D 포커페이스 & 웃참 폭탄",
+      body: "원본 카메라는 숨기고 3D 슬리퍼 풍선 아바타가 내 표정만 따라 해요. 웃음 참기 폭탄에서는 공격자가 오프라인에서 웃기고, 수비수는 웃으면 3D 폭탄이 터져요! 표정 카피는 제시된 표정 2개를 빠르게 따라 해요.",
+      action: "수비수: 무표정 버티기 / 공격자: 도발 카드로 웃기기",
+    },
+  ],
+  host: [
+    commonHost,
+    {
+      ...waitForReady,
+      body: "방 설정에서 모임 분위기에 맞게 ‘라이트(얼굴 미사용)’, ‘스탠다드 믹스(3D 아바타 가리기)’, ‘웃참 스페셜’을 고를 수 있어요.",
+    },
+    {
+      title: "자동 타이머와 일시정지·다음 단계",
+      body: "브리핑·플레이·결산 단계는 서버 타이머로 자동 전환돼요. 모임 대화가 길어지면 일시정지하거나 다음 단계 버튼으로 템포를 조절할 수 있어요.",
+      action: "게임 시작 → 필요 시 일시정지 / 다음 단계",
+    },
+  ],
+  finish: "모든 라운드 종료 → 3D 물리 시상대에서 최종 순위 확인",
+  tips: [
+    "카메라 영상은 내 기기 안에서만 분석하며 서버로 전송하거나 저장하지 않아요.",
+    "첫 만남 번개라면 ‘라이트 · 얼굴 비노출’ 프리셋을 고르면 후면 카메라 라운드만 나와 부담이 없어요.",
+    "웃음 참기 폭탄에서 다른 참가자 폭탄이 빨갛게 부풀어 오르면 집중 공격해보세요!",
+  ],
+  questions: [
+    {
+      question: "내 얼굴이나 방 안 영상이 서버에 저장되나요?",
+      answer:
+        "아니요. 모든 색상·사물·표정 인식은 내 스마트폰 브라우저 안에서만 처리되고 점수와 상태 숫자만 서버로 보내요.",
+    },
+    {
+      question: "카메라를 켤 수 없는 환경이면 못 하나요?",
+      answer:
+        "아니요. 카메라 권한을 거부하거나 기기가 지원하지 않아도 화면 안의 대체 미니게임(컬러 룰렛·빠른 매칭·균형 잡기)으로 함께 즐길 수 있어요.",
+    },
+    {
+      question: "어두운 술집이나 조명에서도 색깔 판정이 공정한가요?",
+      answer:
+        "단순 RGB가 아니라 사람 눈 기준 색 공간(CIE Lab)과 밝기 보정을 적용해 조명이 달라도 비슷한 색감을 공정하게 채점해요.",
+    },
+  ],
+};
 export function getGameTutorial(
   game: TutorialGame,
   mode?: WordMode,
   revealLiar?: boolean,
 ): GameTutorialCopy {
+  if (game === "snap-pang") return snapPang;
   if (game === "drawing" || game === "clue") return creativeTutorial(game);
   if (game === "temperature") return temperature;
   if (game === "toast") return toast;

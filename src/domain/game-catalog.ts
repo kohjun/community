@@ -1,7 +1,16 @@
 export type CatalogGameId =
-  "mbti-intro" | "auction" | "word-liar" | "lobby" | "toast" | "temperature" | "drawing" | "clue";
+  | "snap-pang"
+  | "mbti-intro"
+  | "auction"
+  | "word-liar"
+  | "lobby"
+  | "toast"
+  | "temperature"
+  | "drawing"
+  | "clue";
 export const GAME_GENRES = [
   "전체",
+  "카메라·3D 파티",
   "아이스브레이킹",
   "심리·추리",
   "경매·전략",
@@ -25,6 +34,23 @@ export type CatalogGame = {
 };
 // Public, static discovery metadata. Game rules and secret round data stay on the server.
 export const GAME_CATALOG: readonly CatalogGame[] = [
+  {
+    id: "snap-pang",
+    title: "스냅 팡 3D",
+    roomTitle: "스냅 팡 3D",
+    genre: "카메라·3D 파티",
+    eyebrow: "SNAP. POP. 3D.",
+    summary: "카메라로 찍고 3D로 터뜨려요! 색깔·사물·아바타 웃참 테이블 파티.",
+    hook: "얼굴 비노출 모드부터 3D 풍선 폭탄까지, 오프라인 모임 전용 3D 게임",
+    players: "2~12명 · 테이블 모임 추천",
+    format: "컬러·사물·3D 웃참 믹스",
+    tags: ["3D 물리", "카메라", "오프라인 파티"],
+    highlights: [
+      "컬러 스나이퍼: 테이블 소품·친구 옷에서 목표 색을 찾아 3D 구슬을 발사해요.",
+      "테이블 헌터: 컵·병·남의 휴대폰 등 사물을 0.6초 락온해 3D 캡처해요.",
+      "3D 포커페이스: 원본 얼굴 대신 3D 아바타가 표정을 따라 해요. 웃으면 팡!",
+    ],
+  },
   {
     id: "drawing",
     title: "낙서톡",

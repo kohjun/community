@@ -204,6 +204,11 @@
   color: var(--accent);
   flex-shrink: 0;
 }
+.cover[data-game="snap-pang"] {
+  --accent: #095eac;
+  --base: linear-gradient(135deg, #dff0ff 0%, #e9e4ff 100%);
+  --tile: #0a84fe;
+}
 .cover[data-game="auction"] {
   --accent: #a87326;
   --base: #fff0d8;

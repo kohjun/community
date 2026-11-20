@@ -1,4 +1,6 @@
 "use client";
+import { SnapPangSettingsFields } from "./snap-pang-settings-fields";
+import { SNAP_PANG_PRESET_META, snapPangSettingsFrom } from "@/domain/snap-pang";
 import { CreativeSettingsFields } from "./creative-settings-fields";
 import { DRAWING_MODES, CLUE_MODES } from "@/domain/creative-games";
 import { TemperatureSettingsFields } from "./temperature-settings-fields";
@@ -32,10 +34,13 @@ export function GameRoomSettingsPanel({
   const minimum =
     config.gameType === "drawing"
       ? DRAWING_MODES[activeConfig.drawingMode].minimum
-      : config.gameType === "clue" || config.gameType === "lobby"
+      : config.gameType === "clue" || config.gameType === "lobby" || config.gameType === "snap-pang"
         ? 2
         : 3;
-  const maximum = config.gameType === "drawing" || config.gameType === "clue" ? 12 : 30;
+  const maximum =
+    config.gameType === "drawing" || config.gameType === "clue" || config.gameType === "snap-pang"
+      ? 12
+      : 30;
   const stale = open && version !== room.settingsVersion;
   const patch = (next: Partial<GameRoomSettings>) =>
     setDraft((value) => (value ? { ...value, ...next } : value));
@@ -47,6 +52,13 @@ export function GameRoomSettingsPanel({
   const info = [
     `정원 ${config.capacity}명`,
     `최소 ${config.minPlayers}명`,
+    ...(config.gameType === "snap-pang"
+      ? [
+          SNAP_PANG_PRESET_META[config.snapPreset].title,
+          `${config.snapRounds}라운드`,
+          `${config.snapSeconds}초`,
+        ]
+      : []),
     ...(config.gameType === "drawing"
       ? [
           DRAWING_MODES[config.drawingMode].title,
@@ -221,6 +233,19 @@ export function GameRoomSettingsPanel({
               </select>
             </label>
           </div>
+          {config.gameType === "snap-pang" && (
+            <SnapPangSettingsFields
+              value={snapPangSettingsFrom(draft)}
+              disabled={busy}
+              onChange={(value) =>
+                patch({
+                  ...(value.preset !== undefined ? { snapPreset: value.preset } : {}),
+                  ...(value.rounds !== undefined ? { snapRounds: value.rounds } : {}),
+                  ...(value.seconds !== undefined ? { snapSeconds: value.seconds } : {}),
+                })
+              }
+            />
+          )}
           {(config.gameType === "drawing" || config.gameType === "clue") && (
             <CreativeSettingsFields
               kind={config.gameType}
