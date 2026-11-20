@@ -4,13 +4,13 @@ import { mobileSection, mobileNavigationHidden } from "../src/domain/mobile-navi
 test("mobile navigation follows real routes and home query state", () => {
   const q = (s = "") => new URLSearchParams(s);
   assert.equal(mobileSection("/", q()), "home");
-  assert.equal(mobileSection("/", q("kind=모집")), "meetups");
-  assert.equal(mobileSection("/", q("kind=모집&meetupType=event")), "meetups");
-  assert.equal(mobileSection("/lightning", q()), "explore");
-  assert.equal(mobileSection("/", q("view=bookmarks")), "my");
-  assert.equal(mobileSection("/", q("category=party")), "explore");
-  for (const path of ["/events/abc", "/events/abc/reunion", "/map"])
-    assert.equal(mobileSection(path, q()), "meetups");
+  assert.equal(mobileSection("/", q("kind=모집")), null);
+  assert.equal(mobileSection("/", q("kind=모집&meetupType=event")), null);
+  assert.equal(mobileSection("/", q("kind=모집&meetupType=lightning")), null);
+  assert.equal(mobileSection("/", q("view=bookmarks&kind=모집")), "my");
+  assert.equal(mobileSection("/", q("category=party")), null);
+  for (const path of ["/events/abc", "/events/abc/reunion", "/map", "/lightning", "/archive"])
+    assert.equal(mobileSection(path, q()), null);
   for (const path of [
     "/management",
     "/participation",
@@ -20,7 +20,6 @@ test("mobile navigation follows real routes and home query state", () => {
   ])
     assert.equal(mobileSection(path, q()), "my");
   assert.equal(mobileSection("/notifications", q()), "notifications");
-  assert.equal(mobileSection("/archive", q()), "explore");
 });
 test("authentication, checkout and editing screens stay focused without the mobile navigation", () => {
   for (const path of [

@@ -1625,7 +1625,7 @@ body {
   color: var(--sl-ink-3);
 }
 
-/* Mobile shell (bottom tabs, compose, explore sheet) ----------------------------------------- */
+/* Mobile shell (bottom tabs, compose) ----------------------------------------- */
 @media (max-width: 720px) {
   .mobile-app-nav {
     border-top-color: var(--sl-line);
@@ -1633,19 +1633,16 @@ body {
     box-shadow: none;
   }
   .mobile-app-nav > a,
-  .mobile-app-nav > button,
   .mobile-app-nav .notification-mobile-trigger {
     color: var(--sl-ink-4);
   }
   .mobile-app-nav > a[aria-current="page"],
-  .mobile-app-nav > button[data-active="true"],
   .mobile-app-notifications[data-active="true"] .notification-mobile-trigger {
     background: none;
     color: var(--sl-signature);
     font-weight: 700;
   }
   .mobile-app-nav > a[aria-current="page"] svg,
-  .mobile-app-nav > button[data-active="true"] svg,
   .mobile-app-notifications[data-active="true"] .notification-mobile-trigger svg {
     stroke-width: 2.4;
   }
@@ -1653,68 +1650,6 @@ body {
     height: 46px;
     background: var(--sl-signature);
     box-shadow: 0 10px 24px -10px rgb(10 132 254 / 55%);
-  }
-  .sl-explore .mobile-explore-scroll {
-    padding-top: 2px;
-  }
-  .sl-explore__search {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    height: 48px;
-    margin-bottom: 20px;
-    padding: 0 16px;
-    border-radius: 14px;
-    background: var(--sl-paper);
-    color: var(--sl-ink-3);
-    font-size: 14.5px;
-    text-decoration: none;
-  }
-  .sl-explore__group {
-    margin-bottom: 20px;
-  }
-  .sl-explore__group h3 {
-    margin: 0 0 2px 4px;
-    color: var(--sl-ink-4);
-    font-size: 12.5px;
-    font-weight: 650;
-  }
-  .sl-explore__group a {
-    display: grid;
-    grid-template-columns: 22px minmax(0, 1fr) 16px;
-    align-items: center;
-    gap: 12px;
-    min-height: 50px;
-    padding: 0 6px;
-    border-bottom: 1px solid var(--sl-line-soft);
-    color: var(--sl-ink);
-    font-size: 15.5px;
-    font-weight: 600;
-    text-decoration: none;
-  }
-  .sl-explore__group a > svg:first-child {
-    color: var(--sl-ink-3);
-  }
-  .sl-explore__group a > svg:last-child {
-    color: var(--sl-ink-5);
-  }
-  .sl-explore__shortcuts {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-  .sl-explore__shortcuts a {
-    display: grid;
-    place-items: center;
-    min-height: 46px;
-    padding: 0 8px;
-    border-radius: 12px;
-    background: var(--sl-paper);
-    color: var(--sl-ink-2);
-    font-size: 13.5px;
-    font-weight: 600;
-    text-align: center;
-    text-decoration: none;
   }
 }
 
