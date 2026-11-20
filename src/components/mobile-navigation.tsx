@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Home, UserRound } from "lucide-react";
+import { CalendarDays, Home, UserRound } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
+import { EVENT_RECRUITMENTS_HREF, MEETUP_TYPE_LABELS } from "@/domain/meetup-types";
 import { mobileNavigationHidden, mobileSection } from "@/domain/mobile-navigation";
 
 export function MobileNavigation() {
@@ -16,6 +17,10 @@ export function MobileNavigation() {
       <Link href="/" aria-current={active === "home" ? "page" : undefined}>
         <Home aria-hidden="true" />
         <span>홈</span>
+      </Link>
+      <Link href={EVENT_RECRUITMENTS_HREF} aria-current={active === "meetups" ? "page" : undefined}>
+        <CalendarDays aria-hidden="true" />
+        <span>{MEETUP_TYPE_LABELS.event}</span>
       </Link>
       <div className="mobile-app-notifications" data-active={active === "notifications"}>
         <NotificationBell mobile />

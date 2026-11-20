@@ -1,4 +1,4 @@
-export type MobileSection = "home" | "notifications" | "my";
+export type MobileSection = "home" | "meetups" | "notifications" | "my";
 export function mobileNavigationHidden(path: string) {
   return (
     /^\/(?:login|signup|auth|checkout|admin)(?:\/|$)/.test(path) || /\/(?:edit|new)$/.test(path)
@@ -15,9 +15,11 @@ export function mobileSection(
     )
   )
     return "my";
+  if (/^\/(?:events|map)(?:\/|$)/.test(path)) return "meetups";
   if (path === "/") {
     if (["mine", "bookmarks"].includes(query.get("view") ?? "")) return "my";
-    if (query.get("kind") === "모집") return null;
+    if (query.get("kind") === "모집")
+      return query.get("meetupType") === "lightning" ? null : "meetups";
     if (!query.get("category") || query.get("category") === "all") {
       if (!query.get("view") || query.get("view") === "home") return "home";
     }
