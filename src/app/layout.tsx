@@ -53,6 +53,8 @@ import "./mobile-experience.css";
 import "./site-refresh.css";
 import { NotificationProvider } from "@/components/notification-bell";
 import { SessionProvider } from "@/components/session-provider";
+import { AnalyticsProvider } from "@/components/analytics-provider";
+import { getObservabilityClientConfig } from "@/server/observability-config";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -91,6 +93,7 @@ export function generateMetadata(): Metadata {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const advertising = getAdvertisingConfiguration();
+  const observability = getObservabilityClientConfig();
   return (
     <html lang="ko" className={pretendard.variable} data-scroll-behavior="smooth">
       <head>
@@ -99,6 +102,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <SiteOperationsProvider value={readSiteOperations(process.env)}>
           <SessionProvider>
+            <AnalyticsProvider config={observability} />
             <PushOnboardingProvider>
               <NotificationProvider>
                 <ActivityDayTracker />

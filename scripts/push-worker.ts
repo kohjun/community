@@ -5,8 +5,17 @@ import { pushConfiguration } from "../src/server/push-configuration";
 import { pushDispatcher } from "../src/server/push-dispatcher";
 import { startPushWorker } from "../src/server/push-worker-loop";
 import { engagementWorker } from "../src/server/engagement-worker";
+import { buildLogger, logSafeError } from "../src/server/logger";
+import {
+  captureServerException,
+  flushServerSentry,
+  initServerSentry,
+} from "../src/server/sentry-init";
 
 loadEnvironment({ path: [".env.local", ".env"], quiet: true });
+const logger = buildLogger({ service: "sliper-notification-worker" });
+initServerSentry("sliper-notification-worker");
+
 const config = pushConfiguration();
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
 const connection = createDatabase(process.env.DATABASE_URL, 2);
@@ -15,19 +24,25 @@ if (process.argv.includes("--once")) {
     const inbox = await engagementWorker(connection.db).drain();
     const push = config ? await pushDispatcher(connection.db, config).drain() : { processed: 0 };
     console.log(JSON.stringify({ ...inbox, ...push, pushConfigured: !!config }));
+  } catch (error) {
+    logSafeError(logger, "Notification drain failed", error, { mode: "once" });
+    captureServerException(error, { service: "sliper-notification-worker", mode: "once" });
+    throw error;
   } finally {
+    await flushServerSentry();
     await connection.close();
   }
 } else {
   const heartbeat = await workerHeartbeat("notification");
   const worker = startPushWorker(connection.db, config, { onProgress: heartbeat.success });
-  console.log("Sliper notification worker ready.");
+  logger.info({ pushConfigured: !!config }, "Sliper notification worker ready.");
   let stopping = false;
   async function stop() {
     if (stopping) return;
     stopping = true;
     await worker.stop();
     await heartbeat.stop();
+    await flushServerSentry();
     await connection.close();
   }
   process.once("SIGINT", () => {

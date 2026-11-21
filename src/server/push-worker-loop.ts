@@ -5,6 +5,10 @@ import type { Database } from "../db/connection";
 import { pushDispatcher } from "./push-dispatcher";
 import { engagementWorker } from "./engagement-worker";
 import type { PushConfiguration } from "./push-configuration";
+import { createLogger, logSafeError } from "./logger";
+import { captureServerException } from "./sentry-init";
+
+const workerLogger = createLogger("notification-worker");
 
 export function startPushWorker(
   db: Database,
@@ -35,9 +39,14 @@ export function startPushWorker(
           if (!stopped) await options.onProgress?.();
         }
       })()
-        .catch(() => {
+        .catch((error) => {
           // No credentials, endpoints, message bodies or private member IDs in logs.
-          console.error("Sliper notification worker: batch could not be processed.");
+          logSafeError(
+            workerLogger,
+            "Sliper notification worker: batch could not be processed.",
+            error,
+          );
+          captureServerException(error, { service: "sliper-notification-worker" });
         })
         .finally(() => schedule());
     }, delay);

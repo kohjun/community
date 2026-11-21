@@ -2,7 +2,11 @@ import "server-only";
 import { ZodError } from "zod";
 import { AppError } from "./errors";
 import { localTestAccountEnabled } from "./local-test-auth";
+import { createLogger, logSafeError } from "./logger";
 import { isAllowedRequestOrigin } from "./request-origin";
+import { captureServerException } from "./sentry-init";
+
+const apiLogger = createLogger("api");
 
 export function assertSameOrigin(request: Request) {
   const expected = new URL(process.env.APP_ORIGIN || "http://127.0.0.1:3000").origin;
@@ -58,11 +62,10 @@ export async function apiResponse<T>(work: () => Promise<T>): Promise<Response> 
         : error instanceof AppError
           ? error
           : new AppError("INTERNAL", "저장하지 못했어요. 잠시 후 다시 시도해주세요.");
-    if (value.code === "INTERNAL")
-      console.error(
-        "Sliper request failed:",
-        error instanceof Error ? error.name : "Unknown error",
-      );
+    if (value.code === "INTERNAL") {
+      logSafeError(apiLogger, "Sliper request failed", error, { source: "apiResponse" });
+      captureServerException(error, { source: "apiResponse" });
+    }
     const status = {
       VALIDATION: 400,
       UNAUTHENTICATED: 401,

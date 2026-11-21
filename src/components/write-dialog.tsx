@@ -1,6 +1,7 @@
 "use client";
 import { DISCUSSION_TYPES, DISCUSSION_LABELS, type DiscussionType } from "@/domain/discussions";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { trackEvent } from "@/lib/analytics-client";
 import Link from "next/link";
 import { Pencil, X, Plus, Check, MapPin, Link2 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -230,7 +231,15 @@ export function WriteDialog({
     setPending(true);
     setError("");
     try {
-      if (!(await onPublish(parsed.data))) setError("저장하지 못했어요. 입력한 내용은 유지됩니다.");
+      const saved = await onPublish(parsed.data);
+      if (!saved) setError("저장하지 못했어요. 입력한 내용은 유지됩니다.");
+      else {
+        trackEvent("post_published", {
+          kind: parsed.data.kind,
+          category: parsed.data.categorySlug,
+          isEdit: Boolean(post),
+        });
+      }
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "저장하지 못했어요. 입력한 내용은 유지됩니다.",

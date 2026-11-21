@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useSession } from "./session-provider";
 import { appRequest } from "@/lib/api-client";
+import { trackEvent } from "@/lib/analytics-client";
 import {
   WORD_CATEGORIES,
   WORD_MODE_LABELS,
@@ -81,6 +82,7 @@ export function GameRoomCreate() {
   }
   function chooseGame(id: CatalogGameId) {
     const next = GAME_CATALOG.find((game) => game.id === id)!;
+    trackEvent("web_game_selected", { gameType: id });
     setGameType(id);
     if (id === "drawing" || id === "clue" || id === "snap-pang") {
       const min = id === "drawing" ? DRAWING_MODES[creative.drawingMode].minimum : 2;
@@ -180,6 +182,7 @@ export function GameRoomCreate() {
         capacity,
         minPlayers,
       });
+      trackEvent("web_game_room_created", { gameType, fromTown });
       router.push(`/games/${room.id}?host=1${fromTown ? "&from=town" : ""}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "방을 만들지 못했어요.");

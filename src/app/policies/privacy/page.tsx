@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ParticipationShell } from "@/components/participation-shell";
 import { OperatorContact } from "@/components/operator-contact";
+import { readObservabilityConfig } from "@/domain/observability";
 import { readSiteOperations } from "@/domain/site-operations";
 import { publicPageMetadata } from "@/domain/search-visibility";
 export const dynamic = "force-dynamic";
@@ -59,6 +60,9 @@ const rows = [
 ];
 export default function Page() {
   const config = readSiteOperations(process.env);
+  const observability = readObservabilityConfig(process.env);
+  const sentryEnabled = Boolean(observability.sentryDsn || observability.sentryServerDsn);
+  const posthogEnabled = Boolean(observability.posthogKey);
   return (
     <ParticipationShell advertising={false}>
       <article className="safety-page policy-content">
@@ -127,6 +131,18 @@ export default function Page() {
               공개 프로필에 표시하지 않습니다.
             </li>
             <li>이메일 서비스: 이용자가 이메일 문의를 보낼 때 해당 메일 서비스에서 처리합니다.</li>
+            {sentryEnabled && (
+              <li>
+                Sentry: 서비스 오류 원인과 성능 지연 진단(이메일·연락처·글 본문·쿠키는 제외하고 최소
+                기술 정보만 전송합니다).
+              </li>
+            )}
+            {posthogEnabled && (
+              <li>
+                PostHog: 익명 화면 이동과 핵심 기능 이용 흐름 분석(쿠키·화면 녹화·개인 식별 정보를
+                사용하지 않습니다).
+              </li>
+            )}
           </ul>
           <p>
             외부 제공업체의 하위 처리·지원 범위와 국외 처리의 구체적인 항목·국가·시점·보관 조건은

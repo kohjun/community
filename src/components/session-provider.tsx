@@ -20,6 +20,7 @@ export interface SessionView {
   mode?: string;
   role?: string | null;
   restricted?: boolean;
+  analyticsExcluded?: boolean;
 }
 interface SessionState {
   session: SessionView | null;

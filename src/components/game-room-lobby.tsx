@@ -24,6 +24,7 @@ import {
 import type { GameRoomView } from "@/domain/game-room";
 import { appRequest, RequestError } from "@/lib/api-client";
 import { connectGameRoom } from "@/lib/game-room-client";
+import { trackEvent } from "@/lib/analytics-client";
 import styles from "./game-room.module.css";
 import { GameTutorial } from "./game-tutorial";
 import { GameRoomQr } from "./game-room-qr";
@@ -126,6 +127,10 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
         const view = await connectGameRoom(roomId, host);
         if (!alive) return;
         apply(view);
+        trackEvent("web_game_room_joined", {
+          gameType: view.gameType ?? "lobby",
+          isHost: view.isHost,
+        });
         setError("");
         if (view.phase === "closed" || ["left", "kicked"].includes(view.viewer.status)) return;
         source = new EventSource(`${base}/stream${suffix}`);
@@ -744,7 +749,11 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
               <button
                 className={styles.primary}
                 disabled={busy || !room.canStart}
-                onClick={() => void act({ action: "start", revision: room.revision }, true)}
+                onClick={() => {
+                  void act({ action: "start", revision: room.revision }, true).then((ok) => {
+                    if (ok) trackEvent("web_game_started", { gameType: room.gameType ?? "lobby" });
+                  });
+                }}
               >
                 <Play size={18} />
                 게임 시작

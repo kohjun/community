@@ -24,9 +24,17 @@ services:
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?Set the public Supabase URL}
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?Set the public Supabase key}
         NEXT_PUBLIC_NAVER_MAP_KEY_ID: ${NEXT_PUBLIC_NAVER_MAP_KEY_ID:-}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+        SLIPER_POSTHOG_HOST: ${SLIPER_POSTHOG_HOST:-https://us.i.posthog.com}
     ports: ["${SLIPER_BIND_ADDRESS:-127.0.0.1}:${SLIPER_BIND_PORT:-3000}:3000"]
     healthcheck:
-      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 10s
       start_period: 60s

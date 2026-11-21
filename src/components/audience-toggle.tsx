@@ -1,5 +1,6 @@
 "use client";
 import { useAudience, type Audience } from "@/lib/audience";
+import { trackEvent } from "@/lib/analytics-client";
 
 const options: { value: Audience; label: string }[] = [
   { value: "participant", label: "참가자" },
@@ -16,7 +17,12 @@ export function AudienceToggle() {
           key={option.value}
           type="button"
           aria-pressed={audience === option.value}
-          onClick={() => setAudience(option.value)}
+          onClick={() => {
+            if (audience !== option.value) {
+              trackEvent("audience_mode_switch", { audience: option.value });
+            }
+            setAudience(option.value);
+          }}
         >
           {option.label}
         </button>

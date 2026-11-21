@@ -93,7 +93,7 @@ function StoriesSection({
   return (
     <Section
       id="sl-section-stories"
-      title="지금 인기 이야기"
+      title="지금 인기 있는 이야기"
       description="반응이 모인 모임 후기와 예능 이야기를 한눈에 살펴보세요."
       tinted={tinted}
       action={<MoreLink href="/stories?sort=popular">이야기 전체 보기</MoreLink>}
@@ -168,7 +168,7 @@ function RecruitSection({
       title={isEvent ? "예능 한 판, 주인공은 우리" : "슬쩍 나올 사람?"}
       description={
         isEvent
-          ? "이벤트·행사 · 미션 레이스, 추리 게임, 테마 파티에 참여해요."
+          ? "미션 레이스, 추리 게임, 예능 파티 등 예정된 행사를 살펴보세요."
           : "번개·모임 · 시간과 취향이 맞는 사람들과 가볍게 만나요."
       }
       tinted={tinted}
@@ -209,7 +209,7 @@ function GamesSection({ audience, tinted = false }: { audience: Audience; tinted
   return (
     <Section
       id="sl-section-games"
-      title={audience === "host" ? "모임에 바로 쓰는 웹게임" : "친구와 즐기는 웹게임"}
+      title={audience === "host" ? "모임에 바로 쓰는 웹게임" : "웹게임"}
       description="링크 하나로 모이고, 설치나 가입 없이 휴대폰으로 바로 함께해요."
       tinted={tinted}
       action={<MoreLink href="/games">웹게임 전체 보기</MoreLink>}

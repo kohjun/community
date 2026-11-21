@@ -3613,27 +3613,59 @@ body {
     border: 0;
   }
 
-  /* Mobile hero */
+  /* Compact mobile hero banner matching the previous snappy proportions */
   .sl-page--home .sl-hero {
-    padding: 14px var(--sl-gutter) 18px;
+    padding: 12px var(--sl-gutter) 16px;
   }
   .sl-hero__stage .sl-carousel {
-    border-radius: 20px;
+    border-radius: 18px;
   }
   .sl-hero__stage .sl-carousel__slide > a {
     grid-template-columns: minmax(0, 1fr);
     min-block-size: 0;
   }
+  .sl-hero__stage .sl-carousel__art {
+    block-size: clamp(7.25rem, 34vw, 11rem);
+  }
   .sl-hero__stage .sl-carousel__copy {
-    padding: 1rem 1.125rem 3.25rem;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem 3rem;
+  }
+  .sl-carousel__eyebrow {
+    display: none;
+  }
+  .sl-hero__stage .sl-carousel__title {
+    font-size: 1.25rem;
+    line-height: 1.22;
+  }
+  .sl-hero__stage .sl-carousel__description {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .sl-hero__stage .sl-carousel__action {
+    margin-block-start: 0.25rem;
+    padding: 6px 12px;
+    font-size: 0.8125rem;
   }
   .sl-carousel__arrow {
     display: none;
   }
   .sl-carousel__hud {
-    left: 1.125rem;
-    right: 14px;
-    bottom: 12px;
+    left: 1rem;
+    right: 12px;
+    bottom: 11px;
+    justify-content: space-between;
+  }
+  .sl-carousel__pill {
+    height: 26px;
+    padding: 0 8px 0 10px;
+  }
+  .sl-carousel__pill .sl-carousel__count {
+    font-size: 11px;
   }
   .sl-hero-quick {
     gap: 6px;

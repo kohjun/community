@@ -6,16 +6,24 @@ import {
   ClipboardList,
   Gamepad2,
   Handshake,
-  MapPin,
+  MessageCircle,
   PlusCircle,
   Zap,
 } from "lucide-react";
 import type { Audience } from "@/lib/audience";
+import { trackEvent } from "@/lib/analytics-client";
 import { EVENT_RECRUITMENTS_HREF } from "@/domain/meetup-types";
 import { HOSTED_EVENTS_HREF } from "@/domain/workspace-navigation";
 import { HeroCarousel } from "./hero-carousel";
 
 const PARTICIPANT_QUICK = [
+  {
+    href: "/stories",
+    title: "이야기·질문",
+    subtitle: "모임 후기·노하우·질문 나누기",
+    icon: MessageCircle,
+    tone: "teal",
+  },
   {
     href: EVENT_RECRUITMENTS_HREF,
     title: "이벤트·행사 찾기",
@@ -32,17 +40,10 @@ const PARTICIPANT_QUICK = [
   },
   {
     href: "/games",
-    title: "웹게임 · 스냅 팡 3D",
+    title: "웹게임",
     subtitle: "설치 없이 QR로 바로 한 판",
     icon: Gamepad2,
     tone: "violet",
-  },
-  {
-    href: "/map",
-    title: "내 주변 이벤트 맵",
-    subtitle: "지도로 보는 모임·추천 장소",
-    icon: MapPin,
-    tone: "teal",
   },
 ] as const;
 
@@ -86,7 +87,13 @@ export function HomeHero({ audience, onHost }: { audience: Audience; onHost: () 
               <button
                 type="button"
                 className="sl-hero-quick__item sl-hero-quick__item--primary"
-                onClick={onHost}
+                onClick={() => {
+                  trackEvent("home_quick_link_click", {
+                    destination: "host-compose",
+                    audience: "host",
+                  });
+                  onHost();
+                }}
               >
                 <span className="sl-hero-quick__icon" data-tone="primary" aria-hidden="true">
                   <PlusCircle size={20} />
@@ -97,7 +104,15 @@ export function HomeHero({ audience, onHost }: { audience: Audience; onHost: () 
                 </span>
               </button>
               {HOST_QUICK.map(({ href, title, subtitle, icon: Icon, tone }) => (
-                <Link key={href} href={href} className="sl-hero-quick__item" prefetch={false}>
+                <Link
+                  key={href}
+                  href={href}
+                  className="sl-hero-quick__item"
+                  prefetch={false}
+                  onClick={() =>
+                    trackEvent("home_quick_link_click", { destination: href, audience: "host" })
+                  }
+                >
                   <span className="sl-hero-quick__icon" data-tone={tone} aria-hidden="true">
                     <Icon size={19} />
                   </span>
@@ -110,7 +125,18 @@ export function HomeHero({ audience, onHost }: { audience: Audience; onHost: () 
             </>
           ) : (
             PARTICIPANT_QUICK.map(({ href, title, subtitle, icon: Icon, tone }) => (
-              <Link key={href} href={href} className="sl-hero-quick__item" prefetch={false}>
+              <Link
+                key={href}
+                href={href}
+                className="sl-hero-quick__item"
+                prefetch={false}
+                onClick={() =>
+                  trackEvent("home_quick_link_click", {
+                    destination: href,
+                    audience: "participant",
+                  })
+                }
+              >
                 <span className="sl-hero-quick__icon" data-tone={tone} aria-hidden="true">
                   <Icon size={19} />
                 </span>

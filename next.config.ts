@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import { WORKSPACE_REDIRECTS } from "./src/domain/workspace-navigation";
 
 const nextConfig: NextConfig = {
@@ -6,6 +7,7 @@ const nextConfig: NextConfig = {
   experimental: {
     agentUpgrade: "security",
   },
+  serverExternalPackages: ["pino"],
   // FFmpeg is loaded only by the dedicated video worker, never by web routes.
   // Credentials and mutable development data must never travel in server bundles.
   outputFileTracingExcludes: {
@@ -57,4 +59,15 @@ const nextConfig: NextConfig = {
   ],
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  silent: !process.env.CI,
+  telemetry: false,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeReplayIframe: true,
+    excludeReplayShadowDom: true,
+  },
+});
