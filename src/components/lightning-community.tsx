@@ -406,18 +406,12 @@ export function LightningCommunity({
           {loadError}
         </p>
       )}
-      {!loading && !category && !tag && !search && (
-        <ExampleGallery kind="lightning" singleMobileRow />
-      )}
-      <div className="lightning-grid" aria-busy={loading}>
+      {!loading && !category && !tag && !search && <ExampleGallery kind="lightning" mobileSwipe />}
+      <div className="lightning-grid" aria-busy={loading} data-meetup-swipe>
         {feed.posts.map((post) => {
           const sample = isJanuaryRecruitmentSample(post);
           return (
-            <article
-              className="lightning-card"
-              key={post.id}
-              data-recruitment-sample={sample || undefined}
-            >
+            <article className="lightning-card" key={post.id}>
               <Link
                 className="lightning-card-main"
                 href={sample ? `/posts/${post.id}` : `/events/${post.id}`}

@@ -89,10 +89,7 @@ export function CommunityRecruitmentCard({
   };
 
   return (
-    <article
-      className={cn("recruitment-card", cancelled && "recruitment-card-cancelled")}
-      data-recruitment-sample={sample || undefined}
-    >
+    <article className={cn("recruitment-card", cancelled && "recruitment-card-cancelled")}>
       <a className="recruitment-card-open" href={href} onClick={open} aria-labelledby={titleId}>
         {showImage && (
           <div className="recruitment-card-cover" aria-hidden="true">

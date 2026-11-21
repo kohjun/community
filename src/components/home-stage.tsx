@@ -103,9 +103,8 @@ export function RecruitTrack({
   canWrite: boolean;
 }) {
   const readPosts = useReadPosts();
-  const sampleTrack = posts.length > 0 && posts.every(isJanuaryRecruitmentSample);
   return (
-    <div className="sl-recruits__track" data-sample-track={sampleTrack || undefined}>
+    <div className="sl-recruits__track" data-meetup-swipe>
       {posts.map((post) => {
         const status = recruitStatus(post);
         const isLightning = post.meetupType === "lightning";

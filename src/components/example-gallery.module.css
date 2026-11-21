@@ -111,10 +111,6 @@
     gap: 8px;
   }
 
-  .grid[data-single-mobile-row] > .card:nth-child(n + 3) {
-    display: none;
-  }
-
   .copy {
     padding: 10px;
   }

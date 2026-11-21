@@ -851,12 +851,13 @@ export function SliperCommunity({
                 !discoveryActive &&
                 !store.loading &&
                 !store.feedError &&
-                (store.pagination?.page ?? 1) === 1 && (
-                  <ExampleGallery kind="event" singleMobileRow />
-                )}
+                (store.pagination?.page ?? 1) === 1 && <ExampleGallery kind="event" mobileSwipe />}
               {filtered.length ? (
                 recruitmentCards ? (
-                  <div className="recruitment-card-grid">
+                  <div
+                    className="recruitment-card-grid"
+                    data-meetup-swipe={showRecruitmentImages || undefined}
+                  >
                     {filtered.map((post, index) => (
                       <Fragment key={post.id}>
                         <CommunityRecruitmentCard
