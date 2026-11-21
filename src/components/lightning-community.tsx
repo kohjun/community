@@ -410,7 +410,7 @@ export function LightningCommunity({
         !tag &&
         !search &&
         !feed.posts.some((post) => !post.sample && post.eventAvailable) && (
-          <ExampleGallery kind="lightning" />
+          <ExampleGallery kind="lightning" singleMobileRow />
         )}
       <div className="lightning-grid" aria-busy={loading}>
         {feed.posts.map((post) => (

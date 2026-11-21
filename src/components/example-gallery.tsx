@@ -2,13 +2,19 @@ import Link from "next/link";
 import { EXAMPLES, EXAMPLE_LABELS, exampleImage, type ExampleKind } from "@/demo/showcase";
 import styles from "./example-gallery.module.css";
 
-export function ExampleGallery({ kind }: { kind: ExampleKind }) {
+export function ExampleGallery({
+  kind,
+  singleMobileRow = false,
+}: {
+  kind: ExampleKind;
+  singleMobileRow?: boolean;
+}) {
   const title = `${EXAMPLE_LABELS[kind]} 예시`;
   const avatar = kind === "player";
   return (
     <section className={styles.examples} aria-label={title}>
       <h3>{title}</h3>
-      <div className={styles.grid}>
+      <div className={styles.grid} data-single-mobile-row={singleMobileRow || undefined}>
         {EXAMPLES[kind].map((example) => (
           <Link
             className={styles.card}

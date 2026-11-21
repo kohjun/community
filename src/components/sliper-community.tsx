@@ -853,7 +853,7 @@ export function SliperCommunity({
                 !store.feedError &&
                 (store.pagination?.page ?? 1) === 1 &&
                 !filtered.some((post) => !post.sample && post.eventAvailable) && (
-                  <ExampleGallery kind="event" />
+                  <ExampleGallery kind="event" singleMobileRow />
                 )}
               {filtered.length ? (
                 recruitmentCards ? (
