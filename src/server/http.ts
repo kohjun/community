@@ -4,7 +4,6 @@ import { AppError } from "./errors";
 import { localTestAccountEnabled } from "./local-test-auth";
 import { createLogger, logSafeError } from "./logger";
 import { isAllowedRequestOrigin } from "./request-origin";
-import { captureServerException } from "./sentry-init";
 
 const apiLogger = createLogger("api");
 
@@ -64,7 +63,6 @@ export async function apiResponse<T>(work: () => Promise<T>): Promise<Response> 
           : new AppError("INTERNAL", "저장하지 못했어요. 잠시 후 다시 시도해주세요.");
     if (value.code === "INTERNAL") {
       logSafeError(apiLogger, "Sliper request failed", error, { source: "apiResponse" });
-      captureServerException(error, { source: "apiResponse" });
     }
     const status = {
       VALIDATION: 400,

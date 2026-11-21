@@ -6,15 +6,9 @@ import { pushDispatcher } from "../src/server/push-dispatcher";
 import { startPushWorker } from "../src/server/push-worker-loop";
 import { engagementWorker } from "../src/server/engagement-worker";
 import { buildLogger, logSafeError } from "../src/server/logger";
-import {
-  captureServerException,
-  flushServerSentry,
-  initServerSentry,
-} from "../src/server/sentry-init";
 
 loadEnvironment({ path: [".env.local", ".env"], quiet: true });
 const logger = buildLogger({ service: "sliper-notification-worker" });
-initServerSentry("sliper-notification-worker");
 
 const config = pushConfiguration();
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
@@ -26,10 +20,8 @@ if (process.argv.includes("--once")) {
     console.log(JSON.stringify({ ...inbox, ...push, pushConfigured: !!config }));
   } catch (error) {
     logSafeError(logger, "Notification drain failed", error, { mode: "once" });
-    captureServerException(error, { service: "sliper-notification-worker", mode: "once" });
     throw error;
   } finally {
-    await flushServerSentry();
     await connection.close();
   }
 } else {
@@ -42,7 +34,6 @@ if (process.argv.includes("--once")) {
     stopping = true;
     await worker.stop();
     await heartbeat.stop();
-    await flushServerSentry();
     await connection.close();
   }
   process.once("SIGINT", () => {

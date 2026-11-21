@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { EVENT_RECRUITMENTS_HREF, MEETUP_TYPE_LABELS } from "@/domain/meetup-types";
 import { shouldAdvanceCarousel } from "@/lib/carousel";
-import { trackEvent } from "@/lib/analytics-client";
 import { cn } from "@/lib/utils";
 
 const SLIDE_MS = 6000;
@@ -125,15 +124,7 @@ export function HeroCarousel() {
                 aria-label={`${count}개 중 ${i + 1}번째, ${poster.title}`}
                 inert={i !== current}
               >
-                <Link
-                  href={poster.href}
-                  data-poster={poster.id}
-                  draggable={false}
-                  prefetch={false}
-                  onClick={() =>
-                    trackEvent("home_banner_click", { posterId: poster.id, slideIndex: i })
-                  }
-                >
+                <Link href={poster.href} data-poster={poster.id} draggable={false} prefetch={false}>
                   <span className="sl-carousel__copy">
                     <span className="sl-carousel__eyebrow">{poster.eyebrow}</span>
                     <strong className="sl-carousel__title">{poster.title}</strong>

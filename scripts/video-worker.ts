@@ -9,15 +9,9 @@ import { videoProcessingStorage } from "../src/server/video-source-storage";
 import { videoWorker } from "../src/server/video-processing-service";
 import { compressVideo } from "../src/server/video-transcoding-core";
 import { buildLogger, logSafeError } from "../src/server/logger";
-import {
-  captureServerException,
-  flushServerSentry,
-  initServerSentry,
-} from "../src/server/sentry-init";
 
 config({ path: [".env.local", ".env"], quiet: true });
 const logger = buildLogger({ service: "sliper-video-worker" });
-initServerSentry("sliper-video-worker");
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
 const backend = imageStorageConfiguration().backend;
@@ -54,13 +48,11 @@ try {
           "Sliper video worker: processing requires retry or lease recovery.",
           error,
         );
-        captureServerException(error, { service: "sliper-video-worker" });
       }
       await delay(2000, undefined, { signal: controller.signal }).catch(() => undefined);
     }
   }
 } finally {
   await heartbeat?.stop();
-  await flushServerSentry();
   await connection.close();
 }

@@ -21,7 +21,6 @@ import {
   VolumeX,
 } from "lucide-react";
 import type { GameRoomView } from "@/domain/game-room";
-import { trackEvent } from "@/lib/analytics-client";
 import {
   SNAP_COLOR_BANK,
   SNAP_EXPRESSION_LABELS,
@@ -201,19 +200,6 @@ export function SnapPangStage({
   useEffect(() => {
     if (game.stage === "result") snapSfx.play("fanfare");
   }, [game.stage]);
-
-  // Track completed Snap Pang round once per (runId, round)
-  const trackedRoundRef = useRef<string>("");
-  useEffect(() => {
-    if (game.stage !== "reveal" && game.stage !== "result") return;
-    const key = `${game.runId ?? "none"}:${game.round}`;
-    if (trackedRoundRef.current === key) return;
-    trackedRoundRef.current = key;
-    trackEvent("snap_pang_round_completed", {
-      roundKind: mission?.kind ?? "unknown",
-      mode: game.settings.preset,
-    });
-  }, [game.runId, game.round, game.stage, game.settings.preset, mission?.kind]);
 
   // Countdown tick + auto-refresh when server timer expires
   useEffect(() => {

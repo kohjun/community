@@ -6,7 +6,6 @@ import { pushDispatcher } from "./push-dispatcher";
 import { engagementWorker } from "./engagement-worker";
 import type { PushConfiguration } from "./push-configuration";
 import { createLogger, logSafeError } from "./logger";
-import { captureServerException } from "./sentry-init";
 
 const workerLogger = createLogger("notification-worker");
 
@@ -46,7 +45,6 @@ export function startPushWorker(
             "Sliper notification worker: batch could not be processed.",
             error,
           );
-          captureServerException(error, { service: "sliper-notification-worker" });
         })
         .finally(() => schedule());
     }, delay);

@@ -26,7 +26,6 @@ import { STATUS_LABELS, applicationSchema } from "@/domain/participation";
 import { formatKoreanDateTime } from "@/domain/refund";
 import { participationRequest as request } from "@/lib/participation-client";
 import { RequestError } from "@/lib/api-client";
-import { trackEvent } from "@/lib/analytics-client";
 import { EventPrivateContact } from "./event-private-contact";
 import { AdmissionTicket } from "./admission-ticket";
 import { RecordBacklink } from "./record-discovery";
@@ -152,10 +151,6 @@ export function EventApplication({
         setEvent(
           await request<EventOverview>(`/events/${event.postId}/applications`, "POST", parsed.data),
         );
-        trackEvent("event_apply_submitted", {
-          meetupType: lightning ? "lightning" : "event",
-          paid,
-        });
       } catch (cause) {
         if (cause instanceof RequestError && cause.code === "CONFLICT") {
           const latest = await request<EventOverview>(`/events/${event.postId}`).catch(() => null);

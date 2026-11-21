@@ -11,7 +11,6 @@ import {
   Zap,
 } from "lucide-react";
 import type { Audience } from "@/lib/audience";
-import { trackEvent } from "@/lib/analytics-client";
 import { EVENT_RECRUITMENTS_HREF } from "@/domain/meetup-types";
 import { HOSTED_EVENTS_HREF } from "@/domain/workspace-navigation";
 import { HeroCarousel } from "./hero-carousel";
@@ -87,13 +86,7 @@ export function HomeHero({ audience, onHost }: { audience: Audience; onHost: () 
               <button
                 type="button"
                 className="sl-hero-quick__item sl-hero-quick__item--primary"
-                onClick={() => {
-                  trackEvent("home_quick_link_click", {
-                    destination: "host-compose",
-                    audience: "host",
-                  });
-                  onHost();
-                }}
+                onClick={onHost}
               >
                 <span className="sl-hero-quick__icon" data-tone="primary" aria-hidden="true">
                   <PlusCircle size={20} />
@@ -104,15 +97,7 @@ export function HomeHero({ audience, onHost }: { audience: Audience; onHost: () 
                 </span>
               </button>
               {HOST_QUICK.map(({ href, title, subtitle, icon: Icon, tone }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="sl-hero-quick__item"
-                  prefetch={false}
-                  onClick={() =>
-                    trackEvent("home_quick_link_click", { destination: href, audience: "host" })
-                  }
-                >
+                <Link key={href} href={href} className="sl-hero-quick__item" prefetch={false}>
                   <span className="sl-hero-quick__icon" data-tone={tone} aria-hidden="true">
                     <Icon size={19} />
                   </span>
@@ -125,18 +110,7 @@ export function HomeHero({ audience, onHost }: { audience: Audience; onHost: () 
             </>
           ) : (
             PARTICIPANT_QUICK.map(({ href, title, subtitle, icon: Icon, tone }) => (
-              <Link
-                key={href}
-                href={href}
-                className="sl-hero-quick__item"
-                prefetch={false}
-                onClick={() =>
-                  trackEvent("home_quick_link_click", {
-                    destination: href,
-                    audience: "participant",
-                  })
-                }
-              >
+              <Link key={href} href={href} className="sl-hero-quick__item" prefetch={false}>
                 <span className="sl-hero-quick__icon" data-tone={tone} aria-hidden="true">
                   <Icon size={19} />
                 </span>

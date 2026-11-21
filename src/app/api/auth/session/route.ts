@@ -14,10 +14,7 @@ export async function GET() {
     const [profileRows, role] = await Promise.all([
       raw
         ? getDatabase()
-            .select({
-              nickname: profiles.nickname,
-              analyticsExcluded: profiles.analyticsExcluded,
-            })
+            .select({ nickname: profiles.nickname })
             .from(profiles)
             .where(eq(profiles.id, raw))
         : [],
@@ -31,7 +28,6 @@ export async function GET() {
       restricted: !!raw && !actor,
       mode: authConfiguration() ? "supabase" : "development",
       role,
-      analyticsExcluded: profile?.analyticsExcluded ?? false,
     };
   });
 }

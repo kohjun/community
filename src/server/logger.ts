@@ -83,7 +83,6 @@ export function createLogger(component: string): Logger {
 export interface SafeErrorSummary {
   errName: string;
   errCode?: string;
-  errMessage?: string;
   digest?: string;
 }
 
@@ -96,7 +95,6 @@ export function summarizeErrorForLog(error: unknown): SafeErrorSummary {
     if (typeof record.code === "string" && record.code.length <= 64) summary.errCode = record.code;
     if (typeof record.digest === "string" && record.digest.length <= 128)
       summary.digest = record.digest;
-    if (error.message) summary.errMessage = scrubSensitiveStrings(error.message).slice(0, 240);
     return summary;
   }
   return { errName: typeof error === "string" ? "StringError" : "UnknownError" };

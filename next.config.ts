@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs/config";
 import { WORKSPACE_REDIRECTS } from "./src/domain/workspace-navigation";
 
 const nextConfig: NextConfig = {
@@ -59,15 +58,4 @@ const nextConfig: NextConfig = {
   ],
 };
 
-export default withSentryConfig(nextConfig, {
-  silent: !process.env.CI,
-  telemetry: false,
-  sourcemaps: {
-    disable: !process.env.SENTRY_AUTH_TOKEN,
-  },
-  bundleSizeOptimizations: {
-    excludeDebugStatements: true,
-    excludeReplayIframe: true,
-    excludeReplayShadowDom: true,
-  },
-});
+export default nextConfig;

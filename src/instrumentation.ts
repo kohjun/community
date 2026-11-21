@@ -2,13 +2,6 @@ import type { Instrumentation } from "next";
 
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const [{ initServerSentry }, { createLogger }] = await Promise.all([
-    import("./server/sentry-init"),
-    import("./server/logger"),
-  ]);
-  const logger = createLogger("instrumentation");
-  initServerSentry("sliper-web");
-
   const { pushConfiguration, isLocalPushDevelopment } = await import("./server/push-configuration");
   const embedded =
     process.env.PUSH_WORKER_MODE === "embedded" ||
@@ -24,35 +17,18 @@ export async function register() {
     import("./server/push-worker-loop"),
   ]);
   state.sliperPushWorker = startPushWorker(getDatabase(), config, { unref: true });
-  logger.info("Sliper notification worker ready.");
+  const { createLogger } = await import("./server/logger");
+  createLogger("instrumentation").info("Sliper notification worker ready.");
 }
 
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const [Sentry, { createLogger, logSafeError }, { isServerSentryEnabled }, { sanitizeRoutePath }] =
-    await Promise.all([
-      import("@sentry/nextjs"),
-      import("./server/logger"),
-      import("./server/sentry-init"),
-      import("./domain/observability"),
-    ]);
-  const safePath = sanitizeRoutePath(request.path);
+  const { createLogger, logSafeError } = await import("./server/logger");
   logSafeError(createLogger("next-request"), "Unhandled Next.js request error", error, {
     method: request.method,
-    path: safePath,
+    path: request.path,
     routePath: context.routePath,
     routeType: context.routeType,
     routerKind: context.routerKind,
   });
-  if (isServerSentryEnabled()) {
-    Sentry.captureRequestError(
-      error,
-      {
-        path: safePath,
-        method: request.method,
-        headers: {},
-      },
-      context,
-    );
-  }
 };
