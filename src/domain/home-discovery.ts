@@ -1,6 +1,6 @@
 import type { CommunityPost } from "./community";
 import type { MeetupType } from "./meetup-types";
-/** Preserve editorial samples without presenting them as active recruitment. */
+/** Keep the homepage recruitment feed limited to real, open meetups. */
 export function homeRecruitments(
   upcoming: CommunityPost[],
   featured: CommunityPost[],
@@ -13,13 +13,8 @@ export function homeRecruitments(
         .map((p) => [p.id, p]),
     ).values(),
   ]
-    .filter((post) => post.sample || (post.eventAvailable && !post.eventCancelledAt))
-    .sort(
-      (a, b) =>
-        Number(a.sample) - Number(b.sample) ||
-        b.likes - a.likes ||
-        b.createdAt.localeCompare(a.createdAt),
-    );
+    .filter((post) => !post.sample && post.eventAvailable && !post.eventCancelledAt)
+    .sort((a, b) => b.likes - a.likes || b.createdAt.localeCompare(a.createdAt));
   return {
     event: ordered.filter((post) => post.meetupType !== "lightning").slice(0, 12),
     lightning: ordered.filter((post) => post.meetupType === "lightning").slice(0, 12),

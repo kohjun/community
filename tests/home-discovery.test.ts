@@ -12,17 +12,12 @@ const post = (patch: Partial<CommunityPost>) =>
     createdAt: "2026-01-01",
     ...patch,
   }) as CommunityPost;
-test("home recruitment preserves existing editorial samples, prioritizes real open events and removes duplicates", () => {
+test("home recruitment includes real open events once and excludes editorial samples", () => {
   const sample = post({ id: "sample", sample: true, featured: true, likes: 999 }),
     active = post({ id: "active", eventAvailable: true, likes: 1 }),
     story = post({ id: "story", kind: "이야기" });
   const { event: result } = homeRecruitments([active], [sample, active, story]);
-  assert.deepEqual(
-    result.map((p) => p.id),
-    ["active", "sample"],
-  );
-  assert.equal(result[1]!.sample, true);
-  assert.equal(result[1]!.eventAvailable, false);
+  assert.deepEqual(result, [active]);
 });
 
 test("home recruitment limits each meetup type independently and excludes crews and closed events", () => {
@@ -31,18 +26,18 @@ test("home recruitment limits each meetup type independently and excludes crews 
   const cancelled = post({ id: "cancelled", eventAvailable: true, eventCancelledAt: "2026-01-01" });
   const crew = post({ id: "crew", category: "crew", eventAvailable: true });
   const lightning = post({ id: "lightning", meetupType: "lightning", eventAvailable: true });
-  const samples = Array.from({ length: 12 }, (_, index) =>
-    post({ id: `sample-${index}`, sample: true }),
+  const moreOpenEvents = Array.from({ length: 12 }, (_, index) =>
+    post({ id: `open-${index}`, eventAvailable: true }),
   );
   const result = homeRecruitments(
     [active, crew],
-    [samples[0]!, closed, cancelled],
-    [active, ...samples, lightning],
+    [moreOpenEvents[0]!, closed, cancelled],
+    [active, ...moreOpenEvents, lightning],
   );
 
   assert.equal(result.event.length, 12);
   assert.equal(result.event[0]?.id, active.id);
   assert.equal(new Set(result.event.map(({ id }) => id)).size, 12);
-  assert.ok(result.event.slice(1).every(({ sample }) => sample));
+  assert.ok(result.event.every(({ sample, eventAvailable }) => !sample && eventAvailable));
   assert.deepEqual(result.lightning, [lightning]);
 });
