@@ -3685,6 +3685,9 @@ body {
   .sl-header__brand .sl-brand {
     font-size: 18px;
   }
+  .sl-header__brand .sl-brand__mark {
+    display: none;
+  }
   .sl-header__top .sl-audience-toggle button {
     padding: 0 8px;
     font-size: 11.5px;
