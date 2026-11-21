@@ -184,11 +184,21 @@
   font-size: 12px;
 }
 .topics-post-row {
+  position: relative;
   display: block;
   padding: 20px 0;
   border-bottom: 1px solid #edf0f4;
 }
-.topics-post-row:hover h3,
+.topics-post-title::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+.topics-post-row .post-author-profile {
+  position: relative;
+  z-index: 1;
+}
+.topics-post-title:is(:hover, :focus-visible),
 .topics-library-card:hover h3 {
   color: #0a84fe;
 }

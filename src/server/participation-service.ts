@@ -42,6 +42,7 @@ import { enqueueAnnouncementPush } from "./push-events";
 import { publishRoomWake } from "./room-realtime";
 import { authorVisible, contentVisible } from "./safety-visibility";
 import { bindEventVenue, readEventVenueReference } from "./event-venue-service";
+import { presentAuthor } from "../domain/presenters";
 import {
   assertEventRunning,
   isEventCancelled,
@@ -383,11 +384,22 @@ export function participationService(db: Database) {
         id: posts.id,
         title: posts.title,
         authorId: posts.authorId,
+        isAnonymous: posts.isAnonymous,
+        importedAuthorName: posts.importedAuthorName,
+        authorProfile: {
+          id: profiles.id,
+          publicId: profiles.publicId,
+          nickname: profiles.nickname,
+        },
+        canShowAuthor: operational
+          ? sql<boolean>`${publicEventVisible(actor)}`
+          : sql<boolean>`true`,
         location: posts.location,
         eventDate: posts.eventDate,
         externalUrl: posts.applicationUrl,
       })
       .from(posts)
+      .leftJoin(profiles, and(eq(profiles.id, posts.authorId), eq(posts.isAnonymous, false)))
       .where(
         and(
           eq(posts.id, idSchema.parse(postId)),
@@ -444,6 +456,11 @@ export function participationService(db: Database) {
       publicProfileId: profile?.publicId ?? null,
       postId: p.id,
       title: p.title,
+      ...(p.canShowAuthor
+        ? {
+            author: presentAuthor(p.authorId, p.isAnonymous, p.authorProfile, p.importedAuthorName),
+          }
+        : {}),
       location: p.location,
       eventDate: p.eventDate,
       externalUrl: p.externalUrl,

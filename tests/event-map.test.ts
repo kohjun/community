@@ -44,7 +44,7 @@ async function member(nickname: string) {
 }
 async function event(
   patch: {
-    category?: "party" | "sports";
+    category?: "party" | "sports" | "general" | "crew";
     sample?: boolean;
     deleted?: boolean;
     latitude?: number | null;
@@ -141,6 +141,9 @@ test("map queries require complete increasing bounds and strict bounded filters"
     { south: -91, west: 126, north: 38, east: 128 },
     { q: "x".repeat(101) },
     { freeOnly: "false" },
+    { openOnly: "true" },
+    { meetupType: "place" },
+    { eventId: "invalid" },
     { mode: "mine" },
     { category: "crew" },
     { limit: 100000 },
@@ -351,6 +354,36 @@ test("map recruitment closes at capacity and reopens after a confirmed attendee 
     .set({ status: "cancelled" })
     .where(eq(baseSchema.eventApplications.id, application!.id));
   assert.equal((await service.list(null)).events[0]!.open, true);
+});
+test("open map layers include both recruiting formats, including general posts, and preserve direct links", async () => {
+  const planned = await event({ category: "general" });
+  const lightning = await event({
+    meetupType: "lightning",
+    endsAt: new Date(Date.now() + 7200000),
+  });
+  const closed = await event({ open: false });
+  const sample = await event({ sample: true });
+  await event({ category: "crew" });
+  await event({ latitude: null, longitude: null });
+  const past = await event({ startsAt: new Date(Date.now() - 60000) });
+  const map = await service.list(null, { openOnly: true });
+  assert.equal(map.totalEvents, 2);
+  assert.deepEqual(new Set(map.events.map(({ id }) => id)), new Set([planned, lightning]));
+  for (const [meetupType, id] of [
+    ["event", planned],
+    ["lightning", lightning],
+  ] as const) {
+    const layer = await service.list(null, { mode: "event", openOnly: true, meetupType });
+    assert.equal(layer.totalEvents, 1);
+    assert.equal(layer.totalVenues, 0);
+    assert.equal(layer.events[0]?.id, id);
+  }
+  const directLink = await service.list(null, { openOnly: true, eventId: closed });
+  assert.equal(directLink.events[0]?.id, closed);
+  assert.equal(directLink.events[0]?.open, false);
+  for (const eventId of [sample, past]) {
+    assert.equal((await service.list(null, { openOnly: true, eventId })).totalEvents, 2);
+  }
 });
 test("map recruitment counts active payment reservations but ignores expired holds", async () => {
   const held = await event({ capacity: 1, amountKRW: 10000 });

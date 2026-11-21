@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, BookOpen, CalendarDays, Heart, MapPin, MessageCircle } from "lucide-react";
 import { ParticipationShell } from "./participation-shell";
+import { PostAuthorName } from "./post-author-name";
 import {
   TOPICS,
   topicAliases,
@@ -65,7 +66,7 @@ function Pagination({
 }
 function PostRow({ post }: { post: TopicPostSummary }) {
   return (
-    <Link href={post.href} className="topics-post-row">
+    <article className="topics-post-row">
       <div className="topics-row-heading">
         <span className="topics-type">
           {post.kind === "모집"
@@ -77,11 +78,15 @@ function PostRow({ post }: { post: TopicPostSummary }) {
               : post.kind}
         </span>
         {post.spoiler && <span className="topics-spoiler">스포일러 주의</span>}
-        <h3>{post.title}</h3>
+        <h3>
+          <Link href={post.href} className="topics-post-title">
+            {post.title}
+          </Link>
+        </h3>
       </div>
       <p className="topics-excerpt">{post.excerpt}</p>
       <div className="topics-meta">
-        <span>{post.author}</span>
+        <PostAuthorName post={post} />
         <span>{date(post.createdAt)}</span>
         {post.location && (
           <span>
@@ -111,7 +116,7 @@ function PostRow({ post }: { post: TopicPostSummary }) {
           {post.comments}
         </span>
       </div>
-    </Link>
+    </article>
   );
 }
 export function TopicDetailView({

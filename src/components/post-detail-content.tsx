@@ -72,7 +72,7 @@ export function PostDetailContent({
   const [revealedId, setRevealedId] = useState<string | null>(null);
   const concealed = !!active.spoiler && revealedId !== active.id;
   const Title = presentation === "dialog" ? DialogTitle : "h1";
-  const Description = presentation === "dialog" ? DialogDescription : "div";
+  const Description = presentation === "dialog" ? DialogDescription : "small";
   const label = (slug: CommunityPost["category"]) =>
     CATEGORIES.find((item) => item.slug === slug)?.name ?? "이야기";
   const [replyTo, setReplyTo] = useState<CommunityComment | null>(null);
@@ -173,19 +173,21 @@ export function PostDetailContent({
         <Title className="detail-title">{concealed ? safePostTitle(active) : active.title}</Title>
         {applyButton && <div className="post-title-apply">{applyButton}</div>}
       </div>
-      <Description className="detail-author">
-        <span className="avatar">
-          <UserRound size={20} />
-        </span>
-        <span>
-          <strong>
-            <PostAuthorName post={active} />
-          </strong>
-          <small>
-            {active.time} · 조회 {active.views}
-          </small>
-        </span>
-      </Description>
+      <div className="detail-author">
+        <strong>
+          <PostAuthorName
+            post={active}
+            icon={
+              <span className="avatar" aria-hidden="true">
+                <UserRound size={20} />
+              </span>
+            }
+          />
+        </strong>
+        <Description className="detail-author-stats">
+          {active.time} · 조회 {active.views}
+        </Description>
+      </div>
       {active.isMine && (
         <div className="owner-actions">
           <Button

@@ -986,7 +986,8 @@ img {
 .detail-author {
   display: flex;
   align-items: center;
-  gap: 11px;
+  flex-wrap: wrap;
+  gap: 4px 11px;
   margin-bottom: 23px;
 }
 .avatar,
@@ -1006,7 +1007,8 @@ img {
   font-weight: 600;
   color: #566273;
 }
-.detail-author small {
+.detail-author .detail-author-stats {
+  margin: 0;
   font-size: 11px;
   color: #63748b;
   display: block;

@@ -960,14 +960,25 @@ body {
   display: block;
   text-decoration: none;
 }
-.post-author-profile {
+.post-author-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
   overflow-wrap: anywhere;
-  color: inherit;
+}
+.post-author-name > svg {
+  flex: none;
+}
+.post-author-profile {
+  min-block-size: 24px;
+  overflow-wrap: anywhere;
+  color: var(--sl-ink-3);
   text-decoration: underline;
-  text-decoration-color: #90acc8;
   text-underline-offset: 0.16em;
 }
-.post-author-profile:hover {
+.post-author-profile:is(:hover, :focus-visible) {
   color: var(--sl-accent-2);
 }
 .sl-post-list .expanded-post-row .post-row-actions {

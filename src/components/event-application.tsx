@@ -19,6 +19,7 @@ import {
   ArrowLeft,
   Settings2,
   Users,
+  UserRound,
   Clock3,
 } from "lucide-react";
 import type { EventOverview } from "@/domain/participation";
@@ -40,6 +41,7 @@ import {
   type ApplicationAnswer,
 } from "./application-question-fields";
 import { ParticipationShell } from "./participation-shell";
+import { EventAuthorName } from "./post-author-name";
 const money = (amount: number) => (amount === 0 ? "무료" : `${amount.toLocaleString("ko-KR")}원`);
 export function EventApplication({
   initial,
@@ -196,6 +198,14 @@ export function EventApplication({
           </Link>
           <span>{lightning ? "번개 참가 신청" : "모임 참가 신청"}</span>
           <h1>{event.title}</h1>
+          {event.author && (
+            <div className="participation-event-author">
+              <EventAuthorName
+                author={event.author}
+                icon={<UserRound size={15} aria-hidden="true" />}
+              />
+            </div>
+          )}
           <p>
             {lightning
               ? "참가를 요청하면 담당자가 확인해요. 승인 후 공지방에서 만나요."

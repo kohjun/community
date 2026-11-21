@@ -112,6 +112,7 @@ export function topicService(db: Database) {
                 title: post.title,
                 excerpt: post.excerpt,
                 author: post.author,
+                ...(post.authorPublicId ? { authorPublicId: post.authorPublicId } : {}),
                 anonymous: post.anonymous,
                 spoiler: post.spoiler ?? false,
                 discussionType: post.discussionType ?? null,

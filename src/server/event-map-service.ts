@@ -1,9 +1,8 @@
-import { and, desc, eq, gte, ilike, inArray, isNotNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, isNotNull, lte, ne, or, sql } from "drizzle-orm";
 import type { Database } from "../db/connection";
 import { eventSettings, posts, profiles } from "../db/schema";
 import { communityVenues, venueRecommendations } from "../db/venue-schema";
 import {
-  EVENT_MAP_CATEGORIES,
   EVENT_MAP_PIN_LIMIT,
   eventMapQuerySchema,
   venueDeleteSchema,
@@ -112,6 +111,7 @@ export function eventMapService(db: Database) {
     async list(actor: string | null, input: unknown = {}): Promise<EventMapSnapshot> {
       const value = eventMapQuerySchema.parse(input),
         search = `%${value.q.replace(/[\\%_]/g, "\\$&")}%`;
+      const pinnedEvent = value.eventId ? eq(posts.id, value.eventId) : undefined;
       const venueFilter = and(
         registeredVenueVisible(actor),
         value.category !== "all" ? eq(communityVenues.categorySlug, value.category) : undefined,
@@ -140,10 +140,12 @@ export function eventMapService(db: Database) {
         authorVisible(posts.authorId, actor),
         eq(posts.kind, "모집"),
         eq(posts.sample, false),
-        inArray(posts.categorySlug, [...EVENT_MAP_CATEGORIES]),
+        ne(posts.categorySlug, "crew"),
         isNotNull(eventSettings.venueLatitude),
         isNotNull(eventSettings.venueLongitude),
         sql`case when ${eventSettings.endsAt} is not null then ${eventSettings.endsAt}>statement_timestamp() when ${eventSettings.startsAt} is not null then ${eventSettings.startsAt}>statement_timestamp() else true end`,
+        value.openOnly ? or(eventAvailable, pinnedEvent) : undefined,
+        value.meetupType ? eq(eventSettings.meetupType, value.meetupType) : undefined,
         value.category !== "all" ? eq(posts.categorySlug, value.category) : undefined,
         value.freeOnly ? eq(eventSettings.amountKRW, 0) : undefined,
         value.q ? or(ilike(posts.title, search), ilike(posts.location, search)) : undefined,
@@ -211,7 +213,12 @@ export function eventMapService(db: Database) {
                   .from(posts)
                   .innerJoin(eventSettings, eq(eventSettings.postId, posts.id))
                   .where(eventFilter)
-                  .orderBy(desc(posts.createdAt), desc(posts.id))
+                  .orderBy(
+                    ...(pinnedEvent ? [desc(pinnedEvent)] : []),
+                    ...(value.openOnly ? [asc(eventSettings.startsAt)] : []),
+                    desc(posts.createdAt),
+                    desc(posts.id),
+                  )
                   .limit(eventLimit)
               : [];
           const events: MapEvent[] = eventRows.map((row) => ({

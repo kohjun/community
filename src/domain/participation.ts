@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { PublicAuthor } from "./contracts";
 import { participantGuideSchema, type ParticipantGuide } from "./participant-guide";
 import { venueSchema, type VenuePoint } from "./discovery";
 import {
@@ -75,6 +76,7 @@ export interface ApplicationView {
 export interface EventOverview {
   postId: string;
   title: string;
+  author?: PublicAuthor;
   location: string | null;
   eventDate: string | null;
   externalUrl: string | null;

@@ -90,6 +90,7 @@ export interface TopicPostSummary {
   title: string;
   excerpt: string;
   author: string;
+  authorPublicId?: string;
   anonymous: boolean;
   spoiler: boolean;
   discussionType: DiscussionType | null;

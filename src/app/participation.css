@@ -25,6 +25,12 @@
   letter-spacing: -0.9px;
   overflow-wrap: anywhere;
 }
+.participation-event-author {
+  margin-bottom: 8px;
+  color: #42556e;
+  font-size: 14px;
+  font-weight: 650;
+}
 .participation-heading p {
   color: #63748b;
   display: flex;

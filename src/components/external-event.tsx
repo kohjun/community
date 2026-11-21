@@ -16,6 +16,7 @@ import {
   MapPin,
   Wallet,
   Users,
+  UserRound,
   Clock3,
 } from "lucide-react";
 import { externalClaimSchema, STATUS_LABELS, type EventOverview } from "@/domain/participation";
@@ -35,6 +36,7 @@ import {
   type ApplicationAnswer,
 } from "./application-question-fields";
 import { ParticipationShell } from "./participation-shell";
+import { EventAuthorName } from "./post-author-name";
 export function ExternalEvent({ initial }: { initial: EventOverview }) {
   const [event, setEvent] = useState(initial),
     [showConfirm, setShowConfirm] = useState(false),
@@ -216,6 +218,14 @@ export function ExternalEvent({ initial }: { initial: EventOverview }) {
           </Link>
           <span>외부 플랫폼 신청 모임</span>
           <h1>{event.title}</h1>
+          {event.author && (
+            <div className="participation-event-author">
+              <EventAuthorName
+                author={event.author}
+                icon={<UserRound size={15} aria-hidden="true" />}
+              />
+            </div>
+          )}
           <p>
             {paid
               ? "외부 플랫폼에서 신청·결제를 마친 뒤, 슬리퍼에서 참가 확인을 요청해주세요."

@@ -15,14 +15,25 @@ async function handle(request: Request, context: { params: Promise<{ path?: stri
     if (!path.length && method === "GET") {
       const search = new URL(request.url).searchParams;
       const query: Record<string, unknown> = {};
-      for (const key of ["south", "west", "north", "east", "q", "category", "mode"]) {
+      for (const key of [
+        "south",
+        "west",
+        "north",
+        "east",
+        "q",
+        "category",
+        "mode",
+        "meetupType",
+        "eventId",
+      ]) {
         if (search.has(key)) query[key] = search.get(key);
       }
-      if (search.has("freeOnly")) {
-        const freeOnly = search.get("freeOnly");
-        if (freeOnly !== "true" && freeOnly !== "false")
-          throw new AppError("VALIDATION", "무료 장소 필터를 확인해주세요.");
-        query.freeOnly = freeOnly === "true";
+      for (const key of ["freeOnly", "openOnly"]) {
+        if (!search.has(key)) continue;
+        const value = search.get(key);
+        if (value !== "true" && value !== "false")
+          throw new AppError("VALIDATION", "지도 필터를 확인해주세요.");
+        query[key] = value === "true";
       }
       return service.list(actor, query);
     }

@@ -161,8 +161,7 @@ export function CommunityRecruitmentCard({
       <footer className="recruitment-card-footer">
         <div className="recruitment-card-meta">
           <div className="recruitment-card-author">
-            <UserRound size={13} aria-hidden="true" />
-            <PostAuthorName post={post} />
+            <PostAuthorName post={post} icon={<UserRound size={13} aria-hidden="true" />} />
             {post.distanceKm !== null && post.distanceKm !== undefined && (
               <span className="recruitment-card-distance">
                 <MapPin size={12} aria-hidden="true" />

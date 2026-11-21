@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { applicationUrlSchema } from "./validation";
+import type { CategorySlug } from "./categories";
+import type { MeetupType } from "./meetup-types";
+import { applicationUrlSchema, uuidSchema } from "./validation";
 
 export const EVENT_MAP_CATEGORIES = [
   "travel",
@@ -52,8 +54,8 @@ export type MapEvent = {
   location: string;
   latitude: number;
   longitude: number;
-  categorySlug: EventMapCategory;
-  meetupType: "event" | "lightning";
+  categorySlug: CategorySlug;
+  meetupType: MeetupType;
   startsAt: string | null;
   amountKRW: number;
   capacity: number;
@@ -86,6 +88,9 @@ export const eventMapQuerySchema = z
     freeOnly: z.boolean().default(false),
     category: z.enum(["all", ...EVENT_MAP_CATEGORIES]).default("all"),
     mode: z.enum(["all", "place", "event"]).default("all"),
+    openOnly: z.boolean().optional(),
+    meetupType: z.enum(["event", "lightning"]).optional(),
+    eventId: uuidSchema.optional(),
   })
   .superRefine((value, context) => {
     const given = [value.south, value.west, value.north, value.east].filter(

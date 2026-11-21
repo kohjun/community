@@ -115,6 +115,22 @@ test("only recruitment owner configures registration; anonymous users and forged
   await assert.rejects(service.apply(attendee, postId, details, null), code("CONFLICT"));
   assert.equal((await service.overview(outsider, postId)).config?.occupied, 0);
 });
+test("event overview exposes only a public author profile and keeps anonymous authors unlinked", async () => {
+  const [profile] = await db
+    .select({ publicId: schema.profiles.publicId })
+    .from(schema.profiles)
+    .where(eq(schema.profiles.id, owner));
+  assert.deepEqual((await service.overview(null, postId)).author, {
+    kind: "anonymous",
+    displayName: "익명",
+  });
+  await db.update(schema.posts).set({ isAnonymous: false }).where(eq(schema.posts.id, postId));
+  assert.deepEqual((await service.overview(attendee, postId)).author, {
+    kind: "member",
+    displayName: "등록자",
+    publicProfileId: profile!.publicId,
+  });
+});
 test("free applications are confirmed and invited atomically; duplicate submissions do not add applications", async () => {
   await configure(0, 2);
   const one = await apply(),

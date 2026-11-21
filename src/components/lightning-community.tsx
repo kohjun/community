@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
   X,
   Users,
+  UserRound,
   Zap,
 } from "lucide-react";
 import { CATEGORIES, type CategorySlug } from "@/domain/categories";
@@ -36,6 +37,7 @@ import { appRequest } from "@/lib/api-client";
 import type { VenuePoint } from "@/domain/discovery";
 import { EventLocationField } from "./event-location-field";
 import { ParticipationShell } from "./participation-shell";
+import { PostAuthorName } from "./post-author-name";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 
 const topics = CATEGORIES.filter((category) => category.sortOrder < 9);
@@ -439,7 +441,7 @@ export function LightningCommunity({
               </div>
             </Link>
             <div className="lightning-card-bottom">
-              <span>{post.author}</span>
+              <PostAuthorName post={post} icon={<UserRound size={13} aria-hidden="true" />} />
               <small>
                 {post.eventCancelledAt
                   ? "행사 취소 · 취소 안내 보기"

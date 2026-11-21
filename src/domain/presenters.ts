@@ -13,7 +13,7 @@ import type {
 
 type AuthorProfile = Pick<ProfileRecord, "id" | "publicId" | "nickname">;
 
-function presentAuthor(
+export function presentAuthor(
   authorId: string | null,
   anonymous: boolean,
   profile: AuthorProfile | null,

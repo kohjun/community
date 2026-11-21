@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { CATEGORIES } from "@/domain/categories";
 import type { CommunityVenue, EventMapSnapshot, MapEvent } from "@/domain/event-map";
+import { MEETUP_TYPE_LABELS, type MeetupType } from "@/domain/meetup-types";
 import { appRequest, RequestError } from "@/lib/api-client";
 import { useLocation } from "@/lib/use-location";
 import {
@@ -44,7 +45,7 @@ import { MemberAvatar } from "./member-avatar";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 
 const categories = CATEGORIES.filter((category) => category.sortOrder < 9);
-type Mode = "all" | "place" | "event";
+type Mode = "all" | "place" | MeetupType;
 type Draft = {
   name: string;
   address: string;
@@ -72,7 +73,7 @@ const emptyDraft = (): Draft => ({
   point: null,
 });
 const categoryName = (slug: string) =>
-  categories.find((category) => category.slug === slug)?.name ?? "이벤트";
+  CATEGORIES.find((category) => category.slug === slug)?.name ?? "이벤트";
 const spaceNames = { indoor: "실내", outdoor: "야외", mixed: "실내 · 야외" };
 function eventDate(value: string | null) {
   if (!value) return "일정 미정";
@@ -140,11 +141,12 @@ export function EventMapCommunity({
 }) {
   const [snapshot, setSnapshot] = useState(initial);
   const [mode, setMode] = useState<Mode>("all");
-  const [mobileView, setMobileView] = useState<"map" | "list">("map");
+  const [mobileView, setMobileView] = useState<"map" | "list">(clientId ? "map" : "list");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [freeOnly, setFreeOnly] = useState(false);
-  const [bounds, setBounds] = useState<MapBounds | null>(null);
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  const [useMapArea, setUseMapArea] = useState(false);
   const [focusPoint, setFocusPoint] = useState<MapPoint | null>(initialFocus);
   const [selectedId, setSelectedId] = useState<string | null>(initialSelection);
   const [detail, setDetail] = useState<CommunityVenue | null>(null);
@@ -163,6 +165,7 @@ export function EventMapCommunity({
   const [reload, setReload] = useState(0);
   const [detailReload, setDetailReload] = useState(0);
   const mounted = useRef(false);
+  const lastAppliedMode = useRef<Mode>("all");
   const loadSequence = useRef(0);
   const detailSequence = useRef(0);
   const mutationSequence = useRef(0);
@@ -177,6 +180,11 @@ export function EventMapCommunity({
   const resultsElement = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const { requestLocation, cancelLocation } = location;
+  const bounds = useMapArea ? mapBounds : null;
+  const linkedEventId =
+    mode === "all" && selectedId === initialSelection && selectedId?.startsWith("event:")
+      ? selectedId.slice(6)
+      : null;
 
   useEffect(() => {
     mounted.current = true;
@@ -200,7 +208,13 @@ export function EventMapCommunity({
     const timer = window.setTimeout(async () => {
       setLoading(true);
       setLoadError("");
-      const params = new URLSearchParams({ mode, category });
+      const params = new URLSearchParams({
+        mode: mode === "lightning" ? "event" : mode,
+        category,
+        openOnly: "true",
+      });
+      if (mode === "event" || mode === "lightning") params.set("meetupType", mode);
+      if (linkedEventId) params.set("eventId", linkedEventId);
       if (query.trim()) params.set("q", query.trim());
       if (freeOnly) params.set("freeOnly", "true");
       if (bounds) Object.entries(bounds).forEach(([key, value]) => params.set(key, String(value)));
@@ -213,6 +227,11 @@ export function EventMapCommunity({
         );
         if (!mounted.current || token !== loadSequence.current || controller.signal.aborted) return;
         setSnapshot(next);
+        if (!bounds && mode !== lastAppliedMode.current) {
+          const point = mode === "place" ? next.venues[0] : next.events[0];
+          if (point) setFocusPoint({ latitude: point.latitude, longitude: point.longitude });
+        }
+        lastAppliedMode.current = mode;
         setDetail((previous) =>
           previous ? (next.venues.find((venue) => venue.id === previous.id) ?? previous) : null,
         );
@@ -227,7 +246,7 @@ export function EventMapCommunity({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [mode, query, category, freeOnly, bounds, reload, submitting, mutating]);
+  }, [mode, query, category, freeOnly, bounds, linkedEventId, reload, submitting, mutating]);
   useEffect(() => {
     const token = ++detailSequence.current;
     detailRequest.current?.abort();
@@ -311,7 +330,7 @@ export function EventMapCommunity({
   );
   const onBoundsChange = useCallback(
     (next: MapBounds) =>
-      setBounds((previous) =>
+      setMapBounds((previous) =>
         previous &&
         Object.keys(next).every(
           (key) =>
@@ -522,9 +541,14 @@ export function EventMapCommunity({
   async function locate() {
     const token = ++locationSequence.current;
     const point = await requestLocation();
-    if (point && mounted.current && token === locationSequence.current) setFocusPoint(point);
+    if (point && mounted.current && token === locationSequence.current) {
+      setFocusPoint(point);
+      setUseMapArea(true);
+    }
   }
   const website = publicWebsite(selectedVenue?.websiteUrl ?? null);
+  const emptyLabel = mode === "place" ? "표시할 추천 장소가 없어요" : "모집 중인 모임이 없어요";
+  const empty = !loading && !loadError && !snapshot.venues.length && !snapshot.events.length;
 
   return (
     <ParticipationShell wide>
@@ -534,8 +558,8 @@ export function EventMapCommunity({
             <span>
               <MapPin size={15} /> 함께 만드는 이벤트 맵
             </span>
-            <h1>다음 만남은, 여기서.</h1>
-            <p>좋은 장소를 함께 모으고, 그곳에서 새로운 모임을 시작해요.</p>
+            <h1>이벤트 맵</h1>
+            <p>지금 모집 중인 이벤트·행사와 번개·모임을 찾아보세요.</p>
           </div>
           {canWrite ? (
             <button className="emap-primary" onClick={() => begin()}>
@@ -568,8 +592,8 @@ export function EventMapCommunity({
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 maxLength={100}
-                placeholder="장소명 또는 주소 검색"
-                aria-label="장소명 또는 주소 검색"
+                placeholder="모임 이름, 장소 또는 주소"
+                aria-label="모임 이름, 장소 또는 주소 검색"
               />
               {loading && <LoaderCircle size={16} className="emap-spin" aria-label="검색 중" />}
               {query && (
@@ -578,19 +602,27 @@ export function EventMapCommunity({
                 </button>
               )}
             </div>
-            <div className="emap-modes" aria-label="지도에 표시할 항목">
+            <div className="emap-modes" role="group" aria-label="지도에 표시할 항목">
               {(
                 [
                   { value: "all", label: "전체" },
+                  { value: "event", label: MEETUP_TYPE_LABELS.event },
+                  { value: "lightning", label: MEETUP_TYPE_LABELS.lightning },
                   { value: "place", label: "추천 장소" },
-                  { value: "event", label: "모집 · 번개" },
                 ] as const
               ).map((item) => (
                 <button
                   key={item.value}
+                  type="button"
                   aria-pressed={mode === item.value}
                   className={mode === item.value ? "is-active" : ""}
-                  onClick={() => setMode(item.value)}
+                  onClick={() => {
+                    if (mode === item.value) return;
+                    setMode(item.value);
+                    setSelectedId(null);
+                    setDetail(null);
+                    setDetailError("");
+                  }}
                 >
                   {item.label}
                 </button>
@@ -614,12 +646,23 @@ export function EventMapCommunity({
                 <ChevronDown size={14} />
               </label>
               <button
+                type="button"
                 aria-pressed={freeOnly}
                 className={freeOnly ? "is-active" : ""}
                 onClick={() => setFreeOnly((value) => !value)}
               >
                 {freeOnly && <Check size={13} />} 무료·사전 결제 없음
               </button>
+              {mapBounds && (
+                <button
+                  type="button"
+                  aria-pressed={useMapArea}
+                  className={useMapArea ? "is-active" : ""}
+                  onClick={() => setUseMapArea((value) => !value)}
+                >
+                  지도 범위만
+                </button>
+              )}
             </div>
             {(loadError || snapshot.truncated) && (
               <div className="emap-toolbar-feedback">
@@ -631,7 +674,7 @@ export function EventMapCommunity({
                 )}
                 {snapshot.truncated && (
                   <p className="emap-truncated">
-                    표시할 항목이 많아요. 지도를 확대하거나 취향을 선택해 더 좁혀보세요.
+                    표시할 항목이 많아요. 검색어나 모임 유형으로 범위를 좁혀보세요.
                   </p>
                 )}
               </div>
@@ -658,13 +701,43 @@ export function EventMapCommunity({
               <span>{snapshot.totalVenues + snapshot.totalEvents}</span>
             </button>
           </div>
-          <aside className="emap-sidebar" id="emap-list-panel" aria-label="지도 장소 목록">
+          <aside className="emap-sidebar" id="emap-list-panel" aria-label="지도 검색 결과">
             <div className="emap-result-heading">
-              <span>{bounds ? "지금 지도 안에서" : "등록된 장소와 이벤트"}</span>
+              <span>{bounds ? "지도 안에서" : "전체 지역"}</span>
               <strong>{snapshot.totalVenues + snapshot.totalEvents}개</strong>
               {loading && <LoaderCircle size={14} className="emap-spin" aria-label="불러오는 중" />}
             </div>
             <div className="emap-results" ref={resultsElement} tabIndex={-1} aria-busy={loading}>
+              {snapshot.events.map((event) => (
+                <button
+                  className={`emap-result ${selectedId === `event:${event.id}` ? "is-selected" : ""}`}
+                  key={`event:${event.id}`}
+                  onClick={() => select(`event:${event.id}`, event)}
+                  aria-pressed={selectedId === `event:${event.id}`}
+                >
+                  <span className="emap-result-kind">
+                    {event.meetupType === "lightning" ? (
+                      <Zap size={13} />
+                    ) : (
+                      <CalendarDays size={13} />
+                    )}{" "}
+                    {MEETUP_TYPE_LABELS[event.meetupType]}
+                    <span>{categoryName(event.categorySlug)}</span>
+                  </span>
+                  <strong>{event.title}</strong>
+                  <span className="emap-result-address">{event.location}</span>
+                  <span className="emap-result-meta">
+                    <span>
+                      {event.amountKRW
+                        ? `${event.amountKRW.toLocaleString("ko-KR")}원`
+                        : "사전 결제 없음"}
+                    </span>
+                    <span className={!event.open ? "emap-muted" : ""}>
+                      {event.open ? "모집 중" : "모집 마감"}
+                    </span>
+                  </span>
+                </button>
+              ))}
               {snapshot.venues.map((venue) => (
                 <button
                   className={`emap-result ${selectedId === `place:${venue.id}` ? "is-selected" : ""}`}
@@ -687,46 +760,16 @@ export function EventMapCommunity({
                   </span>
                 </button>
               ))}
-              {snapshot.events.map((event) => (
-                <button
-                  className={`emap-result ${selectedId === `event:${event.id}` ? "is-selected" : ""}`}
-                  key={`event:${event.id}`}
-                  onClick={() => select(`event:${event.id}`, event)}
-                  aria-pressed={selectedId === `event:${event.id}`}
-                >
-                  <span className="emap-result-kind">
-                    {event.meetupType === "lightning" ? (
-                      <Zap size={13} />
-                    ) : (
-                      <CalendarDays size={13} />
-                    )}{" "}
-                    {event.meetupType === "lightning" ? "번개·모임" : "이벤트·행사"}
-                    <span>{categoryName(event.categorySlug)}</span>
-                  </span>
-                  <strong>{event.title}</strong>
-                  <span className="emap-result-address">{event.location}</span>
-                  <span className="emap-result-meta">
-                    <span>
-                      {event.amountKRW
-                        ? `${event.amountKRW.toLocaleString("ko-KR")}원`
-                        : "사전 결제 없음"}
-                    </span>
-                    <span className={!event.open ? "emap-muted" : ""}>
-                      {event.open ? "모집 중" : "모집 마감"}
-                    </span>
-                  </span>
-                </button>
-              ))}
-              {!loading && !snapshot.venues.length && !snapshot.events.length && !loadError && (
+              {empty && (
                 <div className="emap-empty">
                   <MapPin size={25} />
-                  <strong>아직 표시할 장소가 없어요</strong>
+                  <strong>{emptyLabel}</strong>
                   <p>
-                    지도를 움직이거나 검색 조건을 바꿔보세요.
-                    <br />
-                    좋은 장소를 알고 있다면 첫 번째로 등록해요.
+                    {bounds
+                      ? "지도를 움직이거나 전체 지역에서 찾아보세요."
+                      : "다른 유형이나 검색 조건으로 찾아보세요."}
                   </p>
-                  {canWrite && (
+                  {canWrite && mode === "place" && (
                     <button onClick={() => begin()}>
                       장소 등록하기 <Plus size={14} />
                     </button>
@@ -737,6 +780,7 @@ export function EventMapCommunity({
             <p className="emap-community-note">누구나 좋은 장소를 더해 완성하는 우리의 지도</p>
           </aside>
           <div className="emap-map-column" id="emap-map-panel">
+            {empty && <p className="emap-map-empty-note">{emptyLabel}</p>}
             <div className="emap-map-wrap" ref={mapElement}>
               <NaverEventMap
                 clientId={clientId}
@@ -1195,8 +1239,7 @@ function MapEventDetail({ event }: { event: MapEvent }) {
     <>
       <div className="emap-detail-kicker">
         {event.meetupType === "lightning" ? <Zap size={14} /> : <CalendarDays size={14} />}
-        {event.meetupType === "lightning" ? "번개·모임" : "이벤트·행사"} ·{" "}
-        {categoryName(event.categorySlug)}
+        {MEETUP_TYPE_LABELS[event.meetupType]} · {categoryName(event.categorySlug)}
         <span>{event.open ? "모집 중" : "모집 마감"}</span>
       </div>
       <h2>{event.title}</h2>
@@ -1221,7 +1264,7 @@ function MapEventDetail({ event }: { event: MapEvent }) {
       </div>
       <div className="emap-detail-actions">
         <Link className="emap-primary" href={`/events/${event.id}`}>
-          이벤트 자세히 보기 <ArrowUpRight size={16} />
+          모집 상세 보기 <ArrowUpRight size={16} />
         </Link>
       </div>
     </>

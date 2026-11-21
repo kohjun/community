@@ -107,8 +107,7 @@ export function CommunityPostRow({
             {post.excerpt}
           </a>
           <div className="post-author">
-            <UserRound size={13} aria-hidden="true" />
-            <PostAuthorName post={post} />
+            <PostAuthorName post={post} icon={<UserRound size={13} aria-hidden="true" />} />
             <span>·</span>
             <Eye size={14} />
             {post.views}
