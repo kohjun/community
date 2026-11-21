@@ -34,7 +34,7 @@
   cursor: pointer;
 }
 .community-page-nav button:hover:not(:disabled) {
-  background: #f2f7fd;
+  background: var(--sl-paper-2);
   color: #0874dc;
 }
 .community-page-nav button[aria-current="page"] {

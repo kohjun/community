@@ -73,7 +73,7 @@
 }
 
 .expanded-post-row .post-row-reactions > button:hover:not(:disabled) {
-  background: #f2f7fd;
+  background: var(--sl-paper-2);
   color: #0874dc;
 }
 

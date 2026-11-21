@@ -220,11 +220,11 @@
   width: 36px;
   height: 36px;
   border-radius: 11px;
-  background: #f5f6f8;
+  background: var(--sl-paper);
   color: #6a717d;
 }
 .lightning-dialog .dialog-close:hover {
-  background: #e9edf2;
+  background: var(--sl-paper-2);
   color: #20242c;
 }
 .lightning-dialog-heading {
@@ -280,7 +280,7 @@
   gap: 5px;
   padding: 5px 9px;
   border-radius: 7px;
-  background: #f5f7fa;
+  background: var(--sl-paper);
   color: #647283;
   font-size: 11px;
   font-weight: 550;
@@ -441,7 +441,7 @@
 .lightning-dialog input:disabled,
 .lightning-dialog select:disabled,
 .lightning-dialog textarea:disabled {
-  background-color: #f5f7fa;
+  background-color: var(--sl-paper);
   opacity: 0.7;
 }
 .lightning-topic-field legend {
@@ -488,7 +488,7 @@
     border-color 0.15s;
 }
 .lightning-topic-option:hover > span {
-  background: #f7f9fc;
+  background: var(--sl-paper);
 }
 .lightning-topic-option input:checked + span {
   border-color: #0a84fe;
@@ -524,7 +524,7 @@
   padding: 7px 11px;
   border: 1px solid #e7ebf0;
   border-radius: 8px;
-  background: #f8f9fb;
+  background: var(--sl-paper);
   color: #606b79;
   font-size: 12px;
   font-weight: 500;
@@ -545,7 +545,7 @@
   padding: 14px 16px;
   border: 1px solid #e8edf3;
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--sl-paper);
 }
 .lightning-capacity-row label {
   color: #434b56;
@@ -608,7 +608,7 @@
   padding: 16px;
   border: 1px solid #e8edf3;
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--sl-paper);
 }
 .lightning-venue-heading {
   display: flex;
@@ -632,7 +632,7 @@
   gap: 3px;
   padding: 3px 6px;
   border-radius: 5px;
-  background: #e9edf2;
+  background: var(--sl-paper-2);
   color: #647283;
   font-size: 10px;
   font-weight: 500;
@@ -749,7 +749,7 @@
   white-space: nowrap;
 }
 .lightning-cancel:hover {
-  background: #f6f8fb;
+  background: var(--sl-paper);
 }
 .lightning-submit {
   min-width: 146px;
@@ -1075,7 +1075,7 @@
   padding: 7px 11px;
   border: 1px solid #e5eaf0;
   border-radius: 8px;
-  background: #f8f9fb;
+  background: var(--sl-paper);
   color: #5a6575;
   font: inherit;
   font-size: 12px;
@@ -1179,7 +1179,7 @@
 .lightning-card-tags span {
   padding: 4px 7px;
   border-radius: 5px;
-  background: #f3f7fc;
+  background: var(--sl-paper);
   color: #6b7c90;
   font-size: 11px;
 }
@@ -1219,7 +1219,7 @@
   padding: 12px 14px;
   border: 1px solid #e8edf3;
   border-radius: 10px;
-  background: #f8fafc;
+  background: var(--sl-paper);
   font-size: 12px;
   color: #657487;
 }

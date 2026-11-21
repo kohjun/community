@@ -321,7 +321,7 @@
   color: #215e9d !important;
 }
 .event-brief.is-cancelled {
-  background: #f6f9fd;
+  background: var(--sl-paper);
   border-color: #dce7f3;
 }
 .event-brief.is-cancelled .event-status {
@@ -378,7 +378,7 @@
   height: 44px;
   border-radius: 9px;
   color: #465d77;
-  background: #f4f7fa;
+  background: var(--sl-paper);
   cursor: pointer;
 }
 .event-schedule-dialog .lifecycle-panel--dialog {

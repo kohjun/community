@@ -100,7 +100,7 @@ function StoriesSection({
       action={<MoreLink href="/stories?sort=popular">이야기 전체 보기</MoreLink>}
     >
       {posts.length ? (
-        <div className="sl-section__grid">
+        <div className="sl-section__grid sl-section__grid--hide-scrollbar">
           {posts.slice(0, HOME_SECTION_LIMIT).map((post, index) => (
             <a
               key={post.id}
@@ -216,7 +216,7 @@ function GamesSection({ audience, tinted = false }: { audience: Audience; tinted
       tinted={tinted}
       action={<MoreLink href="/games">웹게임 전체 보기</MoreLink>}
     >
-      <div className="sl-section__grid">
+      <div className="sl-section__grid sl-section__grid--hide-scrollbar">
         {GAME_CATALOG.slice(0, HOME_SECTION_LIMIT).map((game) => {
           const isSaved = saved.includes(game.id);
           return (

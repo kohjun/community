@@ -78,7 +78,7 @@
   font-size: 11px;
   line-height: 1.5;
   color: #527293;
-  background: #f0f5fb;
+  background: var(--sl-paper-2);
   border-radius: 5px;
   white-space: nowrap;
 }
@@ -94,7 +94,7 @@
 }
 .participation-workspace .participation-status.rejected {
   color: #67788b;
-  background: #f1f4f8;
+  background: var(--sl-paper-2);
 }
 .participation-workspace .participation-test-note {
   color: #456a93;
@@ -321,7 +321,7 @@
 .participation-workspace .dashboard-table th {
   font-size: 11px;
   padding: 10px;
-  background: #f5f8fc;
+  background: var(--sl-paper);
 }
 .participation-workspace .dashboard-table td {
   padding: 12px 10px;
@@ -345,7 +345,7 @@
 .participation-workspace .dashboard-row-actions button:nth-child(2),
 .participation-workspace .dashboard-refund {
   color: #547294;
-  background: #f4f8fd;
+  background: var(--sl-paper);
   border-color: #e0e9f4;
 }
 .participation-workspace .dashboard-decision-panel {
@@ -459,7 +459,7 @@
   padding: 16px;
   min-height: 180px;
   max-height: 58vh;
-  background: #f8fafd;
+  background: var(--sl-paper);
 }
 .participation-workspace .announcement-bubble {
   padding: 15px 16px;
@@ -764,7 +764,7 @@
   background: #eaf4ff;
 }
 .participation-flow .participation-flow-steps li.done {
-  background: #f1f6fc;
+  background: var(--sl-paper-2);
   color: #527599;
 }
 .participation-flow .participation-flow-form {
@@ -1005,7 +1005,7 @@
   padding: 5px;
   border: 1px solid #e1e9f1;
   border-radius: 12px;
-  background: #f5f8fb;
+  background: var(--sl-paper);
 }
 .event-workspace-nav > :is(a, span) {
   display: flex;

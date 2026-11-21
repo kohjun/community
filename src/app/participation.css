@@ -53,7 +53,7 @@
   gap: 9px;
   padding: 15px 18px;
   border-radius: 10px;
-  background: #f7f9fb;
+  background: var(--sl-paper);
   color: #63748b;
   font-size: 12px;
   font-weight: 600;
@@ -96,7 +96,7 @@
   margin: 15px 0 11px;
 }
 .event-summary {
-  background: #f8fafd;
+  background: var(--sl-paper);
   border-color: #e8eef5;
 }
 .event-summary h2 {
@@ -175,7 +175,7 @@
   color: #607389;
 }
 .participation-secondary:hover:not(:disabled) {
-  background: #f8fafd;
+  background: var(--sl-paper);
   border-color: #ccd8e7;
 }
 .participation-primary:disabled,
@@ -213,7 +213,7 @@
   padding: 11px 13px;
   border: 1px solid #e0e7f0;
   border-radius: 9px;
-  background: #fafbfd;
+  background: var(--sl-paper);
   font-size: 13px;
   font-weight: 400;
   outline-offset: 2px;
@@ -259,7 +259,7 @@
   line-height: 1.7;
   border-radius: 6px;
   color: #63748b;
-  background: #f1f4f8;
+  background: var(--sl-paper-2);
 }
 .participation-status.confirmed {
   color: #63748b;
@@ -432,7 +432,7 @@
 }
 .announcement-messages {
   padding: 25px;
-  background: #f7f9fb;
+  background: var(--sl-paper);
   min-height: 260px;
   max-height: 65vh;
   overflow: auto;
@@ -566,7 +566,7 @@
   font-size: 9px;
   padding: 2px 6px;
   border-radius: 5px;
-  background: #f0f6fc;
+  background: var(--sl-paper-2);
 }
 .announcement-author time {
   font-size: 10px;
@@ -636,7 +636,7 @@
 .profile-public-id {
   padding: 11px 12px;
   margin: 16px 0;
-  background: #f7f9fc;
+  background: var(--sl-paper);
   border-radius: 9px;
   font-size: 10px;
   text-align: left;
@@ -667,7 +667,7 @@
 .external-member-code code {
   display: block;
   border-radius: 9px;
-  background: #f5f8fc;
+  background: var(--sl-paper);
   padding: 13px;
   margin: 12px 0;
   color: #63748b;
@@ -696,7 +696,7 @@
 .dashboard-metric {
   padding: 19px;
   margin: 0;
-  background: #f7f9fc;
+  background: var(--sl-paper);
   border-color: #edf1f6;
   border-radius: 12px;
 }
@@ -800,7 +800,7 @@
   font-size: 12px;
 }
 .dashboard-table thead {
-  background: #f7f9fc;
+  background: var(--sl-paper);
 }
 .dashboard-table th {
   padding: 12px 11px;
@@ -884,7 +884,7 @@
 }
 .dashboard-decision-note {
   border-radius: 9px;
-  background: #f5f8fc;
+  background: var(--sl-paper);
   padding: 13px;
   font-size: 11px;
 }

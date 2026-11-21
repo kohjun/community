@@ -164,7 +164,7 @@
   flex-wrap: wrap;
   gap: 12px 24px;
   padding: 12px 24px;
-  background: #f2f7fd;
+  background: var(--sl-paper-2);
   border-radius: 12px;
   max-width: 100%;
   font-size: 13px;
@@ -212,7 +212,7 @@
   border: 1px solid #e5ebf3;
   border-radius: 8px;
   padding: 8px 10px;
-  background: #f8fafc;
+  background: var(--sl-paper);
   color: #7a8ba1;
   font-family: inherit;
   font-size: 11px;

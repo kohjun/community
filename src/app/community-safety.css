@@ -169,7 +169,7 @@
   margin-bottom: 8px;
 }
 .safety-answer {
-  background: #f4f8fd;
+  background: var(--sl-paper);
   border-radius: 10px;
   padding: 15px;
   margin: 12px 0;

@@ -132,7 +132,7 @@
 }
 .inbox-item.read .inbox-item-symbol {
   color: #8592a4;
-  background: #f3f5f8;
+  background: var(--sl-paper);
 }
 .inbox-item-copy {
   min-width: 0;

@@ -158,7 +158,7 @@
 }
 .crew-state.is-muted {
   color: #64748b;
-  background: #f1f4f7;
+  background: var(--sl-paper-2);
 }
 .crew-state.is-outline {
   border: 1px solid #dceafb;
@@ -324,7 +324,9 @@
   height: 24px;
   padding: 3px;
   flex-shrink: 0;
-  background: #d7dee7;
+  background: var(--sl-control-track);
+  outline: 1px solid var(--sl-control-outline);
+  outline-offset: -1px;
   border-radius: 20px;
   display: flex;
   align-items: center;
@@ -623,9 +625,9 @@
   margin-top: 14px;
   border-radius: 8px;
   border: 1px solid #e4eaf1;
-  color: #697586;
+  color: var(--sl-ink-3);
   font-size: 12px;
-  background: #f9fbfd;
+  background: var(--sl-paper);
 }
 .crew-timeline {
   display: grid;

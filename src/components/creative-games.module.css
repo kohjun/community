@@ -52,7 +52,7 @@
   gap: 7px;
   border-radius: 999px;
   padding: 9px 13px;
-  background: #f3f6f9;
+  background: var(--sl-paper);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
   font-weight: 750;
@@ -147,7 +147,7 @@
   color: #fff;
 }
 .secondary {
-  background: #f1f5f9;
+  background: var(--sl-paper-2);
   color: #334155;
   border: 1px solid #e2e8f0;
 }
@@ -164,7 +164,7 @@
   align-items: center;
 }
 .canvasWrap {
-  background: #f3f6fa;
+  background: var(--sl-paper);
   border: 1px solid #e3e9ef;
   border-radius: 16px;
   overflow: hidden;
@@ -187,7 +187,7 @@
   align-items: center;
   flex-wrap: wrap;
   padding: 10px;
-  background: #f8fafc;
+  background: var(--sl-paper);
   border-bottom: 1px solid #e3e9ef;
 }
 .tool {
@@ -218,8 +218,8 @@
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--sl-paper);
+  color: var(--sl-ink-3);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -247,7 +247,7 @@
   aspect-ratio: 4/3;
   overflow: hidden;
   border-radius: 14px;
-  background: #f1f5f9;
+  background: var(--sl-paper-2);
   display: grid;
   place-items: center;
 }
@@ -262,7 +262,7 @@
   width: 100%;
   max-height: 380px;
   border-radius: 14px;
-  background: #f1f5f9;
+  background: var(--sl-paper-2);
 }
 .mediaAudio {
   width: 100%;
@@ -313,7 +313,7 @@
   flex: 0 0 28px;
   height: 28px;
   border-radius: 8px;
-  background: #f1f5f9;
+  background: var(--sl-paper-2);
   font-weight: 750;
 }
 .scoreboard {
@@ -396,7 +396,7 @@
   display: grid;
   gap: 8px;
   padding: 14px;
-  background: #f8fafc;
+  background: var(--sl-paper);
   border: 1px solid #e5eaf0;
   border-radius: 14px;
 }
@@ -781,7 +781,7 @@
   display: grid;
   gap: 0.625rem;
   padding: 0.875rem 1rem;
-  background: #f5f8fc;
+  background: var(--sl-paper);
   border-radius: 0.875rem;
 }
 .submissionStatus > div {

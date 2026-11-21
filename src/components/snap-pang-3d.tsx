@@ -890,7 +890,7 @@ export function SnapPang3dStage(props: Props) {
           height: "100%",
           display: "grid",
           placeItems: "center",
-          background: "linear-gradient(135deg, #eaf4ff 0%, #f8fafc 100%)",
+          background: "linear-gradient(135deg, var(--sl-paper-2), var(--sl-paper))",
           color: "#334155",
           textAlign: "center",
           padding: 16,

@@ -17,7 +17,7 @@
   padding: 4px;
   border: 1px solid #e0eaf5;
   border-radius: 11px;
-  background: #f4f8fd;
+  background: var(--sl-paper);
 }
 
 .recruitment-view-option {
@@ -140,7 +140,7 @@
 }
 
 .recruitment-card-status-closed {
-  background: var(--sl-paper-2, #f3f6fa);
+  background: var(--sl-paper-2);
   color: var(--sl-ink-3, #52677f);
 }
 
@@ -269,7 +269,7 @@
   min-block-size: 28px;
   padding-inline: 6px;
   border-radius: 5px;
-  background: var(--sl-paper-2, #f1f7fd);
+  background: var(--sl-paper-2);
   color: var(--sl-ink-3, #52677f);
   font-size: 0.6875rem;
   white-space: nowrap;

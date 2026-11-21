@@ -1,12 +1,12 @@
 /*
  * Site shell and community home, tone-on-tone.
- * One blue family built around the signature #0A84FE: blue-slate neutrals from paper to ink,
+ * One blue family built around the signature #0A84FE: light blue surfaces and navy ink,
  * the signature fill for primary actions, deep navy for dark surfaces.
  * Loaded last so it settles the older layered overrides.
  */
 :root {
-  --sl-paper: #f3f5f8;
-  --sl-paper-2: #e9edf3;
+  --sl-paper: #f4f9ff;
+  --sl-paper-2: #eaf4ff;
   --sl-surface: #fff;
   --sl-line: #e1e6ed;
   --sl-line-soft: #edf0f4;
@@ -23,6 +23,8 @@
   --sl-accent-2: #0868cc;
   --sl-accent-soft: #e7f2ff;
   --sl-accent-line: #b9dcff;
+  --sl-control-track: #c4def8;
+  --sl-control-outline: #58789b;
   --sl-navy: #172540;
   --sl-navy-2: #0e1729;
   --sl-shadow: 0 1px 2px rgb(18 29 48 / 4%), 0 10px 28px -18px rgb(18 29 48 / 28%);
@@ -521,7 +523,7 @@ body {
 }
 .sl-carousel__progress button::before {
   right: 0;
-  background: #8391a3;
+  background: var(--sl-control-outline);
 }
 .sl-carousel__progress button[aria-current="true"]::before,
 .sl-carousel__progress button[aria-current="true"] i {
@@ -2451,6 +2453,12 @@ body {
   .sl-section__grid > * {
     scroll-snap-align: start;
   }
+  .sl-section__grid--hide-scrollbar {
+    scrollbar-width: none;
+  }
+  .sl-section__grid--hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 @media (max-width: 720px) {
   .sl-audience-toggle {
@@ -3133,7 +3141,7 @@ body {
   gap: 6px;
   padding: 14px;
   border-radius: 26px;
-  background: #f5f8fc;
+  background: var(--sl-paper);
   border: 1px solid #eaf0f7;
 }
 .sl-hero-quick__item {
@@ -3386,7 +3394,7 @@ body {
   padding: 46px 0;
 }
 .sl-section-band--tinted {
-  background: #f4f7fa;
+  background: var(--sl-paper);
   border-block: 1px solid #edf1f6;
 }
 .sl-section-band .sl-section {

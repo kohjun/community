@@ -11,7 +11,7 @@
   top: 16px;
   right: 16px;
   color: #687588;
-  background: #f4f6f9;
+  background: var(--sl-paper);
 }
 .push-onboarding-sheet[data-busy="true"] .dialog-close {
   pointer-events: none;
@@ -322,7 +322,7 @@
     height: 4px;
     margin: 0 auto 19px;
     border-radius: 8px;
-    background: #dce3eb;
+    background: var(--sl-control-track);
   }
   .push-onboarding-sheet .dialog-close {
     top: 32px;

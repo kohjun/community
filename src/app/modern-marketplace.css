@@ -208,7 +208,7 @@
   border-radius: 6px;
   color: #63748b;
   padding: 4px 8px;
-  background: #f0f6fc;
+  background: var(--sl-paper-2);
   font-size: 10px;
   font-weight: 600;
 }
@@ -229,7 +229,7 @@
 }
 .marketplace-stats > div {
   padding: 18px;
-  background: #f5f8fc;
+  background: var(--sl-paper);
   border-radius: 11px;
   text-align: center;
 }
@@ -827,7 +827,7 @@
   font-weight: 700;
 }
 .refund-steps > div:last-child {
-  background: #f7f9fc;
+  background: var(--sl-paper);
   color: #63748b;
 }
 .refund-quote {
@@ -1139,7 +1139,7 @@
   margin: 22px 0;
 }
 .marketplace-detail-header .marketplace-disclaimer {
-  background: #f7f9fc;
+  background: var(--sl-paper);
   border-radius: 9px;
   padding: 12px 15px;
   margin: 19px 0;
@@ -1151,7 +1151,7 @@
   min-width: 200px;
   flex: 1;
   border: 1px solid #e0e7f0;
-  background: #fafbfd;
+  background: var(--sl-paper);
   border-radius: 9px;
   height: 43px;
   padding: 0 12px;
@@ -1868,7 +1868,7 @@
   padding: 10px 12px;
   border: 1px solid #d7e8fb;
   border-radius: 8px;
-  background: #f2f7fe;
+  background: var(--sl-paper-2);
   color: #536f91;
   font-size: 11px;
   line-height: 1.8;
@@ -1926,7 +1926,7 @@
   margin: 20px 0;
   border: 1px solid #d7e8fb;
   border-radius: 12px;
-  background: #f2f7fe;
+  background: var(--sl-paper-2);
   color: #42678f;
   font-size: 12px;
   line-height: 1.8;

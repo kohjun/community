@@ -9,11 +9,11 @@ export default function Loading() {
           페이지를 불러오고 있어요.
         </p>
         <div className="space-y-6 motion-safe:animate-pulse" aria-hidden="true">
-          <div className="h-7 w-48 rounded-lg bg-slate-100" />
+          <div className="h-7 w-48 rounded-lg bg-surface-tint-strong" />
           {Array.from({ length: 5 }, (_, index) => (
-            <div key={index} className="space-y-3 border-b border-slate-100 pb-5">
-              <div className="h-4 w-3/4 rounded bg-slate-100" />
-              <div className="h-3 w-1/2 rounded bg-slate-100" />
+            <div key={index} className="space-y-3 border-b border-surface-tint-strong pb-5">
+              <div className="h-4 w-3/4 rounded bg-surface-tint-strong" />
+              <div className="h-3 w-1/2 rounded bg-surface-tint-strong" />
             </div>
           ))}
         </div>

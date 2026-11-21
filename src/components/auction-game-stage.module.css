@@ -60,7 +60,7 @@
   border: 1px solid #e8edf4;
   border-radius: 17px;
   padding: 20px;
-  background: linear-gradient(150deg, #fbfdff, #f5f8fd);
+  background: linear-gradient(150deg, #fbfdff, var(--sl-paper));
 }
 .itemTop {
   display: flex;
@@ -268,7 +268,7 @@
   padding: 14px;
   border: 1px solid #e2eaf4;
   border-radius: 10px;
-  background: #f7f9fc;
+  background: var(--sl-paper);
   color: #6d7e94;
   font-size: 12px;
   line-height: 1.8;
@@ -525,7 +525,7 @@
   color: #8090a3;
 }
 .bidTrail > span:not(:first-child) {
-  background: #f6f8fc;
+  background: var(--sl-paper);
   border-radius: 6px;
   padding: 4px 7px;
 }

@@ -182,7 +182,7 @@
   grid-template-columns: repeat(4, 1fr);
   border: 1px solid #e4eaf1;
   border-radius: 12px;
-  background: #f9fbfd;
+  background: var(--sl-paper);
   margin: 20px 0;
   overflow: hidden;
 }
@@ -276,7 +276,7 @@
   gap: 12px;
   font-size: 13px;
   padding: 12px 14px;
-  background: #f6f9fc;
+  background: var(--sl-paper);
   border-radius: 8px;
 }
 .record-linked-list a:hover {

@@ -42,7 +42,7 @@ export const GAME_CATALOG: readonly CatalogGame[] = [
     eyebrow: "SNAP. POP. 3D.",
     summary: "카메라로 찍고 3D로 터뜨려요! 색깔·사물·아바타 웃참 테이블 파티.",
     hook: "얼굴 비노출 모드부터 3D 풍선 폭탄까지, 오프라인 모임 전용 3D 게임",
-    players: "2~12명 · 테이블 모임 추천",
+    players: "2~12명",
     format: "컬러·사물·3D 웃참 믹스",
     tags: ["3D 물리", "카메라", "오프라인 파티"],
     highlights: [

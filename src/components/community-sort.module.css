@@ -31,7 +31,7 @@
   margin-top: 16px;
   padding: 12px;
   border-radius: 10px;
-  background: #f2f7fc;
+  background: var(--sl-paper-2);
   color: #426183;
   font-size: 13px;
   line-height: 1.7;

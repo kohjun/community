@@ -37,7 +37,7 @@
   margin-bottom: 20px;
   border: 1px solid #e4ebf3;
   border-radius: 12px;
-  background: #f3f6fa;
+  background: var(--sl-paper);
 }
 .playbook-tabs > button {
   display: flex;
@@ -163,7 +163,7 @@
 }
 .playbook-inline-facts > span {
   border-radius: 6px;
-  background: #f1f5fa;
+  background: var(--sl-paper-2);
   color: #5c7089;
   padding: 5px 9px;
   font-size: 12px;
@@ -314,7 +314,7 @@
   font-weight: 650;
   padding: 3px 7px;
   border-radius: 5px;
-  background: #f0f3f7;
+  background: var(--sl-paper-2);
   color: #7b899b;
 }
 .playbook-phase.is-main {
@@ -323,10 +323,10 @@
 }
 .playbook-phase.is-wrapup {
   color: #486887;
-  background: #edf2f7;
+  background: var(--sl-paper-2);
 }
 .playbook-cue-note {
-  background: #f6f8fb;
+  background: var(--sl-paper);
   border-radius: 7px;
   padding: 9px 11px;
   font-size: 12px;
@@ -382,7 +382,7 @@
 }
 .playbook-budget-table thead th {
   color: #7c8c9f;
-  background: #f6f8fb;
+  background: var(--sl-paper);
   font-size: 11px;
   font-weight: 500;
 }

@@ -100,7 +100,7 @@
   place-items: center;
   border-radius: 50%;
   color: #738398;
-  background: #f4f7fb;
+  background: var(--sl-paper);
 }
 .home-feature-save.saved {
   color: #0a84fe;
@@ -199,7 +199,7 @@
   display: block;
   width: 6px;
   height: 6px;
-  background: #d7e0eb;
+  background: var(--sl-control-track);
   border-radius: 8px;
   transition:
     width 0.2s,

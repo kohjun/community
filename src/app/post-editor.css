@@ -17,7 +17,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px;
-  background: #f8fafc;
+  background: var(--sl-paper);
   border-bottom: 1px solid #e4eaf1;
 }
 .rich-editor-toolbar select {
@@ -123,7 +123,7 @@
   text-underline-offset: 3px;
 }
 .rich-editor-content code {
-  background: #f0f3f6;
+  background: var(--sl-paper-2);
   padding: 2px 4px;
   border-radius: 4px;
   font-size: 0.9em;
@@ -213,7 +213,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 4px 9px;
-  background: #f8fafc;
+  background: var(--sl-paper);
   border-bottom: 1px solid #e4eaf1;
 }
 .rich-node-label > span {
@@ -246,7 +246,7 @@
   width: 100%;
   max-height: 360px;
   object-fit: contain;
-  background: #f8fafc;
+  background: var(--sl-paper);
 }
 .rich-image-node > input {
   display: block;
@@ -271,7 +271,7 @@
   justify-content: center;
   gap: 6px;
   padding: 24px 14px;
-  background: linear-gradient(130deg, #f0f7ff, #f8fafc);
+  background: linear-gradient(130deg, #f0f7ff, var(--sl-paper));
   text-align: center;
 }
 .rich-video-placeholder > span {
@@ -300,7 +300,7 @@
   display: block;
   font-size: 10px;
   color: #7e8d9c;
-  background: #fafbfd;
+  background: var(--sl-paper);
   padding: 9px 12px;
   line-height: 1.6;
 }

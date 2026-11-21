@@ -139,7 +139,9 @@
   width: 30px;
   height: 18px;
   border-radius: 10px;
-  background: #d9e1eb;
+  background: var(--sl-control-track);
+  outline: 1px solid var(--sl-control-outline);
+  outline-offset: -1px;
 }
 .mineToggle > span::after {
   content: "";
@@ -200,7 +202,7 @@
   padding: 12px 14px;
   margin: 0 0 18px;
   border-radius: 10px;
-  background: #f2f7fd;
+  background: var(--sl-paper-2);
   color: #476888;
   font-size: 12px;
   line-height: 1.7;

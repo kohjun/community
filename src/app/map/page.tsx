@@ -25,13 +25,14 @@ export default async function Page({
   const selectedEvent = uuidSchema.safeParse(query.event);
   const selectedPlace = uuidSchema.safeParse(query.place);
   const initial = await eventMapService(getDatabase()).list(actor, {
+    mode: "event",
     openOnly: true,
     eventId: selectedEvent.data,
   });
   const initialPin = selectedEvent.success
     ? initial.events.find((event) => event.id === selectedEvent.data)
     : selectedPlace.success
-      ? initial.venues.find((venue) => venue.id === selectedPlace.data)
+      ? null
       : initial.events[0];
   return (
     <EventMapCommunity

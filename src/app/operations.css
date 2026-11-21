@@ -162,7 +162,7 @@
   padding: 3px 7px;
   color: #567392;
   border-radius: 5px;
-  background: #f1f5fa;
+  background: var(--sl-paper-2);
   line-height: 1.5;
 }
 .operations-tags .operations-stage {
@@ -171,7 +171,7 @@
 }
 .operations-tags .operations-stage.is-completed {
   color: #6a7a8d;
-  background: #f2f4f7;
+  background: var(--sl-paper-2);
 }
 .operations-tags .operations-category {
   padding-left: 2px;
@@ -230,7 +230,7 @@
   padding: 10px 12px;
   margin: 12px 0;
   border-radius: 8px;
-  background: #f6f8fb;
+  background: var(--sl-paper);
 }
 .operations-response > span {
   color: #78869a;

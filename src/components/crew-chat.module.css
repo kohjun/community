@@ -46,14 +46,14 @@
   background: #0a84fe;
 }
 .offline {
-  background: #aeb8c6;
+  background: var(--sl-control-outline);
 }
 .messages {
   height: clamp(340px, 58dvh, 640px);
   overflow: auto;
   overscroll-behavior: contain;
   padding: 16px 20px;
-  background: #f7f9fc;
+  background: var(--sl-paper);
   scrollbar-width: thin;
 }
 .empty {
@@ -125,7 +125,7 @@
   border-radius: 14px 3px 14px 14px;
 }
 .bubble.removed {
-  background: #edf0f5;
+  background: var(--sl-paper-2);
   border-color: transparent;
   color: #7b8797;
   font-size: 12px;
@@ -170,7 +170,7 @@
   padding: 10px 12px;
   border: 1px solid #e3e8ef;
   border-radius: 10px;
-  background: #f8fafc;
+  background: var(--sl-paper);
   color: #263445;
   font: inherit;
   font-size: 16px;

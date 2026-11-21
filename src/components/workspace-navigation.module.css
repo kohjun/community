@@ -64,7 +64,7 @@
   color: #667085;
   font-size: 13px;
   font-weight: 600;
-  background: #f4f6f8;
+  background: var(--sl-paper);
 }
 .subTabs a[aria-current="page"] {
   color: #095eac;
@@ -193,7 +193,7 @@
   gap: 14px;
   margin: 24px 0;
   padding: 18px;
-  background: #f8fafc;
+  background: var(--sl-paper);
   border-radius: 12px;
 }
 .quickSearch > span {

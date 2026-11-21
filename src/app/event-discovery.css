@@ -132,7 +132,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   padding: 4px;
-  background: #f1f4f8;
+  background: var(--sl-paper-2);
   border-radius: 12px;
 }
 .discovery-kind-options button {
@@ -294,7 +294,9 @@
   width: 44px;
   height: 25px;
   border-radius: 20px;
-  background: #d4dce7;
+  background: var(--sl-control-track);
+  outline: 1px solid var(--sl-control-outline);
+  outline-offset: -1px;
   transition: background 0.15s;
 }
 .discovery-switch > span::after {
@@ -447,7 +449,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: #f2f7fd;
+  background: var(--sl-paper-2);
   color: #0869ce;
   border-radius: 7px;
   padding: 7px 9px;

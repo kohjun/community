@@ -324,7 +324,7 @@
 .push-settings-notice {
   margin: 0 0 12px;
   padding: 10px 12px;
-  background: #f5f8fc;
+  background: var(--sl-paper);
   color: #5b6c83;
   font-size: 11px;
   line-height: 1.7;
@@ -373,7 +373,9 @@
   flex-shrink: 0;
   border: 0;
   border-radius: 999px;
-  background: #d8e0ea;
+  background: var(--sl-control-track);
+  outline: 1px solid var(--sl-control-outline);
+  outline-offset: -1px;
   transition: background 0.18s ease;
 }
 .push-settings-switch span {

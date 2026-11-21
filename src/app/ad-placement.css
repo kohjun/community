@@ -71,7 +71,7 @@
   height: 4px;
   margin: 10px auto 17px;
   border-radius: 5px;
-  background: #dce3eb;
+  background: var(--sl-control-track);
 }
 .mobile-ad-heading {
   flex: none;

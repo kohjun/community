@@ -91,7 +91,7 @@
   margin: 12px 0;
   border: 1px solid #e6edf5;
   border-radius: 9px;
-  background: #fafcfe;
+  background: var(--sl-paper);
   min-width: 0;
 }
 .participation-page .application-response-details > summary {
@@ -202,7 +202,7 @@
   border-radius: 10px;
   padding: 12px;
   margin: 0 0 15px;
-  background: #fafcfe;
+  background: var(--sl-paper);
 }
 .participation-page .event-question-edit-card legend {
   font-size: 11px;

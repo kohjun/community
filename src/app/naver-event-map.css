@@ -6,7 +6,7 @@
   min-height: 380px;
   overflow: hidden;
   border-radius: inherit;
-  background: #f6f8fb;
+  background: var(--sl-paper);
 }
 .naver-event-map-canvas {
   width: 100%;
@@ -22,7 +22,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 28px;
-  background: #f6f8fb;
+  background: var(--sl-paper);
   text-align: center;
 }
 .naver-event-map-status-icon {

@@ -99,7 +99,7 @@
   font-size: max(1rem, 1em);
 }
 .meeting-idea-compose .growth-form select:disabled {
-  background: #f7f9fc;
+  background: var(--sl-paper);
   color: #63748b;
 }
 .maturity-panel .meeting-idea-region {

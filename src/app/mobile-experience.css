@@ -64,7 +64,7 @@
     margin: 0;
     padding: 0 12px;
     border-radius: 12px;
-    background: #f4f7fb;
+    background: var(--sl-paper);
     border: 1px solid #e8edf4;
     flex: 1;
   }
@@ -224,7 +224,7 @@
     min-height: 44px;
     padding: 8px 5px;
     border-radius: 10px;
-    background: #f8fafc;
+    background: var(--sl-paper);
   }
   .mobile-categories button[data-category="knowledge"] svg,
   .mobile-categories button[data-category="lab"] svg,
@@ -787,7 +787,7 @@
     min-width: 56px;
     min-height: 44px;
     padding: 0 11px;
-    background: #f4f7fb;
+    background: var(--sl-paper);
     border-radius: 10px;
     font-size: 12px;
     font-weight: 650;

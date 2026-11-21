@@ -72,7 +72,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #a9b7c4;
+  background: var(--sl-control-outline);
 }
 .online[data-connected="true"] i {
   background: #0a84fe;
@@ -381,7 +381,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: #f6f8fa;
+  background: var(--sl-paper);
   border: 0;
   border-radius: 10px;
   color: #607184;
@@ -428,7 +428,7 @@
   display: inline-block;
   max-width: 90%;
   margin: 5px 0 0;
-  background: #f1f5f8;
+  background: var(--sl-paper-2);
   padding: 9px 12px;
   border-radius: 0 12px 12px;
   font-size: 13px;
@@ -575,7 +575,7 @@
   width: 37px;
   height: 37px;
   border-radius: 12px;
-  background: #f0f4f7;
+  background: var(--sl-paper-2);
   color: #8ba0b0;
 }
 .personIcon[data-me="true"] {

@@ -95,7 +95,7 @@
   font: inherit;
   font-size: 13px;
   border: 1px solid #dce7f4;
-  background: #f6f9fd;
+  background: var(--sl-paper);
   color: #1262b8;
   border-radius: 8px;
   padding: 10px 12px;

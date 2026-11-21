@@ -50,7 +50,7 @@
   padding: 11px 13px;
   border: 1px solid #e5e9ef;
   border-radius: 10px;
-  background: #fafbfc;
+  background: var(--sl-paper);
   color: #536172;
   font-size: 13px;
 }
@@ -95,7 +95,7 @@
 }
 .unified-search-tabs a > span {
   font-size: 11px;
-  background: #f1f3f6;
+  background: var(--sl-paper-2);
   padding: 2px 6px;
   border-radius: 6px;
 }
@@ -149,7 +149,7 @@
   transition: background 0.15s;
 }
 .unified-search-result:hover {
-  background: #f9fbfe;
+  background: var(--sl-paper);
 }
 .unified-search-result-icon {
   width: 43px;
@@ -209,7 +209,7 @@
 .unified-search-result-meta .unified-search-tag {
   font-size: 10px;
   color: #63788d;
-  background: #f5f7fa;
+  background: var(--sl-paper);
   border-radius: 5px;
   padding: 2px 5px;
 }

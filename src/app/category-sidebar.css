@@ -81,7 +81,7 @@
 
   .community-category-nav button:hover {
     color: #29394e;
-    background: #f5f7fa;
+    background: var(--sl-paper);
   }
 
   .community-category-nav button.active {

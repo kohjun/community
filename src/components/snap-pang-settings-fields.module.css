@@ -120,7 +120,7 @@
   align-items: center;
   padding: 3px 8px;
   border-radius: 999px;
-  background: #f1f5f9;
+  background: var(--sl-paper-2);
   color: #475569;
   font-size: 11px;
   font-weight: 700;
@@ -150,7 +150,7 @@
   font-size: 11px;
   font-weight: 650;
   color: #334155;
-  background: #f8fafc;
+  background: var(--sl-paper);
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 3px 7px;

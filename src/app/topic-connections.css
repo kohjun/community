@@ -87,7 +87,7 @@
 }
 .topic-connection-choices .topic-connection-choice:disabled {
   cursor: default;
-  background: #f4f7fa;
+  background: var(--sl-paper);
   color: #98a2b3;
 }
 .topic-connection-choices .topic-connection-choice[aria-pressed="true"] {

@@ -75,7 +75,7 @@
   color: #65758a;
   border: 1px solid transparent;
   border-radius: 7px;
-  background: #f5f7fa;
+  background: var(--sl-paper);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -125,7 +125,7 @@
   padding: 3px 7px;
   color: #6a7a8d;
   border-radius: 5px;
-  background: #f2f5f8;
+  background: var(--sl-paper-2);
   font-size: 11px;
   line-height: 1.5;
 }
@@ -201,7 +201,7 @@
   margin: 12px 0 0;
   padding: 10px 12px;
   border-radius: 8px;
-  background: #f2f7fd;
+  background: var(--sl-paper-2);
   color: #456789;
   font-size: 12px;
 }

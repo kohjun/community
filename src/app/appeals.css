@@ -172,7 +172,7 @@
 }
 .appeals-status.is-closed {
   color: #6a7a8d;
-  background: #f2f4f7;
+  background: var(--sl-paper-2);
 }
 .appeals-history {
   margin-top: 10px;
@@ -188,10 +188,10 @@
   padding: 10px 12px;
   margin-top: 9px;
   border-radius: 8px;
-  background: #f6f8fb;
+  background: var(--sl-paper);
 }
 .appeals-message.is-staff {
-  background: #f2f7fd;
+  background: var(--sl-paper-2);
 }
 .appeals-message strong {
   color: #546d8c;

@@ -60,7 +60,7 @@
 }
 .rich-post-body code {
   border-radius: 4px;
-  background: #edf2f7;
+  background: var(--sl-paper-2);
   padding: 2px 5px;
   font-size: 0.9em;
 }
@@ -94,7 +94,7 @@
 .post-video-player {
   position: relative;
   aspect-ratio: 16 / 9;
-  background: #f4f8fe;
+  background: var(--sl-paper);
 }
 .post-video-player iframe,
 .post-video-player video {
@@ -176,7 +176,7 @@
   align-items: center;
   gap: 13px;
   padding: 19px 16px;
-  background: #f6f9fc;
+  background: var(--sl-paper);
 }
 .post-video-link-icon {
   display: grid;

@@ -354,7 +354,7 @@
   font-size: 0.6875rem;
   line-height: 1.4;
   border-radius: 5px;
-  background: #f3f6fa;
+  background: var(--sl-paper);
   color: #526174;
   padding: 4px 5px;
 }
@@ -391,10 +391,10 @@
   gap: 12px;
   text-align: center;
   padding: 50px 15px;
-  background: #f8fafc;
+  background: var(--sl-paper);
   border: 1px dashed #dce6f2;
   border-radius: 14px;
-  color: #8294a9;
+  color: var(--sl-ink-3);
 }
 .empty h3 {
   font-size: 16px;
@@ -545,9 +545,9 @@
   height: 23px;
   font-size: 10px;
   font-weight: 700;
-  background: #eff5fc;
+  background: var(--sl-paper-2);
   border-radius: 7px;
-  color: #6098cc;
+  color: var(--sl-accent-2);
 }
 .highlights p {
   font-size: 13px;

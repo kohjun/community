@@ -51,7 +51,7 @@
   padding: 15px 18px;
   border: 1px solid #e4eaf1;
   border-radius: 12px;
-  background: #f7f9fc;
+  background: var(--sl-paper);
 }
 .release-readiness-summary dt {
   color: #53677a;
@@ -81,7 +81,7 @@
 .release-readiness-scope {
   padding: 16px 18px;
   border: 1px solid #dbe9fa;
-  background: #f4f8fe;
+  background: var(--sl-paper);
   border-radius: 12px;
 }
 .release-readiness-scope strong {
@@ -144,11 +144,11 @@
 }
 .release-readiness-status-warn {
   color: #607388;
-  background: #f1f4f8;
+  background: var(--sl-paper-2);
 }
 .release-readiness-status-fail {
   color: #315272;
-  background: #e8eff8;
+  background: var(--sl-paper-2);
 }
 .release-readiness-group li p {
   margin: 7px 0 0;

@@ -160,7 +160,7 @@
   padding: 12px;
   font-size: 13px;
   color: #333e4c;
-  background: #f8fafc;
+  background: var(--sl-paper);
   min-width: 0;
 }
 a.post-title-open,

@@ -60,7 +60,7 @@
 }
 .metrics-definition {
   padding: 20px;
-  background: #f8fafc;
+  background: var(--sl-paper);
   border-radius: 14px;
 }
 .metrics-definition h2 {
