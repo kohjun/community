@@ -1,7 +1,7 @@
 import { EVENT_RECRUITMENTS_HREF } from "./meetup-types";
 import { HOSTED_EVENTS_HREF } from "./workspace-navigation";
 
-// `primary` items stay in the header; the rest live under "더보기" so first-time visitors see a short menu.
+// Primary links are considered first when fitting the header row.
 export const SITE_NAVIGATION = [
   { id: "home", label: "홈", href: "/", primary: true },
   { id: "stories", label: "이야기", href: "/stories", primary: true },
@@ -30,6 +30,7 @@ export const AUDIENCE_NAVIGATION = {
       { id: "players", label: "플레이어", href: "/players" },
       { id: "map", label: "이벤트 맵", href: "/map" },
       { id: "ideas", label: "모임 제안하기", href: "/ideas" },
+      { id: "archive", label: "아카이브", href: "/archive" },
     ],
   },
   host: {

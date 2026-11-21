@@ -321,27 +321,32 @@
     margin: 16px 0;
   }
   .heading {
-    padding: 16px;
+    gap: 6px;
+    padding: 10px 12px;
   }
   .layout {
     flex-direction: column;
   }
   .public {
-    padding: 22px 18px;
+    padding: 14px 12px;
   }
   .public h2 {
     font-size: 23px;
   }
   .public blockquote {
-    font-size: 17px;
-    padding: 18px;
+    font-size: 16px;
+    padding: 12px;
   }
   .private {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 8px;
+    text-align: start;
     order: -1;
     width: auto;
     border-left: 0;
     border-bottom: 1px solid #e6eef8;
-    padding: 18px;
+    padding: 10px 12px;
   }
   .private > svg {
     display: none;
@@ -350,11 +355,26 @@
     margin: 0;
   }
   .private h3 {
-    font-size: 30px;
-    margin: 6px 0;
+    grid-column: 1;
+    font-size: 22px;
+    margin: 0;
   }
+  .private button {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    padding-inline: 10px;
+  }
+  .private > strong,
   .private p {
-    margin-top: 12px;
+    grid-column: 1 / -1;
+    margin-top: 2px;
+  }
+  .turn {
+    padding: 12px 0 8px;
+    gap: 8px;
+  }
+  .timer {
+    font-size: 32px;
   }
   .choices {
     grid-template-columns: repeat(2, minmax(0, 1fr));

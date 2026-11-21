@@ -11,6 +11,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Markdown } from "./markdown";
 import { PostBody } from "./post-body";
+import { PostAuthorName } from "./post-author-name";
 import { RelatedTopics } from "./topic-connections";
 import { PollCard } from "./poll-card";
 import { SafetyActions } from "./safety-actions";
@@ -177,7 +178,9 @@ export function PostDetailContent({
           <UserRound size={20} />
         </span>
         <span>
-          <strong>{active.author}</strong>
+          <strong>
+            <PostAuthorName post={active} />
+          </strong>
           <small>
             {active.time} · 조회 {active.views}
           </small>

@@ -955,6 +955,21 @@ body {
   width: 13px;
   height: 13px;
 }
+
+.post-excerpt-link {
+  display: block;
+  text-decoration: none;
+}
+.post-author-profile {
+  overflow-wrap: anywhere;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: #90acc8;
+  text-underline-offset: 0.16em;
+}
+.post-author-profile:hover {
+  color: var(--sl-accent-2);
+}
 .sl-post-list .expanded-post-row .post-row-actions {
   min-height: 34px;
   margin-top: 12px;
@@ -1814,6 +1829,10 @@ body {
   }
   .sl-feed__head h2 {
     font-size: 18px;
+  }
+  .sl-feed__head--events,
+  .sl-feed__head--events .sl-feed__tools {
+    flex-wrap: wrap;
   }
   .sl-feed__write {
     display: none;
@@ -2714,7 +2733,7 @@ body {
 }
 @media (max-width: 720px) {
   html {
-    scroll-padding-top: 116px;
+    scroll-padding-top: 68px;
   }
   .sl-header__inner {
     flex-wrap: wrap;
@@ -2797,7 +2816,7 @@ body {
     grid-row: 2;
   }
   .sl-feed__section {
-    scroll-margin-top: 116px;
+    scroll-margin-top: 0;
   }
   .sl-search.is-open {
     top: calc(100% + 8px);
@@ -2988,9 +3007,29 @@ body {
   border-top: 1px solid #f1f4f8;
 }
 .sl-header__nav-row .sl-nav {
+  position: relative;
   display: flex;
+  flex: 1;
+  min-width: 0;
   align-items: center;
   gap: 28px;
+}
+.sl-nav__measure {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.sl-nav__measure > div {
+  display: flex;
+  inline-size: max-content;
+}
+.sl-header__nav-row .sl-nav > .sl-nav__link,
+.sl-header__nav-row .sl-nav__more,
+.sl-nav__measure .sl-nav__link {
+  flex: none;
 }
 .sl-header__nav-row .sl-nav__link {
   height: 54px;
@@ -3028,41 +3067,6 @@ body {
   font-weight: 800;
   line-height: 13px;
 }
-.sl-header__shortcuts {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: none;
-}
-.sl-header__shortcut {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 32px;
-  padding: 0 12px;
-  border: 1px solid #dce3ec;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #334155;
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  text-decoration: none;
-  white-space: nowrap;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease,
-    background-color 0.15s ease;
-}
-.sl-header__shortcut svg {
-  color: var(--sl-signature);
-}
-.sl-header__shortcut:hover {
-  border-color: var(--sl-signature);
-  background: #f2f8ff;
-  color: #0868cc;
-}
-
 /* Clean White Home Canvas + 2-Column Catch-style Hero --------------------------------------- */
 .sl-page--home {
   background: #ffffff;
@@ -3454,8 +3458,7 @@ body {
 
 /* Tablet & Mobile Responsive Adaptations ---------------------------------------------------- */
 @media (max-width: 1120px) {
-  .sl-header__slogan,
-  .sl-header__shortcuts {
+  .sl-header__slogan {
     display: none;
   }
   .sl-header__top .sl-search-link,
@@ -3534,18 +3537,11 @@ body {
   .sl-header__top .sl-audience-toggle {
     order: 2;
     margin: 0 auto;
-    background: var(--sl-paper-2);
   }
   .sl-header__top .sl-audience-toggle button {
-    height: 28px;
+    height: 30px;
     padding: 0 10px;
-    color: var(--sl-ink-3);
     font-size: 12px;
-  }
-  .sl-header__top .sl-audience-toggle button[aria-pressed="true"] {
-    background: #ffffff;
-    color: var(--sl-accent-2);
-    box-shadow: 0 1px 3px rgb(18 29 48 / 12%);
   }
   .sl-header__top .sl-header__tools {
     order: 3;
@@ -3588,29 +3584,7 @@ body {
     border-width: 1px;
   }
   .sl-header__nav-row {
-    height: 44px;
-    width: calc(100% + var(--sl-gutter) * 2);
-    margin-inline: calc(-1 * var(--sl-gutter));
-    padding-inline: 4px;
-    border-top: 1px solid var(--sl-line-soft);
-  }
-  .sl-header__nav-row .sl-nav {
-    display: flex;
-    width: 100%;
-    height: 44px;
-    gap: 0;
-  }
-  .sl-header__nav-row .sl-nav__link {
-    height: 44px;
-    padding: 0 2px;
-    font-size: 12.5px;
-    font-weight: 650;
-  }
-  .sl-header__nav-row .sl-nav__badge {
-    padding: 0 3px;
-    font-size: 7.5px;
-    line-height: 11px;
-    border: 0;
+    display: none;
   }
 
   /* Compact mobile hero banner matching the previous snappy proportions */
@@ -3722,9 +3696,6 @@ body {
   }
   .sl-header__top .sl-audience-toggle button {
     padding: 0 8px;
-    font-size: 11.5px;
-  }
-  .sl-header__nav-row .sl-nav__link {
     font-size: 11.5px;
   }
   .sl-hero-quick {

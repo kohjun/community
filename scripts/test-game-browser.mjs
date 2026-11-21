@@ -341,9 +341,29 @@ try {
   for (const p of [hp, a, b, c, d])
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   ok("nickname and readiness update host live; mobile has no horizontal overflow");
+  await hp.setViewportSize({ width: 393, height: 740 });
+  await b.setViewportSize({ width: 320, height: 600 });
+  for (const p of [a, b]) await p.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await hp.getByRole("button", { name: "게임 시작", exact: true }).click();
-  for (const p of [hp, a, b]) await p.locator('[data-game-phase="playing"]').waitFor();
+  for (const p of [hp, a, b]) {
+    const stage = p.locator('[data-game-phase="playing"]');
+    await stage.getByRole("heading", { name: "라운드 1 진행 중" }).waitFor();
+    await p.waitForFunction(() => scrollY <= 1 && document.activeElement?.tagName === "H1");
+    const box = await stage.boundingBox();
+    assert.ok(box && box.y >= 0 && box.y + box.height <= p.viewportSize().height);
+    assert.equal(await p.getByRole("heading", { name: "이번 라운드 플레이어" }).isVisible(), false);
+  }
   await c.getByRole("heading", { name: "다음 라운드를 기다려요" }).waitFor();
+  assert.equal(await c.locator('[data-game-phase="playing"]').count(), 0);
+  await hp.getByRole("button", { name: "방 정보", exact: true }).click();
+  const roomInfo = hp.getByRole("dialog", { name: "방 정보", exact: true });
+  await roomInfo.getByRole("heading", { name: "이번 라운드 플레이어" }).waitFor();
+  await hp.keyboard.press("Escape");
+  await roomInfo.waitFor({ state: "hidden" });
+  await hp.getByRole("button", { name: "방 정보", exact: true }).click();
+  ok(
+    "mobile start reveals gameplay without scrolling for host and joined players; room info stays reachable",
+  );
   const initial = (await a.request.get(`${origin}/api/games/${roomId}`).then((r) => r.json())).data;
   await a.reload();
   await a.locator('[data-game-phase="playing"]').waitFor();
@@ -351,8 +371,9 @@ try {
     .data;
   assert.equal(repeated.viewer.id, initial.viewer.id);
   ok("all browsers enter playing together and refresh preserves the seat");
-  await hp.getByRole("button", { name: "이번 라운드 종료", exact: true }).click();
-  await hp.getByRole("button", { name: "다음 라운드 준비", exact: true }).click();
+  await roomInfo.getByRole("button", { name: "이번 라운드 종료", exact: true }).click();
+  await roomInfo.getByRole("button", { name: "다음 라운드 준비", exact: true }).click();
+  await roomInfo.waitFor({ state: "hidden" });
   await b.getByRole("heading", { name: "함께할 준비" }).waitFor();
   await a.getByRole("button", { name: "방 나가기", exact: true }).click();
   await c.getByRole("heading", { name: "함께할 준비" }).waitFor();

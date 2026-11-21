@@ -270,7 +270,7 @@ export function LightningCommunity({
           <p>복잡한 준비 없이 취향 맞는 사람들과 작은 모임을 열어보세요.</p>
           <div className="maturity-actions">
             <Link href="/discover/saved">조건 저장·모집 알림</Link>
-            <Link href="/ideas">원하는 모임 제안</Link>
+            <Link href="/ideas">모임 제안하기</Link>
           </div>
         </div>
         {canWrite ? (
@@ -291,9 +291,6 @@ export function LightningCommunity({
         <span>
           <Zap size={17} /> 담당자 승인 후 참가 확정
         </span>
-        <Link href="/map">
-          이벤트 맵에서 장소 찾기 <ArrowUpRight size={15} />
-        </Link>
       </div>
       {venueUnavailable && (
         <p className="participation-error" role="status">

@@ -16,6 +16,7 @@ import { CATEGORIES } from "@/domain/categories";
 import type { CommunityPost } from "@/domain/community";
 import { postPath } from "@/domain/post-sharing";
 import { shouldOpenPostModal } from "@/lib/post-sharing";
+import { PostAuthorName } from "./post-author-name";
 import { usePostRead } from "@/lib/use-read-posts";
 import { cn } from "@/lib/utils";
 
@@ -161,7 +162,7 @@ export function CommunityRecruitmentCard({
         <div className="recruitment-card-meta">
           <div className="recruitment-card-author">
             <UserRound size={13} aria-hidden="true" />
-            <span>{post.anonymous ? "익명" : post.author}</span>
+            <PostAuthorName post={post} />
             {post.distanceKm !== null && post.distanceKm !== undefined && (
               <span className="recruitment-card-distance">
                 <MapPin size={12} aria-hidden="true" />

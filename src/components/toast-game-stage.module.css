@@ -699,7 +699,7 @@
     border-radius: 12px;
   }
   .header {
-    padding: 16px;
+    padding: 10px 12px;
     gap: 8px;
   }
   .header > span {
@@ -709,28 +709,28 @@
     font-size: 9px;
   }
   .body {
-    padding: 18px 14px;
+    padding: 12px;
   }
   .playGrid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
+    gap: 12px;
   }
   .steps {
     gap: 4px;
-    margin-bottom: 17px;
+    margin-bottom: 10px;
   }
   .steps span {
     font-size: 9px;
     padding: 5px;
   }
   .questionCard {
-    padding: 23px 19px;
+    padding: 14px 12px;
   }
   .questionIcon {
-    width: 60px;
-    height: 60px;
-    border-radius: 19px;
-    margin: 19px 0 15px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    margin: 9px 0;
   }
   .stage .questionCard h2 {
     font-size: 22px;
@@ -755,7 +755,7 @@
     font-size: 12px;
   }
   .choices button {
-    min-height: 110px;
+    min-height: 76px;
   }
   .stage .review h2 {
     font-size: 23px;

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   AUDIENCE_NAVIGATION,
@@ -11,6 +11,19 @@ import {
   type SiteNavigationOverride,
 } from "@/domain/navigation";
 import { useAudience } from "@/lib/audience";
+
+function navLabel(id: string, label: string) {
+  return (
+    <>
+      {label}
+      {id === "games" && (
+        <span className="sl-nav__badge" aria-hidden="true">
+          BETA
+        </span>
+      )}
+    </>
+  );
+}
 
 export function SiteNavigation({
   activeSection,
@@ -22,16 +35,52 @@ export function SiteNavigation({
   const pathname = usePathname();
   const [audience] = useAudience();
   const { primary, more } = AUDIENCE_NAVIGATION[audience];
+  const items = [...primary, ...more];
   const active = activeNavigationSection(pathname, activeSection);
-  const secondaryActive = more.some(
-    (item) => item.id === active || pathname === item.href || pathname?.startsWith(item.href + "/"),
-  );
   const menuId = useId();
+  const [visibleCount, setVisibleCount] = useState<number>(primary.length);
   const [moreOpen, setMoreOpen] = useState(false);
   const [nativePopover, setNativePopover] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const isActive = (item: { id: string; href: string }) =>
+    item.id === active || pathname === item.href;
+  const overflow = items.slice(visibleCount);
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    const measure = measureRef.current;
+    if (!nav || !measure) return;
+    function fit() {
+      if (!nav || !measure || !nav.clientWidth) return;
+      const widths = Array.from(measure.children, (item) => item.getBoundingClientRect().width);
+      const moreWidth = widths.pop() ?? 0;
+      const gap = Number.parseFloat(getComputedStyle(nav).columnGap) || 0;
+      const available = nav.clientWidth;
+      const fullWidth =
+        widths.reduce((sum, width) => sum + width, 0) + gap * Math.max(0, widths.length - 1);
+      if (fullWidth <= available) {
+        setVisibleCount(widths.length);
+        return;
+      }
+      let width = moreWidth;
+      let count = 0;
+      for (const itemWidth of widths) {
+        width += itemWidth + gap;
+        if (width > available) break;
+        count++;
+      }
+      setVisibleCount(count);
+    }
+    fit();
+    const resize = new ResizeObserver(fit);
+    resize.observe(nav);
+    resize.observe(measure);
+    return () => resize.disconnect();
+  }, [audience, active, pathname]);
 
   function placeMenu() {
     const trigger = triggerRef.current,
@@ -51,7 +100,7 @@ export function SiteNavigation({
     setMoreOpen(false);
   }
   useEffect(() => setNativePopover(Object.hasOwn(HTMLElement.prototype, "popover")), []);
-  useEffect(() => closeMenu(), [pathname, audience, activeSection]);
+  useEffect(() => closeMenu(), [pathname, audience, activeSection, visibleCount]);
   useEffect(() => {
     if (!moreOpen) return;
     window.addEventListener("resize", placeMenu);
@@ -77,14 +126,26 @@ export function SiteNavigation({
   }, [moreOpen, nativePopover]);
 
   return (
-    <nav className="sl-nav" aria-label="주 메뉴">
-      {primary.map(({ id, label, href }) => (
+    <nav className="sl-nav" aria-label="주 메뉴" ref={navRef}>
+      <div className="sl-nav__measure" aria-hidden="true">
+        <div ref={measureRef}>
+          {items.map((item) => (
+            <span key={item.id} className="sl-nav__link" data-active={isActive(item) || undefined}>
+              {navLabel(item.id, item.label)}
+            </span>
+          ))}
+          <span className="sl-nav__link">
+            더보기 <ChevronDown size={15} aria-hidden="true" />
+          </span>
+        </div>
+      </div>
+      {items.slice(0, visibleCount).map(({ id, label, href }) => (
         <Link
           key={id}
           href={href}
           className="sl-nav__link"
           aria-label={id === "games" ? "웹게임 (베타)" : undefined}
-          aria-current={active === id ? "page" : undefined}
+          aria-current={isActive({ id, href }) ? "page" : undefined}
           onClick={(event) => {
             if (
               event.defaultPrevented ||
@@ -98,59 +159,56 @@ export function SiteNavigation({
             if (id === "stories") onNavigate?.(id);
           }}
         >
-          {label}
-          {id === "games" && (
-            <span className="sl-nav__badge" aria-hidden="true">
-              BETA
-            </span>
-          )}
+          {navLabel(id, label)}
         </Link>
       ))}
-      <div
-        className="sl-nav__more"
-        ref={moreRef}
-        onBlurCapture={(event) => {
-          if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node))
-            closeMenu();
-        }}
-      >
-        <button
-          type="button"
-          className="sl-nav__link"
-          ref={triggerRef}
-          aria-expanded={moreOpen}
-          aria-controls={menuId}
-          popoverTarget={nativePopover ? menuId : undefined}
-          data-active={secondaryActive || undefined}
-          onClick={() => {
-            placeMenu();
-            if (!nativePopover) setMoreOpen((open) => !open);
-          }}
-        >
-          더보기 <ChevronDown size={15} aria-hidden="true" />
-        </button>
+      {overflow.length > 0 && (
         <div
-          id={menuId}
-          className="sl-nav__menu"
-          ref={panelRef}
-          popover={nativePopover ? "auto" : undefined}
-          hidden={!nativePopover && !moreOpen}
-          onToggle={(event) => {
-            if (nativePopover) setMoreOpen(event.newState === "open");
+          className="sl-nav__more"
+          ref={moreRef}
+          onBlurCapture={(event) => {
+            if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node))
+              closeMenu();
           }}
         >
-          {more.map(({ id, label, href }) => (
-            <Link
-              key={id}
-              href={href}
-              onClick={closeMenu}
-              aria-current={active === id || pathname === href ? "page" : undefined}
-            >
-              {label}
-            </Link>
-          ))}
+          <button
+            type="button"
+            className="sl-nav__link"
+            ref={triggerRef}
+            aria-expanded={moreOpen}
+            aria-controls={menuId}
+            popoverTarget={nativePopover ? menuId : undefined}
+            data-active={overflow.some(isActive) || undefined}
+            onClick={() => {
+              placeMenu();
+              if (!nativePopover) setMoreOpen((open) => !open);
+            }}
+          >
+            더보기 <ChevronDown size={15} aria-hidden="true" />
+          </button>
+          <div
+            id={menuId}
+            className="sl-nav__menu"
+            ref={panelRef}
+            popover={nativePopover ? "auto" : undefined}
+            hidden={!nativePopover && !moreOpen}
+            onToggle={(event) => {
+              if (nativePopover) setMoreOpen(event.newState === "open");
+            }}
+          >
+            {overflow.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                onClick={closeMenu}
+                aria-current={isActive(item) ? "page" : undefined}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </nav>
   );
 }

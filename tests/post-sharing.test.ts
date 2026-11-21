@@ -157,6 +157,17 @@ test("published anonymous posts have safe public previews without private author
     assert.equal(json.includes(privateValue), false);
   const visible = await createPostReader(database).getPost(postId, viewer);
   assert.equal(visible.author, "익명");
+  assert.equal("authorPublicId" in visible, false);
+});
+test("non-anonymous posts expose only the public profile identifier for author links", async () => {
+  await db.update(schema.posts).set({ isAnonymous: false }).where(eq(schema.posts.id, postId));
+  const [profile] = await db
+    .select({ publicId: schema.profiles.publicId })
+    .from(schema.profiles)
+    .where(eq(schema.profiles.id, owner));
+  const visible = await createPostReader(database).getPost(postId, viewer);
+  assert.equal(visible.authorPublicId, profile!.publicId);
+  assert.equal(JSON.stringify(visible).includes(owner), false);
 });
 test("deleted, hidden, missing and malformed posts cannot expose share metadata", async () => {
   for (const invalid of ["invalid", randomUUID(), postId + "?token=secret"])

@@ -114,7 +114,7 @@ test("participant header separates scheduled events from lightning and keeps dis
   assert.equal(primary[2].href, "/lightning");
   assert.deepEqual(
     more.map((item) => item.label),
-    ["플레이어", "이벤트 맵", "모임 제안하기"],
+    ["플레이어", "이벤트 맵", "모임 제안하기", "아카이브"],
   );
   assert.equal(more[0].href, "/players");
 });

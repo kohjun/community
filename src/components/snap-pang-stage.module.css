@@ -89,8 +89,14 @@
 }
 
 @media (max-width: 520px) {
+  .stage {
+    gap: 10px;
+    padding: 10px;
+  }
+
   .viewport {
     height: 270px;
+    height: clamp(180px, 38svh, 270px);
   }
 }
 

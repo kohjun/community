@@ -298,17 +298,17 @@
     border-radius: 18px;
   }
   .header {
-    padding: 17px;
+    padding: 10px 12px;
   }
   .body {
-    padding: 22px 17px;
+    padding: 14px 12px;
   }
   .body h2 {
     font-size: 22px;
   }
   .body blockquote {
-    font-size: 18px;
-    padding: 18px;
+    font-size: 16px;
+    padding: 12px;
   }
   .guessGrid,
   .answerGrid {

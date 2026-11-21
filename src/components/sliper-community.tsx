@@ -18,6 +18,7 @@ import {
   Home,
   ImageIcon,
   List,
+  MapPin,
   Pencil,
   Search,
   X,
@@ -541,7 +542,9 @@ export function SliperCommunity({
         <div className={cn("sl-layout", homeLanding && "sl-layout--home", showRail && "has-rail")}>
           <div className="sl-feed">
             <section ref={feedRef} className="sl-feed__section" aria-labelledby="feed-title">
-              <div className="sl-feed__head">
+              <div
+                className={cn("sl-feed__head", meetupBoard === "event" && "sl-feed__head--events")}
+              >
                 <h2 id="feed-title">
                   {feedTitle}
                   <span className="sl-count">
@@ -549,6 +552,12 @@ export function SliperCommunity({
                   </span>
                 </h2>
                 <div className="sl-feed__tools">
+                  {meetupBoard === "event" && (
+                    <Link className="sl-chip-link" href="/map">
+                      <MapPin size={15} aria-hidden="true" />
+                      이벤트 맵
+                    </Link>
+                  )}
                   {!storyBoard && (
                     <EventDiscoveryButton
                       active={discoveryActive}

@@ -177,6 +177,7 @@ export function createPostReader(db: Database) {
             .replace(/\s+/g, " ")
             .slice(0, 100),
           author: dto.author.displayName,
+          ...(dto.author.kind === "member" ? { authorPublicId: dto.author.publicProfileId } : {}),
           anonymous: dto.author.kind === "anonymous",
           time: timeLabel(post.createdAt),
           createdAt: timestamp,

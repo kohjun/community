@@ -17,6 +17,7 @@ import { usePostRead } from "@/lib/use-read-posts";
 import { cn } from "@/lib/utils";
 import { postPath } from "@/domain/post-sharing";
 import { shouldOpenPostModal } from "@/lib/post-sharing";
+import { PostAuthorName } from "./post-author-name";
 export function CommunityPostRow({
   post,
   busy,
@@ -100,12 +101,14 @@ export function CommunityPostRow({
           </h3>
         </a>
       </div>
-      <a className="post-body-open" href={href} onClick={open}>
+      <div className="post-body-open">
         <div>
-          <p className="post-excerpt">{post.excerpt}</p>
+          <a className="post-excerpt post-excerpt-link" href={href} onClick={open}>
+            {post.excerpt}
+          </a>
           <div className="post-author">
-            <UserRound size={13} />
-            {post.anonymous ? "익명" : post.author}
+            <UserRound size={13} aria-hidden="true" />
+            <PostAuthorName post={post} />
             <span>·</span>
             <Eye size={14} />
             {post.views}
@@ -114,8 +117,12 @@ export function CommunityPostRow({
             {post.comments}
           </div>
         </div>
-        {post.image && <img className="post-thumbnail" src={post.image} alt="" loading="lazy" />}
-      </a>
+        {post.image && (
+          <a href={href} onClick={open} aria-label={`${post.title} 열기`}>
+            <img className="post-thumbnail" src={post.image} alt="" loading="lazy" />
+          </a>
+        )}
+      </div>
       <div className="row-actions post-row-actions">
         {post.kind === "모집" && (
           <RecruitmentApplyButton

@@ -33,6 +33,7 @@ export interface CommunityPost {
   body: string;
   bodyDocument?: PostDocument | null;
   author: string;
+  authorPublicId?: string;
   anonymous: boolean;
   time: string;
   createdAt: string;

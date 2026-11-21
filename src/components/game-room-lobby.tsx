@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import {
   Check,
   CheckCheck,
+  ChevronLeft,
   ChevronRight,
   Copy,
   Crown,
@@ -24,6 +25,8 @@ import {
 import type { GameRoomView } from "@/domain/game-room";
 import { appRequest, RequestError } from "@/lib/api-client";
 import { connectGameRoom } from "@/lib/game-room-client";
+import { useMediaQuery } from "@/lib/use-media-query";
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "./ui/dialog";
 import styles from "./game-room.module.css";
 import { GameTutorial } from "./game-tutorial";
 import { GameRoomQr } from "./game-room-qr";
@@ -47,6 +50,22 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
     [connected, setConnected] = useState(false),
     [attempt, setAttempt] = useState(0);
   const [myMbti, setMyMbti] = useState<Mbti | "">("");
+  const narrow = useMediaQuery("(max-width: 720px)");
+  const playHeading = useRef<HTMLHeadingElement>(null);
+  const playView =
+    room !== null &&
+    (room.phase === "playing" || room.phase === "finished") &&
+    (room.isHost || room.viewer.status === "admitted");
+  const mobilePlay = playView && narrow === true;
+
+  useEffect(() => {
+    if (!mobilePlay) return;
+    const frame = requestAnimationFrame(() => {
+      playHeading.current?.focus({ preventScroll: true });
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [mobilePlay]);
   const current = useRef<GameRoomView | null>(null),
     mounted = useRef(false),
     editing = useRef(false),
@@ -246,162 +265,36 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
     );
   const me = room.viewer,
     inactive = ["left", "kicked"].includes(me.status) || room.phase === "closed";
-  return (
-    <div className={styles.screen}>
-      <div className={styles.breadcrumb}>
-        <Link href="/games">웹 게임</Link>
-        <ChevronRight size={14} />
-        <span>{room.isHost ? "호스트 대기실" : "참가 대기실"}</span>
-      </div>
-      <header className={styles.roomHeader}>
-        <div>
-          <span className={styles.eyebrow}>
-            <Gamepad2 size={17} /> ROUND {String(room.round).padStart(2, "0")}
-          </span>
-          <h1>{room.title}</h1>
-          <p>
-            <span className={styles.connection} data-connected={connected} />
-            {connected ? "실시간으로 함께하고 있어요" : "연결 상태를 확인하고 있어요"}
-          </p>
-        </div>
-        <span className={styles.pill}>{phases[room.phase]}</span>
-      </header>
-      <GameTutorial
-        game={
-          room.gameType ??
-          (room.toast
-            ? "toast"
-            : room.auction
-              ? "auction"
-              : room.mbtiIntro
-                ? "mbti-intro"
-                : room.mbti?.words
-                  ? "word-liar"
-                  : room.mbti
-                    ? "mbti"
-                    : "lobby")
-        }
-        wordMode={room.mbti?.words?.mode}
-        revealLiar={room.mbti?.revealLiar}
-        audience={room.isHost ? "host" : "player"}
-        compact
-        inProgress={room.phase === "playing"}
-      />
-      <GameRoomSettingsPanel
-        room={room}
-        busy={busy}
-        onSave={(settings, settingsVersion) =>
-          act({ action: "settings", settings, settingsVersion }, true)
-        }
-      />
-      {room.snapPang && room.snapPang.stage !== "lobby" && (
-        <SnapPangStage
-          room={room}
-          game={room.snapPang}
-          busy={busy}
-          onAction={act}
-          onRefresh={() => {
-            void appRequest<GameRoomView>(base + suffix)
-              .then(apply)
-              .catch(() => {});
-          }}
-        />
-      )}
-      {room.clue && <ClueQuestionPreparation room={room} busy={busy} onAction={act} />}
-      {room.drawing && room.drawing.stage !== "lobby" && (
-        <DrawingGameStage
-          room={room}
-          busy={busy}
-          onAction={act}
-          onRefresh={() => {
-            void appRequest<GameRoomView>(base + suffix)
-              .then(apply)
-              .catch(() => {});
-          }}
-        />
-      )}
-      {room.clue && room.clue.stage !== "lobby" && (
-        <ClueGameStage
-          room={room}
-          busy={busy}
-          onAction={act}
-          onRefresh={() => {
-            void appRequest<GameRoomView>(base + suffix)
-              .then(apply)
-              .catch(() => {});
-          }}
-        />
-      )}
-      {room.temperature && room.temperature.stage !== "lobby" && (
-        <TemperatureGameStage
-          key={`${room.temperature.runId}:${room.temperature.turn}`}
-          room={room}
-          game={room.temperature}
-          busy={busy}
-          onAction={(action, asHost) => void act(action, asHost)}
-          onRefresh={() => {
-            void appRequest<GameRoomView>(base + suffix)
-              .then(apply)
-              .catch(() => {});
-          }}
-        />
-      )}
-      {room.toast && (
-        <ToastGameStage
-          key={room.round}
-          room={room}
-          busy={busy}
-          onAction={(action, asHost) => void act(action, asHost)}
-          onRefresh={() => {
-            void appRequest<GameRoomView>(base + suffix)
-              .then(apply)
-              .catch(() => {});
-          }}
-        />
-      )}
-      {room.auction && (
-        <AuctionGameStage
-          key={room.round}
-          room={room}
-          busy={busy}
-          onAction={(action, asHost) => void act(action, asHost)}
-          onRefresh={() => {
-            void appRequest<GameRoomView>(base + suffix)
-              .then(apply)
-              .catch(() => {});
-          }}
-        />
-      )}
-      {room.mbtiIntro && room.phase !== "lobby" && (
-        <MbtiIntroStage
-          key={room.round}
-          room={room}
-          busy={busy}
-          onAction={(action, asHost) => void act(action, asHost)}
-        />
-      )}
-      {room.mbti && room.phase !== "lobby" && (
-        <MbtiGameStage
-          key={room.round}
-          room={room}
-          busy={busy}
-          onAction={(action, asHost) => void act(action, asHost)}
-          onRefresh={() => {
-            void appRequest<GameRoomView>(base + suffix)
-              .then(apply)
-              .catch(() => {});
-          }}
-        />
-      )}
-      {room.phase === "finished" &&
-        (room.drawing?.runId || room.clue?.runId || room.snapPang?.runId) && (
-          <Link
-            className={styles.primary}
-            href={`/games/${room.id}/results/${room.drawing?.runId ?? room.clue?.runId ?? room.snapPang?.runId}${room.isHost ? "?host=1" : ""}`}
-          >
-            이 게임 결과 다시 보기 · 24시간 보관
-          </Link>
-        )}
+  const refreshGame = () => {
+    void appRequest<GameRoomView>(base + suffix)
+      .then(apply)
+      .catch(() => {});
+  };
+  const guide = (
+    <GameTutorial
+      game={
+        room.gameType ??
+        (room.toast
+          ? "toast"
+          : room.auction
+            ? "auction"
+            : room.mbtiIntro
+              ? "mbti-intro"
+              : room.mbti?.words
+                ? "word-liar"
+                : room.mbti
+                  ? "mbti"
+                  : "lobby")
+      }
+      wordMode={room.mbti?.words?.mode}
+      revealLiar={room.mbti?.revealLiar}
+      audience={room.isHost ? "host" : "player"}
+      compact
+      inProgress={room.phase === "playing"}
+    />
+  );
+  const roomInfo = (
+    <>
       <div className={styles.stats}>
         <span>
           <UsersRound size={18} />
@@ -814,35 +707,183 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
           )}
         </aside>
       </div>
-      {room.phase === "playing" &&
-        !room.mbti &&
-        !room.mbtiIntro &&
-        !room.auction &&
-        !room.toast &&
-        !room.temperature &&
-        !room.drawing &&
-        !room.clue && (
-          <section className={`${styles.card} ${styles.gameStage}`} data-game-phase="playing">
-            <span className={styles.eyebrow}>PLAY TOGETHER</span>
-            <h2>라운드 {room.round} 진행 중</h2>
-            <p>문제·미션·점수판을 연결할 공통 게임 화면이에요.</p>
-            <small>
-              시작 시각{" "}
-              {room.startedAt
-                ? new Intl.DateTimeFormat("ko-KR", {
-                    timeZone: "Asia/Seoul",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  }).format(new Date(room.startedAt))
-                : ""}
-            </small>
-          </section>
+    </>
+  );
+
+  return (
+    <div className={playView ? styles.screen + " " + styles.playView : styles.screen}>
+      <div className={styles.breadcrumb}>
+        <Link href="/games">웹 게임</Link>
+        <ChevronRight size={14} aria-hidden="true" />
+        <span>{playView ? phases[room.phase] : room.isHost ? "호스트 대기실" : "참가 대기실"}</span>
+      </div>
+      <header className={styles.roomHeader}>
+        {mobilePlay && (
+          <Link className={styles.playBack} href="/games" aria-label="웹게임 목록">
+            <ChevronLeft size={21} aria-hidden="true" />
+          </Link>
         )}
-      <p className={styles.templateNote}>
-        화면을 2분 이상 닫으면 대기실 자리가 해제될 수 있어요. 진행 중인 라운드는 연결이 끊겨도
-        자리를 유지해요.
-      </p>
+        <div>
+          <span className={styles.eyebrow}>
+            <Gamepad2 size={17} aria-hidden="true" /> ROUND {String(room.round).padStart(2, "0")}
+          </span>
+          <h1 ref={playHeading} tabIndex={mobilePlay ? -1 : undefined}>
+            {room.title}
+          </h1>
+          <p>
+            <span className={styles.connection} data-connected={connected} />
+            {mobilePlay && connected
+              ? phases[room.phase]
+              : connected
+                ? "실시간으로 함께하고 있어요"
+                : "연결 상태를 확인하고 있어요"}
+          </p>
+        </div>
+        {mobilePlay ? (
+          <Dialog>
+            <DialogTrigger asChild>
+              <button type="button" className={styles.playInfoButton}>
+                방 정보
+              </button>
+            </DialogTrigger>
+            <DialogContent className={styles.screen + " " + styles.roomInfoDialog}>
+              <DialogTitle>방 정보</DialogTitle>
+              <DialogDescription>
+                참가자, 게임 설명, 초대 링크를 확인할 수 있어요.
+              </DialogDescription>
+              {guide}
+              {roomInfo}
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <span className={styles.pill}>{phases[room.phase]}</span>
+        )}
+      </header>
+      {!playView && guide}
+      {room.phase === "lobby" && (
+        <>
+          <GameRoomSettingsPanel
+            room={room}
+            busy={busy}
+            onSave={(settings, settingsVersion) =>
+              act({ action: "settings", settings, settingsVersion }, true)
+            }
+          />
+          {room.clue && <ClueQuestionPreparation room={room} busy={busy} onAction={act} />}
+        </>
+      )}
+      {playView && error && (
+        <p role="alert" className={styles.error}>
+          {error}
+        </p>
+      )}
+      {(playView || room.phase === "lobby") && (
+        <div className={styles.playContent} data-game-phase={playView ? room.phase : undefined}>
+          {room.snapPang && room.snapPang.stage !== "lobby" && (
+            <SnapPangStage
+              room={room}
+              game={room.snapPang}
+              busy={busy}
+              onAction={act}
+              onRefresh={refreshGame}
+            />
+          )}
+          {room.drawing && room.drawing.stage !== "lobby" && (
+            <DrawingGameStage room={room} busy={busy} onAction={act} onRefresh={refreshGame} />
+          )}
+          {room.clue && room.clue.stage !== "lobby" && (
+            <ClueGameStage room={room} busy={busy} onAction={act} onRefresh={refreshGame} />
+          )}
+          {room.temperature && room.temperature.stage !== "lobby" && (
+            <TemperatureGameStage
+              key={`${room.temperature.runId}:${room.temperature.turn}`}
+              room={room}
+              game={room.temperature}
+              busy={busy}
+              onAction={(action, asHost) => void act(action, asHost)}
+              onRefresh={refreshGame}
+            />
+          )}
+          {room.toast && (
+            <ToastGameStage
+              key={room.round}
+              room={room}
+              busy={busy}
+              onAction={(action, asHost) => void act(action, asHost)}
+              onRefresh={refreshGame}
+            />
+          )}
+          {room.auction && (
+            <AuctionGameStage
+              key={room.round}
+              room={room}
+              busy={busy}
+              onAction={(action, asHost) => void act(action, asHost)}
+              onRefresh={refreshGame}
+            />
+          )}
+          {room.mbtiIntro && room.phase !== "lobby" && (
+            <MbtiIntroStage
+              key={room.round}
+              room={room}
+              busy={busy}
+              onAction={(action, asHost) => void act(action, asHost)}
+            />
+          )}
+          {room.mbti && room.phase !== "lobby" && (
+            <MbtiGameStage
+              key={room.round}
+              room={room}
+              busy={busy}
+              onAction={(action, asHost) => void act(action, asHost)}
+              onRefresh={refreshGame}
+            />
+          )}
+          {room.phase === "finished" &&
+            (room.drawing?.runId || room.clue?.runId || room.snapPang?.runId) && (
+              <Link
+                className={styles.primary}
+                href={`/games/${room.id}/results/${room.drawing?.runId ?? room.clue?.runId ?? room.snapPang?.runId}${room.isHost ? "?host=1" : ""}`}
+              >
+                이 게임 결과 다시 보기 · 24시간 보관
+              </Link>
+            )}
+          {room.phase === "playing" &&
+            !room.mbti &&
+            !room.mbtiIntro &&
+            !room.auction &&
+            !room.toast &&
+            !room.temperature &&
+            !room.drawing &&
+            !room.clue &&
+            !room.snapPang && (
+              <section className={`${styles.card} ${styles.gameStage}`}>
+                <span className={styles.eyebrow}>PLAY TOGETHER</span>
+                <h2>라운드 {room.round} 진행 중</h2>
+                <p>호스트의 안내에 따라 함께 플레이해주세요.</p>
+                <small>
+                  시작 시각{" "}
+                  {room.startedAt
+                    ? new Intl.DateTimeFormat("ko-KR", {
+                        timeZone: "Asia/Seoul",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      }).format(new Date(room.startedAt))
+                    : ""}
+                </small>
+              </section>
+            )}
+        </div>
+      )}
+      {playView && !mobilePlay && guide}
+      {!mobilePlay && roomInfo}
+      {!mobilePlay && (
+        <p className={styles.templateNote}>
+          화면을 2분 이상 닫으면 대기실 자리가 해제될 수 있어요. 진행 중인 라운드는 연결이 끊겨도
+          자리를 유지해요.
+        </p>
+      )}
     </div>
   );
 }

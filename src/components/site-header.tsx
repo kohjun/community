@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { BookOpen, Bookmark, MapPin, Search, UserRound } from "lucide-react";
+import { Bookmark, Search, UserRound } from "lucide-react";
 import type { SiteNavigationOverride } from "@/domain/navigation";
 import { NotificationBell } from "./notification-bell";
 import { SiteNavigation } from "./site-navigation";
@@ -22,7 +22,7 @@ export function SiteBrand({ mark = true }: { mark?: boolean }) {
 
 /**
  * Spacious two-row header on desktop (brand + utility row above primary navigation row),
- * collapsing cleanly to a compact responsive two-row bar on phones.
+ * with the site tools in a single row on phones.
  */
 export function SiteHeader({
   activeSection,
@@ -79,16 +79,6 @@ export function SiteHeader({
         </div>
         <div className="sl-header__nav-row">
           <SiteNavigation {...(activeSection ? { activeSection } : {})} />
-          <div className="sl-header__shortcuts" aria-label="빠른 바로가기">
-            <Link href="/map" className="sl-header__shortcut" prefetch={false}>
-              <MapPin size={14} aria-hidden="true" />
-              이벤트 맵
-            </Link>
-            <Link href="/archive" className="sl-header__shortcut" prefetch={false}>
-              <BookOpen size={14} aria-hidden="true" />
-              아카이브
-            </Link>
-          </div>
         </div>
       </div>
     </header>

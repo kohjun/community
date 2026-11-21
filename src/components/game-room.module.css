@@ -557,6 +557,122 @@
   font-size: 12px;
   color: #7b8ba2;
 }
+
+.playContent[data-game-phase] {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin-bottom: 16px;
+}
+
+.playContent[data-game-phase] > section {
+  min-width: 0;
+  margin-block: 0;
+}
+
+@media (max-width: 720px) {
+  :global(body):has(.playView) :global(.sl-header),
+  :global(body):has(.playView) :global(.sl-footer),
+  :global(body):has(.playView) :global(.mobile-app-nav) {
+    display: none;
+  }
+
+  :global(body):has(.playView) {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  :global(html):has(.playView) {
+    scroll-padding: 0;
+  }
+
+  :global(.participation-page):has(.playView) {
+    padding: env(safe-area-inset-top, 0px) 10px 12px;
+  }
+
+  .playView {
+    --game-room-submit-inset: env(safe-area-inset-bottom, 0px);
+    padding: 0;
+  }
+
+  .playView .breadcrumb,
+  .playView .roomHeader .eyebrow {
+    display: none;
+  }
+
+  .playView .roomHeader {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    min-height: 60px;
+    margin: 0 0 6px;
+    border-bottom: 1px solid #e5edf6;
+  }
+
+  .playView .roomHeader h1 {
+    margin: 0;
+    color: #18334d;
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  .playView .roomHeader p {
+    margin-top: 3px;
+    color: #53667c;
+    font-size: 0.75rem;
+  }
+
+  .playBack,
+  .playInfoButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    border: 1px solid #dbe7f5;
+    border-radius: 11px;
+    background: #fff;
+    color: #164f86;
+  }
+
+  .screen .playInfoButton {
+    padding: 0 10px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+  }
+
+  .playContent[data-game-phase] {
+    margin-bottom: 0;
+  }
+
+  .roomInfoDialog:global(.dialog-content) {
+    position: fixed;
+    inset: auto 0 0;
+    width: 100%;
+    max-width: none;
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    margin: 0;
+    padding: 18px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: none;
+    border-radius: 20px 20px 0 0;
+    background: #fff;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .roomInfoDialog > h2,
+  .roomInfoDialog > p {
+    padding-right: 44px;
+  }
+
+  .roomInfoDialog > p {
+    margin-block: 4px 14px;
+    color: #53667c;
+    font-size: 0.8125rem;
+  }
+}
+
 @media (max-width: 700px) {
   .screen {
     padding: 8px 0 24px;

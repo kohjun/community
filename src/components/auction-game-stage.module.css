@@ -712,43 +712,43 @@
     margin-bottom: 18px;
   }
   .header {
-    padding: 14px 16px;
+    padding: 10px 12px;
     font-size: 11px;
   }
   .header b {
     font-size: 17px;
   }
   .body {
-    padding: 17px;
+    padding: 12px;
   }
   .steps {
     justify-content: space-between;
     gap: 5px;
     font-size: 10px;
-    margin-bottom: 18px;
+    margin-bottom: 10px;
   }
   .auctionGrid {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 12px;
   }
   .item {
-    padding: 17px;
+    padding: 12px;
     position: relative;
   }
   .art {
-    height: 128px;
+    height: 82px;
     margin-top: 0;
   }
   .art > span {
-    font-size: 61px;
+    font-size: 48px;
   }
   .art i {
-    width: 113px;
-    height: 113px;
+    width: 80px;
+    height: 80px;
   }
   .art i:last-child {
-    width: 155px;
-    height: 155px;
+    width: 115px;
+    height: 115px;
   }
   .item h2 {
     font-size: 21px;
