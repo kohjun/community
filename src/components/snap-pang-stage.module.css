@@ -89,6 +89,9 @@
 }
 
 @media (max-width: 520px) {
+  .stage[data-snap-step="active"] .viewport {
+    height: clamp(150px, 34dvh, 250px);
+  }
   .stage {
     gap: 10px;
     padding: 10px;

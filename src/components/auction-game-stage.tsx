@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   ArrowRight,
   Gavel,
@@ -15,6 +15,7 @@ import {
 import type { GameRoomView } from "@/domain/game-room";
 import { AUCTION_BID_STEP } from "@/domain/auction-game";
 import styles from "./auction-game-stage.module.css";
+import { GameRoundActions } from "./game-round-layout";
 const money = (value: number) => `${value.toLocaleString("ko-KR")}G`;
 const signed = (value: number) => `${value > 0 ? "+" : ""}${money(value)}`;
 export function AuctionGameStage({
@@ -28,6 +29,7 @@ export function AuctionGameStage({
   onAction: (action: Record<string, unknown>, host?: boolean) => void;
   onRefresh: () => void;
 }) {
+  const bidForm = useId();
   const g = room.auction!,
     lot = g.lot;
   const [draft, setDraft] = useState(""),
@@ -103,7 +105,7 @@ export function AuctionGameStage({
       </section>
     );
   return (
-    <section className={styles.stage} aria-label="수상한 경매장">
+    <section className={styles.stage} aria-label="수상한 경매장" data-auction-step={g.stage}>
       <header className={styles.header}>
         <span>
           <Gavel size={18} /> 수상한 경매장
@@ -200,14 +202,16 @@ export function AuctionGameStage({
                       </div>
                     )}
                     {room.isHost ? (
-                      <button
-                        className={styles.primary}
-                        disabled={busy}
-                        onClick={() => hostAction("auction-open")}
-                      >
-                        소개 완료 · 입찰 시작
-                        <ArrowRight size={17} />
-                      </button>
+                      <GameRoundActions>
+                        <button
+                          className={styles.primary}
+                          disabled={busy}
+                          onClick={() => hostAction("auction-open")}
+                        >
+                          소개 완료 · 입찰 시작
+                          <ArrowRight size={17} />
+                        </button>
+                      </GameRoundActions>
                     ) : (
                       <div className={styles.wait}>호스트가 입찰을 열면 시작해요</div>
                     )}
@@ -232,6 +236,7 @@ export function AuctionGameStage({
                     </p>
                     {room.viewer.status === "admitted" && !isSeller ? (
                       <form
+                        id={bidForm}
                         onSubmit={(e) => {
                           e.preventDefault();
                           if (valid && g.canBid && !busy)
@@ -255,6 +260,9 @@ export function AuctionGameStage({
                             <span>G</span>
                           </div>
                         </label>
+                        <small className={styles.bidBalance}>
+                          입찰 가능 {money(g.myCash ?? 0)}
+                        </small>
                         <div className={styles.quick}>
                           {[0, 50, 100].map((v) => (
                             <button
@@ -269,18 +277,21 @@ export function AuctionGameStage({
                             </button>
                           ))}
                         </div>
-                        <button
-                          type="submit"
-                          className={styles.primary}
-                          disabled={busy || !g.canBid || !valid || seconds === 0}
-                        >
-                          {lot.highestBidder === room.viewer.id
-                            ? "내가 최고 입찰자예요"
-                            : (g.myCash ?? 0) < minimum
-                              ? "입찰할 머니가 부족해요"
-                              : `${money(Number.isFinite(amount) ? amount : 0)} 입찰하기`}
-                          <Gavel size={17} />
-                        </button>
+                        <GameRoundActions>
+                          <button
+                            type="submit"
+                            form={bidForm}
+                            className={styles.primary}
+                            disabled={busy || !g.canBid || !valid || seconds === 0}
+                          >
+                            {lot.highestBidder === room.viewer.id
+                              ? "내가 최고 입찰자예요"
+                              : (g.myCash ?? 0) < minimum
+                                ? "입찰할 머니가 부족해요"
+                                : `${money(Number.isFinite(amount) ? amount : 0)} 입찰하기`}
+                            <Gavel size={17} />
+                          </button>
+                        </GameRoundActions>
                         <small className={styles.hint}>
                           최소 {money(minimum)} · 10G 단위 · 낙찰 시 차감 · 입찰 취소 불가
                         </small>

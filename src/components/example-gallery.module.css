@@ -1,0 +1,116 @@
+.examples {
+  margin-block: 12px 20px;
+}
+
+.examples > h3 {
+  margin: 0 0 9px;
+  color: #536983;
+  font-size: 0.875rem;
+  font-weight: 750;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.card {
+  display: grid;
+  align-content: start;
+  min-inline-size: 0;
+  color: #1b2b41;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.card:is(:hover, :focus-visible) {
+  border-color: #0a84fe;
+}
+
+.cover {
+  inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 15px 15px 0 0;
+  background: #eaf4ff;
+  object-fit: cover;
+}
+
+.avatar {
+  inline-size: 68px;
+  block-size: 68px;
+  margin: 12px 0 0 12px;
+  border-radius: 16px;
+  background: #eaf4ff;
+}
+
+.copy {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+}
+
+.copy strong {
+  font-size: 0.9375rem;
+}
+
+.copy p,
+.copy small {
+  margin: 0;
+  color: #53657b;
+  font-size: 0.8125rem;
+}
+
+.tag {
+  color: #205a99;
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.detail {
+  max-inline-size: 760px;
+  margin-inline: auto;
+  padding-block: 24px;
+}
+
+.detail .cover {
+  border-radius: 16px;
+}
+
+.detail .avatar {
+  inline-size: 120px;
+  block-size: 120px;
+  margin: 0;
+}
+
+.detail dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-block: 18px;
+}
+
+.detail dt {
+  color: #53657b;
+  font-size: 0.8125rem;
+}
+
+.detail dd {
+  margin: 4px 0 0;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .copy {
+    padding: 10px;
+  }
+}

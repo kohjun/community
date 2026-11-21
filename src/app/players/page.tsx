@@ -9,6 +9,7 @@ import { crewListSchema } from "@/domain/crew";
 import { PlayerDirectory } from "@/components/player-directory";
 import { CrewDirectory } from "@/components/crew-directory";
 import { PeopleDirectory } from "@/components/people-directory";
+import { ExampleGallery } from "@/components/example-gallery";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "플레이어·크루 — Sliper",
@@ -42,6 +43,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Que
   if (!actor)
     return (
       <PeopleDirectory tab="players">
+        <ExampleGallery kind="player" />
         <section className="participation-card participation-empty">
           <h2>로그인하고 플레이어를 만나보세요</h2>
           <p>플레이어의 성향과 공개한 참가 경험을 확인할 수 있어요.</p>

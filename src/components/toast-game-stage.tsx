@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -10,11 +10,11 @@ import {
   MessageCircle,
   PartyPopper,
   SkipForward,
-  Sparkles,
   Trophy,
 } from "lucide-react";
 import type { GameRoomView } from "@/domain/game-room";
 import styles from "./toast-game-stage.module.css";
+import { GameRoundActions, GameRoundDetails } from "./game-round-layout";
 export function ToastGameStage({
   room,
   busy,
@@ -26,6 +26,7 @@ export function ToastGameStage({
   onAction: (action: Record<string, unknown>, host?: boolean) => void;
   onRefresh: () => void;
 }) {
+  const questionForm = useId();
   const g = room.toast!,
     me = room.viewer.id,
     isQuestioner = me !== null && me === g.questionerId;
@@ -96,7 +97,7 @@ export function ToastGameStage({
       </section>
     );
   return (
-    <section className={styles.stage} aria-label="건배의 눈치">
+    <section className={styles.stage} aria-label="건배의 눈치" data-toast-step={g.stage}>
       <header className={styles.header}>
         <span>
           <GlassWater size={19} /> 건배의 눈치{" "}
@@ -153,6 +154,7 @@ export function ToastGameStage({
                     </div>
                   )}
                   <form
+                    id={questionForm}
                     className={styles.questionForm}
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -178,18 +180,18 @@ export function ToastGameStage({
                       />
                     </label>
                     <small className={styles.characterCount}>{draft.length} / 160</small>
-                    <button
-                      type="submit"
-                      className={styles.primary}
-                      disabled={busy || draft.trim().length < 5}
-                    >
-                      질문 공개하기 <ArrowRight size={16} />
-                    </button>
+                    <GameRoundActions>
+                      <button
+                        type="submit"
+                        form={questionForm}
+                        className={styles.primary}
+                        disabled={busy || draft.trim().length < 5}
+                      >
+                        질문 공개하기 <ArrowRight size={16} />
+                      </button>
+                    </GameRoundActions>
                   </form>
-                  <div className={styles.suggestions}>
-                    <h3>
-                      <Sparkles size={15} /> 이런 질문은 어때요?
-                    </h3>
+                  <GameRoundDetails label="추천 질문 보기" className={styles.suggestions}>
                     {g.suggestions.map((text) => (
                       <button
                         type="button"
@@ -202,7 +204,7 @@ export function ToastGameStage({
                       </button>
                     ))}
                     <p>질문을 누르면 입력창에 채워져요. 수정한 뒤 공개해도 좋아요.</p>
-                  </div>
+                  </GameRoundDetails>
                 </>
               ) : (
                 <div className={styles.waiting}>
@@ -329,22 +331,24 @@ export function ToastGameStage({
                       사람의 선택을 기다려요.
                     </p>
                   ) : (
-                    <button
-                      type="button"
-                      className={styles.primary}
-                      disabled={!canSubmit}
-                      onClick={() => {
-                        if (canSubmit)
-                          onAction({
-                            action: "toast-answer",
-                            turn: g.turn,
-                            cheers: own,
-                            ...(needsPrediction ? { prediction: Number(prediction) } : {}),
-                          });
-                      }}
-                    >
-                      선택 제출하기 <ArrowRight size={16} />
-                    </button>
+                    <GameRoundActions>
+                      <button
+                        type="button"
+                        className={styles.primary}
+                        disabled={!canSubmit}
+                        onClick={() => {
+                          if (canSubmit)
+                            onAction({
+                              action: "toast-answer",
+                              turn: g.turn,
+                              cheers: own,
+                              ...(needsPrediction ? { prediction: Number(prediction) } : {}),
+                            });
+                        }}
+                      >
+                        선택 제출하기 <ArrowRight size={16} />
+                      </button>
+                    </GameRoundActions>
                   )}
                   <p className={styles.note}>
                     시간이 끝나면 미응답은 패스로 처리돼요.

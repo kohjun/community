@@ -578,7 +578,7 @@
   }
 
   :global(body):has(.playView) {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-block: 0 env(safe-area-inset-bottom, 0px);
   }
 
   :global(html):has(.playView) {
@@ -586,11 +586,16 @@
   }
 
   :global(.participation-page):has(.playView) {
-    padding: env(safe-area-inset-top, 0px) 10px 12px;
+    padding: env(safe-area-inset-top, 0px) max(10px, env(safe-area-inset-right, 0px)) 0
+      max(10px, env(safe-area-inset-left, 0px));
   }
 
-  .playView {
-    --game-room-submit-inset: env(safe-area-inset-bottom, 0px);
+  .screen.playView {
+    display: flex;
+    flex-direction: column;
+    block-size: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    block-size: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-block-size: 280px;
     padding: 0;
   }
 
@@ -604,8 +609,9 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 8px;
-    min-height: 60px;
-    margin: 0 0 6px;
+    flex: none;
+    min-height: 51px;
+    margin: 0 0 4px;
     border-bottom: 1px solid #e5edf6;
   }
 
@@ -642,7 +648,32 @@
   }
 
   .playContent[data-game-phase] {
+    flex: 1 1 auto;
+    align-content: start;
+    min-block-size: 0;
     margin-bottom: 0;
+    padding-block-end: 8px;
+    overflow: auto;
+    overscroll-behavior-y: contain;
+    scroll-padding-block: 8px;
+  }
+
+  .roundActions {
+    flex: none;
+    display: grid;
+    min-inline-size: 0;
+    padding: 6px 0 8px;
+    background: #fff;
+    border-block-start: 1px solid #e5edf6;
+  }
+
+  .roundActions:empty {
+    display: none;
+  }
+
+  .roundActions > button {
+    min-block-size: 44px;
+    inline-size: 100%;
   }
 
   .roomInfoDialog:global(.dialog-content) {

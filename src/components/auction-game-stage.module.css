@@ -344,6 +344,11 @@
   font-weight: 650;
   color: #5e728d;
 }
+.bidBalance {
+  display: block;
+  color: #52667c;
+  margin-block: 4px;
+}
 .bidInput > div {
   display: flex;
   align-items: center;
@@ -722,10 +727,7 @@
     padding: 12px;
   }
   .steps {
-    justify-content: space-between;
-    gap: 5px;
-    font-size: 10px;
-    margin-bottom: 10px;
+    display: none;
   }
   .auctionGrid {
     grid-template-columns: 1fr;
@@ -734,6 +736,10 @@
   .item {
     padding: 12px;
     position: relative;
+  }
+  .stage[data-auction-step="bidding"] .art,
+  .stage[data-auction-step="bidding"] .sellerLine {
+    display: none;
   }
   .art {
     height: 82px;
@@ -767,7 +773,7 @@
     font-size: 21px;
   }
   .controls .priceLabel {
-    margin-top: 18px;
+    margin-top: 8px;
   }
   .price {
     font-size: 42px;

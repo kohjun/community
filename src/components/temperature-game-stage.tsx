@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -13,6 +13,7 @@ import {
 import type { GameRoomView } from "@/domain/game-room";
 import { TEMPERATURE_MODE_LABELS, type TemperatureView } from "@/domain/temperature-game";
 import styles from "./temperature-game-stage.module.css";
+import { GameRoundActions } from "./game-round-layout";
 
 const stageLabels = {
   lobby: "준비 중",
@@ -75,6 +76,7 @@ function OrderCards({
   disabled: boolean;
   onSubmit: (order: string[]) => void;
 }) {
+  const orderForm = useId();
   const [draft, setDraft] = useState(() => game.situations.map((item) => item.id));
   const [announcement, setAnnouncement] = useState("");
   const drag = useRef<{ id: string; lastTarget: string | null } | null>(null);
@@ -94,8 +96,13 @@ function OrderCards({
   }
   function handleDrag(event: PointerEvent<HTMLSpanElement>) {
     if (!drag.current || locked) return;
-    if (event.clientY < 64) window.scrollBy(0, -24);
-    else if (event.clientY > window.innerHeight - 64) window.scrollBy(0, 24);
+    const playArea = event.currentTarget.closest<HTMLElement>("[data-game-phase]");
+    const scroller = playArea && getComputedStyle(playArea).overflowY === "auto" ? playArea : null;
+    const bounds = scroller?.getBoundingClientRect();
+    const top = bounds?.top ?? 0;
+    const bottom = bounds?.bottom ?? window.innerHeight;
+    if (event.clientY < top + 44) (scroller ?? window).scrollBy(0, -24);
+    else if (event.clientY > bottom - 44) (scroller ?? window).scrollBy(0, 24);
     const target = document
       .elementFromPoint(event.clientX, event.clientY)
       ?.closest<HTMLElement>("[data-temperature-card]")?.dataset.temperatureCard;
@@ -106,6 +113,7 @@ function OrderCards({
 
   return (
     <form
+      id={orderForm}
       onSubmit={(event) => {
         event.preventDefault();
         if (!locked) onSubmit(draft);
@@ -172,9 +180,11 @@ function OrderCards({
           순서를 제출했어요. 결과를 기다려주세요.
         </p>
       ) : (
-        <button className={styles.primary} type="submit" disabled={locked}>
-          순서 제출
-        </button>
+        <GameRoundActions>
+          <button className={styles.primary} type="submit" form={orderForm} disabled={locked}>
+            순서 제출
+          </button>
+        </GameRoundActions>
       )}
     </form>
   );
@@ -257,6 +267,7 @@ export function TemperatureGameStage({
   onAction: Send;
   onRefresh: () => void;
 }) {
+  const answerForm = useId();
   const [number, setNumber] = useState("50");
   const [text, setText] = useState("");
   const [seconds, setSeconds] = useState(() =>
@@ -380,6 +391,7 @@ export function TemperatureGameStage({
               </p>
             ) : (
               <form
+                id={answerForm}
                 onSubmit={(event) => {
                   event.preventDefault();
                   if (validNumber && !locked)
@@ -387,9 +399,16 @@ export function TemperatureGameStage({
                 }}
               >
                 <NumberChoice value={number} onChange={setNumber} disabled={locked} />
-                <button className={styles.primary} type="submit" disabled={locked || !validNumber}>
-                  예상 숫자 제출
-                </button>
+                <GameRoundActions>
+                  <button
+                    className={styles.primary}
+                    type="submit"
+                    form={answerForm}
+                    disabled={locked || !validNumber}
+                  >
+                    예상 숫자 제출
+                  </button>
+                </GameRoundActions>
               </form>
             )}
           </>
@@ -407,6 +426,7 @@ export function TemperatureGameStage({
               </p>
             ) : (
               <form
+                id={answerForm}
                 onSubmit={(event) => {
                   event.preventDefault();
                   if (validNumber && text.trim().length >= 2 && !locked)
@@ -427,13 +447,16 @@ export function TemperatureGameStage({
                 </label>
                 <p className={styles.help}>실명, 연락처 등 개인 정보는 입력하지 마세요.</p>
                 <NumberChoice value={number} onChange={setNumber} disabled={locked} />
-                <button
-                  className={styles.primary}
-                  type="submit"
-                  disabled={locked || !validNumber || text.trim().length < 2}
-                >
-                  상황과 숫자 제출
-                </button>
+                <GameRoundActions>
+                  <button
+                    className={styles.primary}
+                    type="submit"
+                    form={answerForm}
+                    disabled={locked || !validNumber || text.trim().length < 2}
+                  >
+                    상황과 숫자 제출
+                  </button>
+                </GameRoundActions>
               </form>
             )}
           </>

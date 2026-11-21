@@ -49,6 +49,7 @@ import {
 import { snapSfx } from "@/lib/vision/sfx";
 import { SnapPang3dStage, type Snap3dLiveState } from "./snap-pang-3d";
 import styles from "./snap-pang-stage.module.css";
+import { GameRoundActions } from "./game-round-layout";
 
 type Send = (action: Record<string, unknown>, host?: boolean) => Promise<boolean> | void;
 
@@ -688,7 +689,7 @@ export function SnapPangStage({
       : null;
 
   return (
-    <section className={styles.stage} aria-label="스냅 팡 3D 게임 무대">
+    <section className={styles.stage} aria-label="스냅 팡 3D 게임 무대" data-snap-step={game.stage}>
       {/* Top Status Bar */}
       <div className={styles.topBar}>
         <div className={styles.badges}>
@@ -936,26 +937,28 @@ export function SnapPangStage({
                       />
                     </div>
                   </div>
-                  <div className={styles.controlsRow}>
-                    <button
-                      type="button"
-                      className={styles.shutterBtn}
-                      disabled={!cameraReady || submitting || busy}
-                      onClick={() => void submitColorShot(sampleHex, false)}
-                    >
-                      <Camera size={18} />
-                      {cameraReady ? "셔터 팡! 이 색으로 확정" : "카메라 준비 중…"}
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.secondaryBtn}
-                      onClick={() =>
-                        setFacingOverride((f) => (f === "user" ? "environment" : "user"))
-                      }
-                    >
-                      <RefreshCw size={14} /> 카메라 전환
-                    </button>
-                  </div>
+                  <GameRoundActions>
+                    <div className={styles.controlsRow}>
+                      <button
+                        type="button"
+                        className={styles.shutterBtn}
+                        disabled={!cameraReady || submitting || busy}
+                        onClick={() => void submitColorShot(sampleHex, false)}
+                      >
+                        <Camera size={18} />
+                        {cameraReady ? "셔터 팡! 이 색으로 확정" : "카메라 준비 중…"}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.secondaryBtn}
+                        onClick={() =>
+                          setFacingOverride((f) => (f === "user" ? "environment" : "user"))
+                        }
+                      >
+                        <RefreshCw size={14} /> 카메라 전환
+                      </button>
+                    </div>
+                  </GameRoundActions>
                 </>
               ) : (
                 <div className={styles.fallbackBox}>
@@ -973,16 +976,18 @@ export function SnapPangStage({
                       />
                     ))}
                   </div>
-                  <button
-                    type="button"
-                    className={styles.shutterBtn}
-                    disabled={submitting || busy}
-                    onClick={() =>
-                      void submitColorShot(rouletteColors[rouletteIndex] ?? "#0A84FE", true)
-                    }
-                  >
-                    <Camera size={18} /> 지금 스톱! 3D 구슬 발사
-                  </button>
+                  <GameRoundActions>
+                    <button
+                      type="button"
+                      className={styles.shutterBtn}
+                      disabled={submitting || busy}
+                      onClick={() =>
+                        void submitColorShot(rouletteColors[rouletteIndex] ?? "#0A84FE", true)
+                      }
+                    >
+                      <Camera size={18} /> 지금 스톱! 3D 구슬 발사
+                    </button>
+                  </GameRoundActions>
                 </div>
               )}
             </>
@@ -1052,19 +1057,21 @@ export function SnapPangStage({
                     <strong>{mission.label}</strong>)에 해당하는 아이콘을 {mission.targetCount + 1}
                     번 연속 탭해 락온하세요!
                   </p>
-                  <div className={styles.controlsRow}>
-                    {FALLBACK_OBJECT_CHOICES.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={styles.secondaryBtn}
-                        disabled={submitting || busy}
-                        onClick={() => void handleFallbackObjectTap(item.id)}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
+                  <GameRoundActions>
+                    <div className={styles.controlsRow}>
+                      {FALLBACK_OBJECT_CHOICES.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={styles.secondaryBtn}
+                          disabled={submitting || busy}
+                          onClick={() => void handleFallbackObjectTap(item.id)}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </GameRoundActions>
                   <div className={styles.meterTrack}>
                     <div
                       className={styles.meterFill}
@@ -1136,14 +1143,16 @@ export function SnapPangStage({
                     <strong>대체 모드 (정직한 웃참)</strong> · 웃음을 참아보세요! 만약 웃음이
                     터졌다면 솔직하게 아래 폭탄 버튼을 눌러요.
                   </p>
-                  <button
-                    type="button"
-                    className={styles.shutterBtn}
-                    style={{ background: "#ef4444" }}
-                    onClick={() => void handleFallbackSmilePop()}
-                  >
-                    <Flame size={18} /> 앗, 웃어버렸다! (내 3D 폭탄 터뜨리기)
-                  </button>
+                  <GameRoundActions>
+                    <button
+                      type="button"
+                      className={styles.shutterBtn}
+                      style={{ background: "#ef4444" }}
+                      onClick={() => void handleFallbackSmilePop()}
+                    >
+                      <Flame size={18} /> 앗, 웃어버렸다! (내 3D 폭탄 터뜨리기)
+                    </button>
+                  </GameRoundActions>
                 </div>
               )}
 
@@ -1245,19 +1254,21 @@ export function SnapPangStage({
                     <strong>대체 모드 (표정 콤보 터치)</strong> · 위 순서대로 표정 버튼을 눌러 3D
                     아바타를 연기시키세요!
                   </p>
-                  <div className={styles.controlsRow}>
-                    {(Object.keys(SNAP_EXPRESSION_LABELS) as SnapExpressionId[]).map((expr) => (
-                      <button
-                        key={expr}
-                        type="button"
-                        className={styles.secondaryBtn}
-                        disabled={submitting || busy}
-                        onClick={() => void handleFallbackFaceTap(expr)}
-                      >
-                        {SNAP_EXPRESSION_LABELS[expr].emoji} {SNAP_EXPRESSION_LABELS[expr].label}
-                      </button>
-                    ))}
-                  </div>
+                  <GameRoundActions>
+                    <div className={styles.controlsRow}>
+                      {(Object.keys(SNAP_EXPRESSION_LABELS) as SnapExpressionId[]).map((expr) => (
+                        <button
+                          key={expr}
+                          type="button"
+                          className={styles.secondaryBtn}
+                          disabled={submitting || busy}
+                          onClick={() => void handleFallbackFaceTap(expr)}
+                        >
+                          {SNAP_EXPRESSION_LABELS[expr].emoji} {SNAP_EXPRESSION_LABELS[expr].label}
+                        </button>
+                      ))}
+                    </div>
+                  </GameRoundActions>
                 </div>
               )}
             </>

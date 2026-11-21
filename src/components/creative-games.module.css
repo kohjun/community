@@ -458,6 +458,14 @@
   font-size: 12px;
   color: #426384;
 }
+.roundHelp {
+  color: #526174;
+  font-size: 0.8125rem;
+}
+.roundHelp summary {
+  cursor: pointer;
+  padding-block: 8px;
+}
 .finish {
   background: linear-gradient(140deg, #f1f8ff, #fff);
   text-align: center;
@@ -607,14 +615,57 @@
 }
 @media (max-width: 640px) {
   .submitBar {
-    position: sticky;
-    bottom: var(--game-room-submit-inset, calc(72px + env(safe-area-inset-bottom, 0px)));
-    background: rgba(255, 255, 255, 0.98);
-    padding: 12px;
-    border: 1px solid #e5eaf0;
-    border-radius: 14px;
-    z-index: 3;
-    box-shadow: 0 5px 24px #16385910;
+    gap: 5px;
+  }
+  .submitBar > p {
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+  }
+  .stage {
+    gap: 8px;
+  }
+  .heading h2 {
+    font-size: 1.125rem;
+  }
+  .instruction {
+    padding: 8px 10px;
+  }
+  .form {
+    gap: 8px;
+  }
+  .mediaAudio {
+    margin: 0;
+  }
+  .stage[data-clue-step="guess"] .photo:not([data-large="true"]) {
+    block-size: clamp(84px, 16dvh, 142px);
+    aspect-ratio: auto;
+  }
+  .stage[data-clue-step="guess"] .map {
+    block-size: clamp(155px, 30dvh, 275px);
+  }
+  .stage[data-clue-step="guess"] .grid {
+    gap: 7px;
+  }
+  .stage[data-clue-step="guess"] .submissionStatus {
+    display: none;
+  }
+  .stage[data-clue-step="guess"] .options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .stage[data-clue-step="guess"] .option {
+    min-block-size: 48px;
+    padding: 6px;
+    gap: 5px;
+    overflow-wrap: anywhere;
+  }
+  .stage[data-clue-step="guess"] .option > span {
+    padding: 4px;
+  }
+  .stage .canvas {
+    max-inline-size: clamp(206px, 53dvh, 100%);
+    margin-inline: auto;
   }
 }
 

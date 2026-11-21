@@ -293,6 +293,9 @@
   letter-spacing: 0.06em;
 }
 @media (max-width: 720px) {
+  .steps {
+    display: none;
+  }
   .stage {
     margin: 16px 0;
     border-radius: 18px;

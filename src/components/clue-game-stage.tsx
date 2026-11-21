@@ -13,6 +13,7 @@ import {
   type CreativeAction,
 } from "./creative-game-common";
 import styles from "./creative-games.module.css";
+import { GameRoundActions, GameRoundDetails } from "./game-round-layout";
 export function ClueGameStage({
   room,
   busy,
@@ -162,8 +163,9 @@ export function ClueGameStage({
       ...(quiz ? { choice } : { point, ...(member ? { authorId: author } : {}) }),
     });
   }
+  const solving = game.stage === "guess" && game.canAnswer && !submitted;
   return (
-    <section className={styles.stage} aria-label="단서각 게임">
+    <section className={styles.stage} aria-label="단서각 게임" data-clue-step={game.stage}>
       <div className={styles.heading}>
         <div>
           <span className={styles.eyebrow}>
@@ -191,7 +193,7 @@ export function ClueGameStage({
       {game.stage === "guess" && (
         <CreativeSubmissionStatus submitted={game.submitted} expected={game.expected} />
       )}
-      {!finished && (
+      {!finished && !solving && (
         <p className={styles.instruction}>
           {result
             ? member
@@ -199,9 +201,7 @@ export function ClueGameStage({
               : "정답과의 거리·선택을 비교해보고 다음 문제로 넘어가요."
             : !game.canAnswer
               ? "이번 문제는 내가 낸 사진·단서예요. 추리는 잠깐 쉬고 결과 공개 후 이야기를 나눠주세요."
-              : submitted
-                ? "제출을 마쳤어요. 정답과 다른 사람의 선택은 잠시 후 공개돼요."
-                : CLUE_MODES[game.settings.mode].rules}
+              : "제출을 마쳤어요. 정답과 다른 사람의 선택은 잠시 후 공개돼요."}
         </p>
       )}
       {finished && game.results.length > 0 && (
@@ -361,42 +361,49 @@ export function ClueGameStage({
           </div>
         </fieldset>
       )}
-      {game.stage === "guess" && game.canAnswer && !submitted && (
-        <form
-          method="post"
-          aria-label="단서각 정답 제출"
-          className={`${styles.form} ${styles.submitBar}`}
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submit();
-          }}
-        >
-          {member && (
-            <label>
-              이 사진을 낸 사람은?
-              <select
-                name="photoAuthor"
-                required
-                value={author}
-                onChange={(e) => setAuthor(e.target.value)}
-              >
-                <option value="">사진 주인을 선택해주세요</option>
-                {game.roster
-                  .filter((p) => p.id !== self)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nickname}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          )}
-          <button type="submit" className={styles.button} disabled={busy || game.paused}>
-            {quiz ? "이 답으로 제출" : "이 위치로 제출"}
-            {member ? " · 사진 주인도 함께" : ""}
-          </button>
-          <p className={styles.muted}>제출을 확정한 뒤에는 바꿀 수 없어요.</p>
-        </form>
+      {solving && (
+        <GameRoundDetails label="이번 모드 규칙 보기" className={styles.roundHelp}>
+          <p>{CLUE_MODES[game.settings.mode].rules}</p>
+        </GameRoundDetails>
+      )}
+      {solving && (
+        <GameRoundActions>
+          <form
+            method="post"
+            aria-label="단서각 정답 제출"
+            className={`${styles.form} ${styles.submitBar}`}
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit();
+            }}
+          >
+            {member && (
+              <label>
+                이 사진을 낸 사람은?
+                <select
+                  name="photoAuthor"
+                  required
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                >
+                  <option value="">사진 주인을 선택해주세요</option>
+                  {game.roster
+                    .filter((p) => p.id !== self)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nickname}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
+            <button type="submit" className={styles.button} disabled={busy || game.paused}>
+              {quiz ? "이 답으로 제출" : "이 위치로 제출"}
+              {member ? " · 사진 주인도 함께" : ""}
+            </button>
+            <p className={styles.muted}>제출을 확정한 뒤에는 바꿀 수 없어요.</p>
+          </form>
+        </GameRoundActions>
       )}
       {result && (
         <ul className={styles.results}>

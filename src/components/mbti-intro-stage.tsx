@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { ArrowRight, CheckCircle2, UsersRound, Mic2, Trophy, LockKeyhole } from "lucide-react";
 import { MBTI_TYPES, type Mbti } from "@/domain/mbti-game";
 import { INTRO_PROMPTS } from "@/domain/mbti-intro";
 import type { GameRoomView } from "@/domain/game-room";
 import styles from "./mbti-intro-stage.module.css";
+import { GameRoundActions, GameRoundDetails } from "./game-round-layout";
 export function MbtiPicker({
   value,
   onChange,
@@ -43,6 +44,7 @@ export function MbtiIntroStage({
   busy: boolean;
   onAction: (action: Record<string, unknown>, host?: boolean) => void;
 }) {
+  const guessForm = useId();
   const g = room.mbtiIntro!,
     others = g.roster.filter((p) => p.id !== room.viewer.id),
     [draft, setDraft] = useState<Record<string, Mbti>>(() =>
@@ -151,15 +153,22 @@ export function MbtiIntroStage({
                 )}
               </div>
             )}
-            <ol className={styles.order} aria-label="설명 순서">
-              {g.roster.map((p, i) => (
-                <li key={p.id} data-current={p.id === g.speakerId}>
-                  <span>{i + 1}</span>
-                  {p.nickname}
-                  {g.stage !== "acting" || i < g.turn ? <CheckCircle2 size={14} /> : null}
-                </li>
-              ))}
-            </ol>
+            {g.stage === "acting" && (
+              <GameRoundDetails
+                label={`설명 순서 · ${g.turn + 1}/${g.roster.length}`}
+                className={styles.history}
+              >
+                <ol className={styles.order} aria-label="설명 순서">
+                  {g.roster.map((p, i) => (
+                    <li key={p.id} data-current={p.id === g.speakerId}>
+                      <span>{i + 1}</span>
+                      {p.nickname}
+                      {g.stage !== "acting" || i < g.turn ? <CheckCircle2 size={14} /> : null}
+                    </li>
+                  ))}
+                </ol>
+              </GameRoundDetails>
+            )}
             <div className={styles.summary}>
               <span>
                 {g.stage === "acting"
@@ -181,6 +190,7 @@ export function MbtiIntroStage({
             </details>
             {room.viewer.status === "admitted" && (
               <form
+                id={guessForm}
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (g.stage !== "guessing" || g.hasSubmitted) return;
@@ -210,22 +220,25 @@ export function MbtiIntroStage({
                     미리 선택하거나 수정할 수 있어요. 전원의 설명이 끝나면 제출 버튼이 열려요.
                   </p>
                 )}
-                <button
-                  className={styles.primary}
-                  type="submit"
-                  disabled={
-                    busy ||
-                    g.stage !== "guessing" ||
-                    g.hasSubmitted ||
-                    others.some((p) => !draft[p.id])
-                  }
-                >
-                  {g.hasSubmitted
-                    ? "이번 라운드 제출 완료"
-                    : g.stage === "acting"
-                      ? "설명이 끝나면 제출할 수 있어요"
-                      : "이번 라운드 추리 제출"}
-                </button>
+                <GameRoundActions>
+                  <button
+                    className={styles.primary}
+                    type="submit"
+                    form={guessForm}
+                    disabled={
+                      busy ||
+                      g.stage !== "guessing" ||
+                      g.hasSubmitted ||
+                      others.some((p) => !draft[p.id])
+                    }
+                  >
+                    {g.hasSubmitted
+                      ? "이번 라운드 제출 완료"
+                      : g.stage === "acting"
+                        ? "설명이 끝나면 제출할 수 있어요"
+                        : "이번 라운드 추리 제출"}
+                  </button>
+                </GameRoundActions>
               </form>
             )}
             {mine && (

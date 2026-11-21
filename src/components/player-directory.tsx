@@ -6,6 +6,7 @@ import { Users, MapPin, ArrowUpRight, Thermometer } from "lucide-react";
 import { PLAYER_ROLES, PLAYER_ROLE_LABELS, type PlayerDirectoryView } from "@/domain/player";
 import { appRequest } from "@/lib/api-client";
 import { ParticipationShell } from "./participation-shell";
+import { ExampleGallery } from "./example-gallery";
 export interface PlayerFilters {
   role: string;
   region: string;
@@ -175,6 +176,9 @@ export function PlayerDirectory({
           </Link>
         ))}
       </section>
+      {!busy && !data.items.length && !appliedFilters.role && !appliedFilters.region && (
+        <ExampleGallery kind="player" />
+      )}
       {!data.items.length && (
         <section className="participation-card participation-empty">
           <Users size={32} />

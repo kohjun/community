@@ -5,6 +5,7 @@ import { WORD_CATEGORIES, WORD_MODE_LABELS } from "@/domain/word-liar";
 import { MBTI_TYPES } from "@/domain/mbti-game";
 import type { GameRoomView } from "@/domain/game-room";
 import styles from "./mbti-game-stage.module.css";
+import { GameRoundActions, GameRoundDetails } from "./game-round-layout";
 export function MbtiGameStage({
   room,
   busy,
@@ -115,16 +116,18 @@ export function MbtiGameStage({
               </div>
             </div>
           )}
-          {game.stage !== "lobby" && (
-            <ol className={styles.order} aria-label="발언 순서">
-              {game.roster.map((p, i) => (
-                <li key={p.id} data-active={p.id === game.speakerId}>
-                  <span>{i + 1}</span>
-                  {p.nickname}
-                  {p.id === room.viewer.id && <small>나</small>}
-                </li>
-              ))}
-            </ol>
+          {game.stage === "acting" && (
+            <GameRoundDetails label="발언 순서 보기" className={styles.turnOrder}>
+              <ol className={styles.order} aria-label="발언 순서">
+                {game.roster.map((p, i) => (
+                  <li key={p.id} data-active={p.id === game.speakerId}>
+                    <span>{i + 1}</span>
+                    {p.nickname}
+                    {p.id === room.viewer.id && <small>나</small>}
+                  </li>
+                ))}
+              </ol>
+            </GameRoundDetails>
           )}
           {game.stage === "voting" && (
             <div className={styles.votePanel}>
@@ -168,23 +171,25 @@ export function MbtiGameStage({
                         </button>
                       ))}
                   </div>
-                  <div className={styles.actions}>
-                    <button
-                      className={styles.primary}
-                      disabled={busy || !target}
-                      onClick={() => onAction({ action: "mbti-vote", cycle: game.cycle, target })}
-                    >
-                      선택한 사람에게 투표
-                    </button>
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        onAction({ action: "mbti-vote", cycle: game.cycle, target: null })
-                      }
-                    >
-                      기권하기
-                    </button>
-                  </div>
+                  <GameRoundActions>
+                    <div className={styles.actions}>
+                      <button
+                        className={styles.primary}
+                        disabled={busy || !target}
+                        onClick={() => onAction({ action: "mbti-vote", cycle: game.cycle, target })}
+                      >
+                        선택한 사람에게 투표
+                      </button>
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          onAction({ action: "mbti-vote", cycle: game.cycle, target: null })
+                        }
+                      >
+                        기권하기
+                      </button>
+                    </div>
+                  </GameRoundActions>
                 </>
               )}
             </div>
@@ -215,48 +220,50 @@ export function MbtiGameStage({
             </div>
           )}
           {game.stage === "guess" && game.canGuess && (
-            <form
-              className={styles.guess}
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (guess && confirm(`${guess}로 최종 제출할까요? 한 번만 추리할 수 있어요.`))
-                  onAction({
-                    action: isWord ? "word-guess" : "mbti-guess",
-                    cycle: game.cycle,
-                    guess,
-                  });
-              }}
-            >
-              <label>
-                {isWord ? "공통 제시어 정답" : "다른 참가자들의 공통 MBTI"}
-                {isWord ? (
-                  <input
-                    aria-label="공통 제시어 정답"
-                    required
-                    maxLength={40}
-                    autoComplete="off"
-                    placeholder="공통 제시어를 입력해주세요"
-                    value={guess}
-                    onChange={(e) => setGuess(e.target.value)}
-                  />
-                ) : (
-                  <select
-                    aria-label="다른 참가자들의 공통 MBTI"
-                    required
-                    value={guess}
-                    onChange={(e) => setGuess(e.target.value)}
-                  >
-                    <option value="">MBTI를 선택해주세요</option>
-                    {MBTI_TYPES.map((t) => (
-                      <option key={t}>{t}</option>
-                    ))}
-                  </select>
-                )}
-              </label>
-              <button className={styles.primary} disabled={busy || !guess.trim()}>
-                마지막 추리 제출
-              </button>
-            </form>
+            <GameRoundActions>
+              <form
+                className={styles.guess}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (guess && confirm(`${guess}로 최종 제출할까요? 한 번만 추리할 수 있어요.`))
+                    onAction({
+                      action: isWord ? "word-guess" : "mbti-guess",
+                      cycle: game.cycle,
+                      guess,
+                    });
+                }}
+              >
+                <label>
+                  {isWord ? "공통 제시어 정답" : "다른 참가자들의 공통 MBTI"}
+                  {isWord ? (
+                    <input
+                      aria-label="공통 제시어 정답"
+                      required
+                      maxLength={40}
+                      autoComplete="off"
+                      placeholder="공통 제시어를 입력해주세요"
+                      value={guess}
+                      onChange={(e) => setGuess(e.target.value)}
+                    />
+                  ) : (
+                    <select
+                      aria-label="다른 참가자들의 공통 MBTI"
+                      required
+                      value={guess}
+                      onChange={(e) => setGuess(e.target.value)}
+                    >
+                      <option value="">MBTI를 선택해주세요</option>
+                      {MBTI_TYPES.map((t) => (
+                        <option key={t}>{t}</option>
+                      ))}
+                    </select>
+                  )}
+                </label>
+                <button className={styles.primary} disabled={busy || !guess.trim()}>
+                  마지막 추리 제출
+                </button>
+              </form>
+            </GameRoundActions>
           )}
           {game.result && (
             <div className={styles.result}>

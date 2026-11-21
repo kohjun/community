@@ -303,12 +303,10 @@
 .suggestions {
   margin-top: 25px;
 }
-.stage .suggestions h3 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.stage .suggestions summary {
+  cursor: pointer;
   font-size: 12px;
-  color: #86a0bb;
+  color: #4a6481;
   margin-bottom: 10px;
 }
 .suggestions button {
@@ -716,8 +714,7 @@
     gap: 12px;
   }
   .steps {
-    gap: 4px;
-    margin-bottom: 10px;
+    display: none;
   }
   .steps span {
     font-size: 9px;
@@ -727,10 +724,7 @@
     padding: 14px 12px;
   }
   .questionIcon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    margin: 9px 0;
+    display: none;
   }
   .stage .questionCard h2 {
     font-size: 22px;
@@ -742,8 +736,7 @@
     font-size: 12px;
   }
   .privacy {
-    font-size: 10px;
-    margin-top: 19px;
+    margin-top: 8px;
   }
   .controls {
     padding: 0 4px;
@@ -755,7 +748,7 @@
     font-size: 12px;
   }
   .choices button {
-    min-height: 76px;
+    min-height: 60px;
   }
   .stage .review h2 {
     font-size: 23px;

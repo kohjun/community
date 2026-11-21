@@ -114,6 +114,12 @@
   background: #0a84fe;
   transition: width 0.2s linear;
 }
+.turnOrder summary {
+  cursor: pointer;
+  color: #456080;
+  font-size: 0.8125rem;
+  margin-block: 6px;
+}
 .order {
   display: flex;
   flex-wrap: wrap;

@@ -13,6 +13,7 @@ import {
   type CreativeAction,
 } from "./creative-game-common";
 import styles from "./creative-games.module.css";
+import { GameRoundActions } from "./game-round-layout";
 const steps = {
   lobby: "함께 준비해요",
   prompt: "시작 문장 작성",
@@ -150,6 +151,7 @@ export function DrawingGameStage({
       {!finished && <p className={styles.instruction}>{explanation}</p>}
       {writing && game.assignment && !game.submitted && (
         <form
+          id={`${uid}-relay`}
           method="post"
           aria-label="낙서톡 문장 전달"
           className={styles.form}
@@ -200,9 +202,16 @@ export function DrawingGameStage({
               시작 문장 추천받기
             </button>
           )}
-          <button className={styles.button} disabled={busy || game.paused}>
-            문장 전달하기
-          </button>
+          <GameRoundActions>
+            <button
+              type="submit"
+              form={`${uid}-relay`}
+              className={styles.button}
+              disabled={busy || game.paused}
+            >
+              문장 전달하기
+            </button>
+          </GameRoundActions>
         </form>
       )}
       {game.submitted && ["prompt", "draw", "interpret"].includes(game.stage) && (
@@ -225,13 +234,15 @@ export function DrawingGameStage({
             editable={!game.paused}
           />
           {game.stage === "draw" && (
-            <button
-              className={styles.button}
-              disabled={busy || saving || game.paused}
-              onClick={() => void submitImage()}
-            >
-              {saving ? "그림을 전달하고 있어요…" : "그림 완성 · 다음 사람에게 전달"}
-            </button>
+            <GameRoundActions>
+              <button
+                className={styles.button}
+                disabled={busy || saving || game.paused}
+                onClick={() => void submitImage()}
+              >
+                {saving ? "그림을 전달하고 있어요…" : "그림 완성 · 다음 사람에게 전달"}
+              </button>
+            </GameRoundActions>
           )}
         </>
       )}
@@ -250,35 +261,37 @@ export function DrawingGameStage({
           </>
         )}
       {game.canGuess && (
-        <form
-          method="post"
-          aria-label="그림 정답 제출"
-          className={styles.guess}
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (text.trim() && (await act({ action: "drawing-guess", text: text.trim() })))
-              setText("");
-          }}
-        >
-          <label className={styles.hiddenLabel} htmlFor={`${uid}-answer`}>
-            그림 정답
-          </label>
-          <input
-            id={`${uid}-answer`}
-            name="guess"
-            pattern={".*\\S.*"}
-            enterKeyHint="send"
-            required
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            maxLength={100}
-            placeholder="무엇을 그리고 있을까요?"
-            autoComplete="off"
-          />
-          <button className={styles.button} disabled={busy || game.paused}>
-            맞히기
-          </button>
-        </form>
+        <GameRoundActions>
+          <form
+            method="post"
+            aria-label="그림 정답 제출"
+            className={styles.guess}
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (text.trim() && (await act({ action: "drawing-guess", text: text.trim() })))
+                setText("");
+            }}
+          >
+            <label className={styles.hiddenLabel} htmlFor={`${uid}-answer`}>
+              그림 정답
+            </label>
+            <input
+              id={`${uid}-answer`}
+              name="guess"
+              pattern={".*\\S.*"}
+              enterKeyHint="send"
+              required
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              maxLength={100}
+              placeholder="무엇을 그리고 있을까요?"
+              autoComplete="off"
+            />
+            <button className={styles.button} disabled={busy || game.paused}>
+              맞히기
+            </button>
+          </form>
+        </GameRoundActions>
       )}
       {game.canJudge && (
         <div className={styles.judge}>

@@ -35,6 +35,7 @@ import type { Mbti } from "@/domain/mbti-game";
 import { AuctionGameStage } from "./auction-game-stage";
 import { MbtiGameStage } from "./mbti-game-stage";
 import { gameJoinUrl } from "@/domain/game-invite";
+import { GameRoundActionsTarget } from "./game-round-layout";
 const phases = {
   lobby: "함께 준비해요",
   playing: "게임 진행 중",
@@ -52,11 +53,25 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
   const [myMbti, setMyMbti] = useState<Mbti | "">("");
   const narrow = useMediaQuery("(max-width: 720px)");
   const playHeading = useRef<HTMLHeadingElement>(null);
+  const playContent = useRef<HTMLDivElement>(null);
+  const [actionsTarget, setActionsTarget] = useState<HTMLDivElement | null>(null);
   const playView =
     room !== null &&
     (room.phase === "playing" || room.phase === "finished") &&
     (room.isHost || room.viewer.status === "admitted");
   const mobilePlay = playView && narrow === true;
+  const roundStep =
+    room?.snapPang?.stage ??
+    room?.drawing?.stage ??
+    room?.clue?.stage ??
+    room?.temperature?.stage ??
+    room?.toast?.stage ??
+    room?.auction?.stage ??
+    room?.mbtiIntro?.stage ??
+    room?.mbti?.stage ??
+    room?.phase;
+  const roundNumber = room?.round;
+  const turn = room?.temperature?.turn ?? room?.toast?.turn;
 
   useEffect(() => {
     if (!mobilePlay) return;
@@ -66,6 +81,13 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
     });
     return () => cancelAnimationFrame(frame);
   }, [mobilePlay]);
+  useEffect(() => {
+    if (!mobilePlay || !playContent.current) return;
+    const editing = document.activeElement;
+    if (editing?.matches("input, select, textarea") && playContent.current.contains(editing))
+      return;
+    playContent.current.scrollTop = 0;
+  }, [mobilePlay, roundStep, roundNumber, turn]);
   const current = useRef<GameRoomView | null>(null),
     mounted = useRef(false),
     editing = useRef(false),
@@ -777,105 +799,112 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
           {error}
         </p>
       )}
-      {(playView || room.phase === "lobby") && (
-        <div className={styles.playContent} data-game-phase={playView ? room.phase : undefined}>
-          {room.snapPang && room.snapPang.stage !== "lobby" && (
-            <SnapPangStage
-              room={room}
-              game={room.snapPang}
-              busy={busy}
-              onAction={act}
-              onRefresh={refreshGame}
-            />
-          )}
-          {room.drawing && room.drawing.stage !== "lobby" && (
-            <DrawingGameStage room={room} busy={busy} onAction={act} onRefresh={refreshGame} />
-          )}
-          {room.clue && room.clue.stage !== "lobby" && (
-            <ClueGameStage room={room} busy={busy} onAction={act} onRefresh={refreshGame} />
-          )}
-          {room.temperature && room.temperature.stage !== "lobby" && (
-            <TemperatureGameStage
-              key={`${room.temperature.runId}:${room.temperature.turn}`}
-              room={room}
-              game={room.temperature}
-              busy={busy}
-              onAction={(action, asHost) => void act(action, asHost)}
-              onRefresh={refreshGame}
-            />
-          )}
-          {room.toast && (
-            <ToastGameStage
-              key={room.round}
-              room={room}
-              busy={busy}
-              onAction={(action, asHost) => void act(action, asHost)}
-              onRefresh={refreshGame}
-            />
-          )}
-          {room.auction && (
-            <AuctionGameStage
-              key={room.round}
-              room={room}
-              busy={busy}
-              onAction={(action, asHost) => void act(action, asHost)}
-              onRefresh={refreshGame}
-            />
-          )}
-          {room.mbtiIntro && room.phase !== "lobby" && (
-            <MbtiIntroStage
-              key={room.round}
-              room={room}
-              busy={busy}
-              onAction={(action, asHost) => void act(action, asHost)}
-            />
-          )}
-          {room.mbti && room.phase !== "lobby" && (
-            <MbtiGameStage
-              key={room.round}
-              room={room}
-              busy={busy}
-              onAction={(action, asHost) => void act(action, asHost)}
-              onRefresh={refreshGame}
-            />
-          )}
-          {room.phase === "finished" &&
-            (room.drawing?.runId || room.clue?.runId || room.snapPang?.runId) && (
-              <Link
-                className={styles.primary}
-                href={`/games/${room.id}/results/${room.drawing?.runId ?? room.clue?.runId ?? room.snapPang?.runId}${room.isHost ? "?host=1" : ""}`}
-              >
-                이 게임 결과 다시 보기 · 24시간 보관
-              </Link>
+      <GameRoundActionsTarget.Provider value={mobilePlay ? actionsTarget : null}>
+        {(playView || room.phase === "lobby") && (
+          <div
+            ref={playContent}
+            className={styles.playContent}
+            data-game-phase={playView ? room.phase : undefined}
+          >
+            {room.snapPang && room.snapPang.stage !== "lobby" && (
+              <SnapPangStage
+                room={room}
+                game={room.snapPang}
+                busy={busy}
+                onAction={act}
+                onRefresh={refreshGame}
+              />
             )}
-          {room.phase === "playing" &&
-            !room.mbti &&
-            !room.mbtiIntro &&
-            !room.auction &&
-            !room.toast &&
-            !room.temperature &&
-            !room.drawing &&
-            !room.clue &&
-            !room.snapPang && (
-              <section className={`${styles.card} ${styles.gameStage}`}>
-                <span className={styles.eyebrow}>PLAY TOGETHER</span>
-                <h2>라운드 {room.round} 진행 중</h2>
-                <p>호스트의 안내에 따라 함께 플레이해주세요.</p>
-                <small>
-                  시작 시각{" "}
-                  {room.startedAt
-                    ? new Intl.DateTimeFormat("ko-KR", {
-                        timeZone: "Asia/Seoul",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                      }).format(new Date(room.startedAt))
-                    : ""}
-                </small>
-              </section>
+            {room.drawing && room.drawing.stage !== "lobby" && (
+              <DrawingGameStage room={room} busy={busy} onAction={act} onRefresh={refreshGame} />
             )}
-        </div>
-      )}
+            {room.clue && room.clue.stage !== "lobby" && (
+              <ClueGameStage room={room} busy={busy} onAction={act} onRefresh={refreshGame} />
+            )}
+            {room.temperature && room.temperature.stage !== "lobby" && (
+              <TemperatureGameStage
+                key={`${room.temperature.runId}:${room.temperature.turn}`}
+                room={room}
+                game={room.temperature}
+                busy={busy}
+                onAction={(action, asHost) => void act(action, asHost)}
+                onRefresh={refreshGame}
+              />
+            )}
+            {room.toast && (
+              <ToastGameStage
+                key={room.round}
+                room={room}
+                busy={busy}
+                onAction={(action, asHost) => void act(action, asHost)}
+                onRefresh={refreshGame}
+              />
+            )}
+            {room.auction && (
+              <AuctionGameStage
+                key={room.round}
+                room={room}
+                busy={busy}
+                onAction={(action, asHost) => void act(action, asHost)}
+                onRefresh={refreshGame}
+              />
+            )}
+            {room.mbtiIntro && room.phase !== "lobby" && (
+              <MbtiIntroStage
+                key={room.round}
+                room={room}
+                busy={busy}
+                onAction={(action, asHost) => void act(action, asHost)}
+              />
+            )}
+            {room.mbti && room.phase !== "lobby" && (
+              <MbtiGameStage
+                key={room.round}
+                room={room}
+                busy={busy}
+                onAction={(action, asHost) => void act(action, asHost)}
+                onRefresh={refreshGame}
+              />
+            )}
+            {room.phase === "finished" &&
+              (room.drawing?.runId || room.clue?.runId || room.snapPang?.runId) && (
+                <Link
+                  className={styles.primary}
+                  href={`/games/${room.id}/results/${room.drawing?.runId ?? room.clue?.runId ?? room.snapPang?.runId}${room.isHost ? "?host=1" : ""}`}
+                >
+                  이 게임 결과 다시 보기 · 24시간 보관
+                </Link>
+              )}
+            {room.phase === "playing" &&
+              !room.mbti &&
+              !room.mbtiIntro &&
+              !room.auction &&
+              !room.toast &&
+              !room.temperature &&
+              !room.drawing &&
+              !room.clue &&
+              !room.snapPang && (
+                <section className={`${styles.card} ${styles.gameStage}`}>
+                  <span className={styles.eyebrow}>PLAY TOGETHER</span>
+                  <h2>라운드 {room.round} 진행 중</h2>
+                  <p>호스트의 안내에 따라 함께 플레이해주세요.</p>
+                  <small>
+                    시작 시각{" "}
+                    {room.startedAt
+                      ? new Intl.DateTimeFormat("ko-KR", {
+                          timeZone: "Asia/Seoul",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        }).format(new Date(room.startedAt))
+                      : ""}
+                  </small>
+                </section>
+              )}
+          </div>
+        )}
+      </GameRoundActionsTarget.Provider>
+      {mobilePlay && <div ref={setActionsTarget} className={styles.roundActions} />}
       {playView && !mobilePlay && guide}
       {!mobilePlay && roomInfo}
       {!mobilePlay && (

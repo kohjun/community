@@ -38,6 +38,7 @@ import type { VenuePoint } from "@/domain/discovery";
 import { EventLocationField } from "./event-location-field";
 import { ParticipationShell } from "./participation-shell";
 import { PostAuthorName } from "./post-author-name";
+import { ExampleGallery } from "./example-gallery";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 
 const topics = CATEGORIES.filter((category) => category.sortOrder < 9);
@@ -404,6 +405,13 @@ export function LightningCommunity({
           {loadError}
         </p>
       )}
+      {!loading &&
+        !category &&
+        !tag &&
+        !search &&
+        !feed.posts.some((post) => !post.sample && post.eventAvailable) && (
+          <ExampleGallery kind="lightning" />
+        )}
       <div className="lightning-grid" aria-busy={loading}>
         {feed.posts.map((post) => (
           <article className="lightning-card" key={post.id}>

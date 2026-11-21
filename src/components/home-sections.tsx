@@ -33,6 +33,7 @@ import { useSavedGames } from "@/lib/saved-games";
 import { cn } from "@/lib/utils";
 import { GameCover } from "./game-cover";
 import { RecruitTrack } from "./home-stage";
+import { ExampleGallery } from "./example-gallery";
 
 const HOME_SECTION_LIMIT = 8;
 const categoryName = (slug: string) => CATEGORIES.find((c) => c.slug === slug)?.name ?? "";
@@ -162,6 +163,7 @@ function RecruitSection({
 }) {
   const isEvent = type === "event";
   const label = MEETUP_TYPE_LABELS[type];
+  const openPosts = posts.filter((post) => !post.sample);
   return (
     <Section
       id={`sl-section-recruits-${type}`}
@@ -186,9 +188,9 @@ function RecruitSection({
         </>
       }
     >
-      {posts.length ? (
+      {openPosts.length ? (
         <RecruitTrack
-          posts={posts.slice(0, HOME_SECTION_LIMIT)}
+          posts={openPosts.slice(0, HOME_SECTION_LIMIT)}
           onOpen={onOpen}
           onSave={onSave}
           bookmarked={bookmarked}
@@ -196,9 +198,7 @@ function RecruitSection({
           canWrite={canWrite}
         />
       ) : (
-        <p className="sl-section__empty">
-          {isEvent ? "지금 모집 중인 이벤트·행사가 없어요." : "지금 모집 중인 번개·모임이 없어요."}
-        </p>
+        <ExampleGallery kind={type} compact={!isEvent} />
       )}
     </Section>
   );
@@ -356,13 +356,16 @@ function PlayersSection({ signedIn, tinted = false }: { signedIn: boolean; tinte
       action={<MoreLink href="/players">플레이어 전체 보기</MoreLink>}
     >
       {!signedIn ? (
-        <div className="sl-player-card__login">
-          <strong>로그인하고 플레이어를 만나보세요</strong>
-          <span>플레이어의 성향과 공개한 참가 경험을 확인할 수 있어요.</span>
-          <Link className="sl-chip-link" href={loginHref("/players")}>
-            로그인하기
-          </Link>
-        </div>
+        <>
+          <ExampleGallery kind="player" />
+          <div className="sl-player-card__login">
+            <strong>로그인하고 플레이어를 만나보세요</strong>
+            <span>플레이어의 성향과 공개한 참가 경험을 확인할 수 있어요.</span>
+            <Link className="sl-chip-link" href={loginHref("/players")}>
+              로그인하기
+            </Link>
+          </div>
+        </>
       ) : players === null ? (
         <p className="sl-section__empty" role="status">
           플레이어를 불러오고 있어요.
@@ -402,10 +405,7 @@ function PlayersSection({ signedIn, tinted = false }: { signedIn: boolean; tinte
           ))}
         </div>
       ) : (
-        <p className="sl-section__empty">
-          아직 탐색을 공개한 플레이어가 없어요.{" "}
-          <Link href="/players">내 플레이어 프로필 공개하기</Link>
-        </p>
+        <ExampleGallery kind="player" />
       )}
     </Section>
   );

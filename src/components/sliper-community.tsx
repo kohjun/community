@@ -28,6 +28,7 @@ import Link from "next/link";
 import { PostDetailContent } from "./post-detail-content";
 import dynamic from "next/dynamic";
 import { HomeSections } from "./home-sections";
+import { ExampleGallery } from "./example-gallery";
 import { CATEGORY_ICONS } from "./category-icons";
 import { CommunityCategoryMenu } from "./community-category-menu";
 import { useAudience } from "@/lib/audience";
@@ -843,6 +844,17 @@ export function SliperCommunity({
                   글을 불러오는 중이에요.
                 </p>
               )}
+              {meetupBoard === "event" &&
+                view === "home" &&
+                category === "all" &&
+                !query &&
+                !discoveryActive &&
+                !store.loading &&
+                !store.feedError &&
+                (store.pagination?.page ?? 1) === 1 &&
+                !filtered.some((post) => !post.sample && post.eventAvailable) && (
+                  <ExampleGallery kind="event" />
+                )}
               {filtered.length ? (
                 recruitmentCards ? (
                   <div className="recruitment-card-grid">
