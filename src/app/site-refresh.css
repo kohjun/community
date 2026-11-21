@@ -1101,12 +1101,14 @@ body {
 .sl-recruit {
   position: relative;
   display: grid;
-  grid-template-rows: auto 1fr;
   overflow: hidden;
   border: 1px solid var(--sl-line);
   border-radius: 14px;
   background: var(--sl-surface);
   scroll-snap-align: start;
+}
+.sl-recruit:has(> .sl-recruit__cover) {
+  grid-template-rows: auto 1fr;
 }
 .sl-recruit__cover {
   position: relative;
@@ -1130,19 +1132,22 @@ body {
   height: 40px;
 }
 .sl-recruit__status {
-  position: absolute;
-  top: 10px;
-  left: 10px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   height: 24px;
   padding: 0 9px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 92%);
+  background: var(--sl-paper-2);
   color: var(--sl-ink-2);
   font-size: 11.5px;
   font-weight: 650;
+}
+.sl-recruit__cover .sl-recruit__status {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgb(255 255 255 / 92%);
 }
 .sl-recruit__status.is-open::before {
   width: 6px;
@@ -1169,13 +1174,41 @@ body {
 .sl-recruit__save:disabled {
   opacity: 0.75;
 }
+.sl-recruit:not(:has(> .sl-recruit__cover)) .sl-recruit__title::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+.sl-recruit:has(.sl-recruit__summary) .sl-recruit__save {
+  z-index: 1;
+  top: 6px;
+  right: 6px;
+  width: 44px;
+  height: 44px;
+  background: var(--sl-paper-2);
+}
+.sl-recruit:has(.sl-recruit__title:focus-visible) {
+  outline: 2px solid var(--sl-accent);
+  outline-offset: -2px;
+}
 .sl-recruit__body {
   display: grid;
   align-content: start;
   gap: 6px;
   padding: 12px 14px 14px;
 }
-.sl-recruit__body a {
+.sl-recruit__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 7px;
+  min-height: 32px;
+  padding-inline-end: 42px;
+}
+.sl-recruit__summary .sl-recruit__status.is-open {
+  background: var(--sl-accent-soft);
+}
+.sl-recruit__title {
   text-decoration: none;
 }
 .sl-recruit__meta {
@@ -1196,7 +1229,7 @@ body {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
-.sl-recruit a:hover h3 {
+.sl-recruit__title:hover {
   color: var(--sl-accent-2);
 }
 .sl-recruit .title-is-read {

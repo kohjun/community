@@ -105,8 +105,13 @@ export function RecruitTrack({
     <div className="sl-recruits__track">
       {posts.map((post) => {
         const status = recruitStatus(post);
-        const image = post.image ?? post.images[0]?.src;
+        const isLightning = post.meetupType === "lightning";
+        const image = isLightning ? null : (post.image ?? post.images[0]?.src);
+        const category = CATEGORIES.find((c) => c.slug === post.category)?.name;
         const saved = bookmarked.includes(post.id);
+        const statusBadge = (
+          <span className={cn("sl-recruit__status", status.open && "is-open")}>{status.label}</span>
+        );
         const open = (event: React.MouseEvent<HTMLAnchorElement>) => {
           if (!shouldOpenPostModal(event)) return;
           event.preventDefault();
@@ -114,42 +119,40 @@ export function RecruitTrack({
         };
         return (
           <article className="sl-recruit" key={post.id}>
-            <a
-              className="sl-recruit__cover"
-              href={postPath(post.id)}
-              onClick={open}
-              tabIndex={-1}
-              aria-hidden="true"
-            >
-              {image ? (
-                <img src={image} alt="" loading="lazy" />
+            {!isLightning && (
+              <a
+                className="sl-recruit__cover"
+                href={postPath(post.id)}
+                onClick={open}
+                tabIndex={-1}
+                aria-hidden="true"
+              >
+                {image ? (
+                  <img src={image} alt="" loading="lazy" />
+                ) : (
+                  <span className="sl-recruit__placeholder">
+                    <SliperMark />
+                  </span>
+                )}
+                {statusBadge}
+              </a>
+            )}
+            <div className="sl-recruit__body">
+              {isLightning ? (
+                <div className="sl-recruit__summary">
+                  {statusBadge}
+                  {category && <span className="sl-recruit__meta">{category}</span>}
+                </div>
               ) : (
-                <span className="sl-recruit__placeholder">
-                  <SliperMark />
+                <span className="sl-recruit__meta">
+                  {category ? `${category} · ` : ""}이벤트·행사
                 </span>
               )}
-              <span className={cn("sl-recruit__status", status.open && "is-open")}>
-                {status.label}
-              </span>
-            </a>
-            <button
-              type="button"
-              className={cn("sl-recruit__save", saved && "is-saved")}
-              aria-label={post.title + " 북마크"}
-              aria-pressed={saved}
-              disabled={busy || !canWrite}
-              onClick={() => onSave(post.id)}
-            >
-              <Bookmark size={16} fill={saved ? "currentColor" : "none"} aria-hidden="true" />
-            </button>
-            <div className="sl-recruit__body">
-              <span className="sl-recruit__meta">
-                {CATEGORIES.find((c) => c.slug === post.category)?.name} ·{" "}
-                {post.meetupType === "lightning" ? "번개·모임" : "이벤트·행사"}
-              </span>
-              <a href={postPath(post.id)} onClick={open}>
-                <h3 className={cn(readPosts.includes(post.id) && "title-is-read")}>{post.title}</h3>
-              </a>
+              <h3 className={cn(readPosts.includes(post.id) && "title-is-read")}>
+                <a className="sl-recruit__title" href={postPath(post.id)} onClick={open}>
+                  {post.title}
+                </a>
+              </h3>
               <dl className="sl-recruit__facts">
                 <div>
                   <dt>
@@ -166,6 +169,16 @@ export function RecruitTrack({
               </dl>
               <span className="sl-recruit__fee">{recruitFee(post)}</span>
             </div>
+            <button
+              type="button"
+              className={cn("sl-recruit__save", saved && "is-saved")}
+              aria-label={post.title + " 북마크"}
+              aria-pressed={saved}
+              disabled={busy || !canWrite}
+              onClick={() => onSave(post.id)}
+            >
+              <Bookmark size={16} fill={saved ? "currentColor" : "none"} aria-hidden="true" />
+            </button>
           </article>
         );
       })}
