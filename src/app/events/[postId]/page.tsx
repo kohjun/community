@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getDatabase } from "@/db/client";
 import { currentActor } from "@/server/identity";
 import { participationService } from "@/server/participation-service";
@@ -7,10 +7,13 @@ import { AppError } from "@/server/errors";
 import { ExternalEvent } from "@/components/external-event";
 import { EventApplication } from "@/components/event-application";
 import { PostReadTracker } from "@/components/post-read-tracker";
+import { isJanuaryRecruitmentSample } from "@/demo/january-recruitments";
+import { postPath } from "@/domain/post-sharing";
 export const dynamic = "force-dynamic";
 export default async function Page({ params }: { params: Promise<{ postId: string }> }) {
-  const { postId } = await params,
-    actor = await currentActor();
+  const { postId } = await params;
+  if (isJanuaryRecruitmentSample({ id: postId, sample: true })) redirect(postPath(postId));
+  const actor = await currentActor();
   try {
     const event = await participationService(getDatabase()).overview(actor, postId);
     return (

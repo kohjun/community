@@ -33,6 +33,7 @@ import { useSavedGames } from "@/lib/saved-games";
 import { cn } from "@/lib/utils";
 import { GameCover } from "./game-cover";
 import { RecruitTrack } from "./home-stage";
+import { isJanuaryRecruitmentSample } from "@/demo/january-recruitments";
 
 const HOME_SECTION_LIMIT = 8;
 const categoryName = (slug: string) => CATEGORIES.find((c) => c.slug === slug)?.name ?? "";
@@ -162,14 +163,17 @@ function RecruitSection({
 }) {
   const isEvent = type === "event";
   const label = MEETUP_TYPE_LABELS[type];
+  const showingSamples = posts.some(isJanuaryRecruitmentSample);
   return (
     <Section
       id={`sl-section-recruits-${type}`}
       title={isEvent ? "예능 한 판, 주인공은 우리" : "슬쩍 나올 사람?"}
       description={
-        isEvent
-          ? "미션 레이스, 추리 게임, 예능 파티 등 예정된 행사를 살펴보세요."
-          : "번개·모임 · 시간과 취향이 맞는 사람들과 가볍게 만나요."
+        showingSamples
+          ? "2027년 1월 모임을 가정한 모집글이에요."
+          : isEvent
+            ? "미션 레이스, 추리 게임, 예능 파티 등 예정된 행사를 살펴보세요."
+            : "번개·모임 · 시간과 취향이 맞는 사람들과 가볍게 만나요."
       }
       tinted={tinted}
       action={

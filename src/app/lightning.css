@@ -795,6 +795,20 @@
     margin-left: 0;
   }
 }
+
+@media (max-width: 720px) {
+  .lightning-grid:has(> [data-recruitment-sample]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lightning-grid:has(> [data-recruitment-sample]) > :not([data-recruitment-sample]) {
+    grid-column: 1 / -1;
+  }
+
+  .lightning-grid > :nth-child(n + 3 of [data-recruitment-sample]) {
+    display: none;
+  }
+}
 @media (max-width: 640px) {
   .lightning-hero {
     flex-direction: column;

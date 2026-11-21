@@ -15,6 +15,8 @@ import { visibleEventVenueId, visibleEventVenueVersion } from "./event-venue-ser
 import { periodLikeCount } from "./popularity";
 import { postMetadataColumns } from "./post-metadata-sql";
 import { unionAll } from "drizzle-orm/pg-core";
+import { januaryRecruitmentSample } from "@/demo/january-recruitments";
+import { exampleImage } from "@/demo/showcase";
 export const likeCount = sql<number>`(select count(*)::int from sliper.post_likes l where l.post_id = ${posts.id})`;
 const viewCount = sql<number>`(select count(*)::int from sliper.post_daily_views v where v.post_id = ${posts.id})`;
 const commentCount = sql<number>`(select count(*)::int from sliper.comments c where c.post_id = ${posts.id} and c.status = 'published')`;
@@ -83,6 +85,7 @@ export function createPostReader(db: Database) {
         eventStartsAt: eventSettings.startsAt,
         eventCancelledAt: eventLifecycle.cancelledAt,
         eventAmountKRW: eventSettings.amountKRW,
+        eventCapacity: eventSettings.capacity,
         eventAvailable,
         distanceKm: location?.distance ?? sql<number | null>`null::double precision`,
         liked: actor
@@ -143,6 +146,7 @@ export function createPostReader(db: Database) {
         eventStartsAt,
         eventCancelledAt,
         eventAmountKRW,
+        eventCapacity,
         eventAvailable: available,
         distanceKm,
       }) => {
@@ -159,6 +163,18 @@ export function createPostReader(db: Database) {
           images,
           attachedVideos,
         );
+        const sample = januaryRecruitmentSample(post);
+        const displayedImages =
+          !images.length && sample?.type === "event"
+            ? [
+                {
+                  id: dto.id,
+                  src: exampleImage(sample.exampleId),
+                  contentType: "image/webp" as const,
+                  sortOrder: 0,
+                },
+              ]
+            : images;
         const result: CommunityPost = {
           id: dto.id,
           discussionType: post.kind === "이야기" ? (post.discussionType ?? "free") : null,
@@ -186,9 +202,9 @@ export function createPostReader(db: Database) {
           ...(popular ? { popularityScore } : {}),
           views,
           comments: count,
-          images,
+          images: displayedImages,
           videos: dto.videos ?? [],
-          ...(images[0] ? { image: images[0].src } : {}),
+          ...(displayedImages[0] ? { image: displayedImages[0].src } : {}),
           ...(post.location ? { location: post.location } : {}),
           ...(post.eventDate ? { eventDate: post.eventDate } : {}),
           meetupType: post.kind === "모집" && meetupType === "lightning" ? "lightning" : "event",
@@ -203,6 +219,7 @@ export function createPostReader(db: Database) {
           eventStartsAt: post.kind === "모집" ? (eventStartsAt?.toISOString() ?? null) : null,
           eventCancelledAt: post.kind === "모집" ? (eventCancelledAt?.toISOString() ?? null) : null,
           eventAmountKRW: post.kind === "모집" ? eventAmountKRW : null,
+          eventCapacity: post.kind === "모집" ? eventCapacity : null,
           eventAvailable: post.kind === "모집" && available,
           distanceKm: post.kind === "모집" && distanceKm !== null ? Number(distanceKm) : null,
           applicationUrl:

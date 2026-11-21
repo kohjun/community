@@ -19,6 +19,7 @@ import { shouldOpenPostModal } from "@/lib/post-sharing";
 import { PostAuthorName } from "./post-author-name";
 import { usePostRead } from "@/lib/use-read-posts";
 import { cn } from "@/lib/utils";
+import { isJanuaryRecruitmentSample } from "@/demo/january-recruitments";
 
 const eventDateFormatter = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -57,13 +58,16 @@ export function CommunityRecruitmentCard({
   const category = CATEGORIES.find((item) => item.slug === post.category)?.name;
   const cancelled = !!post.eventCancelledAt;
   const closed = post.eventAvailable === false;
-  const status = cancelled
-    ? "모집 취소"
-    : closed
-      ? "모집 마감"
-      : post.eventAvailable === true
-        ? "모집 중"
-        : "모집";
+  const sample = isJanuaryRecruitmentSample(post);
+  const status = sample
+    ? "1월 모집 샘플"
+    : cancelled
+      ? "모집 취소"
+      : closed
+        ? "모집 마감"
+        : post.eventAvailable === true
+          ? "모집 중"
+          : "모집";
   const start = post.eventStartsAt ? new Date(post.eventStartsAt) : null;
   const validStart = start && !Number.isNaN(start.getTime()) ? start : null;
   const eventDate = validStart
@@ -85,7 +89,10 @@ export function CommunityRecruitmentCard({
   };
 
   return (
-    <article className={cn("recruitment-card", cancelled && "recruitment-card-cancelled")}>
+    <article
+      className={cn("recruitment-card", cancelled && "recruitment-card-cancelled")}
+      data-recruitment-sample={sample || undefined}
+    >
       <a className="recruitment-card-open" href={href} onClick={open} aria-labelledby={titleId}>
         {showImage && (
           <div className="recruitment-card-cover" aria-hidden="true">

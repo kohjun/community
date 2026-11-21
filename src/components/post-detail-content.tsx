@@ -17,6 +17,7 @@ import { PollCard } from "./poll-card";
 import { SafetyActions } from "./safety-actions";
 import { PostShareButton } from "./post-share-button";
 import { RecruitmentApplyButton, RecruitmentCta } from "./recruitment-cta";
+import { isJanuaryRecruitmentSample } from "@/demo/january-recruitments";
 import { CATEGORIES } from "@/domain/categories";
 import { createCommentSchema } from "@/domain/validation";
 import { evaluateContentPolicy } from "@/domain/content-policy";
@@ -148,7 +149,7 @@ export function PostDetailContent({
     setToast("댓글을 남겼어요.");
   }
   const applyButton =
-    active.kind === "모집" ? (
+    active.kind === "모집" && !isJanuaryRecruitmentSample(active) ? (
       <RecruitmentApplyButton
         postId={active.id}
         url={active.applicationUrl}
@@ -267,6 +268,7 @@ export function PostDetailContent({
         </section>
       ) : (
         <>
+          {active.kind === "모집" && <RecruitmentCta post={active} />}
           <PostBody
             document={active.bodyDocument ?? null}
             body={active.body}
@@ -276,7 +278,6 @@ export function PostDetailContent({
           {(active.category === "knowledge" || active.category === "lab") && (
             <PostLibraryLinks postId={active.id} enabled={store.canWrite} />
           )}
-          {active.kind === "모집" && <RecruitmentCta post={active} />}
           {active.poll && (
             <PollCard
               poll={active.poll}

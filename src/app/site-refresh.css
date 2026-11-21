@@ -2217,6 +2217,31 @@ body {
 .sl-section .sl-recruits__track:has(> :nth-child(2)) {
   grid-template-rows: repeat(2, auto);
 }
+
+@media (max-width: 720px) {
+  .sl-section .sl-recruits__track[data-sample-track] {
+    grid-auto-columns: auto;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto;
+    overflow: visible;
+  }
+
+  .sl-section .sl-recruits__track[data-sample-track] > :nth-child(n + 3),
+  .sl-feed .recruitment-card-grid > :nth-child(n + 3 of [data-recruitment-sample]) {
+    display: none;
+  }
+
+  .sl-feed .recruitment-card-grid:has(> [data-recruitment-sample]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sl-feed
+    .recruitment-card-grid:has(> [data-recruitment-sample])
+    > :not([data-recruitment-sample]) {
+    grid-column: 1 / -1;
+  }
+}
 .sl-story-card,
 .sl-crew-card,
 .sl-template-card {

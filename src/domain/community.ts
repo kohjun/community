@@ -57,6 +57,7 @@ export interface CommunityPost {
   eventStartsAt?: string | null;
   eventCancelledAt?: string | null;
   eventAmountKRW?: number | null;
+  eventCapacity?: number | null;
   eventAvailable?: boolean;
   applicationUrl: string | null;
   eventFee: string | null;

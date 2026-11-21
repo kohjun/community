@@ -10,6 +10,7 @@ import { postPath } from "@/domain/post-sharing";
 import { shouldOpenPostModal } from "@/lib/post-sharing";
 import { appRequest } from "@/lib/api-client";
 import { SliperMark } from "./sliper-mark";
+import { isJanuaryRecruitmentSample } from "@/demo/january-recruitments";
 
 const startFormatter = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -23,6 +24,7 @@ const startFormatter = new Intl.DateTimeFormat("ko-KR", {
 const feeFormatter = new Intl.NumberFormat("ko-KR");
 
 function recruitStatus(post: CommunityPost) {
+  if (isJanuaryRecruitmentSample(post)) return { label: "1월 모집 샘플", open: false };
   if (post.sample) return { label: "모임 예시", open: false };
   if (post.eventCancelledAt) return { label: "모집 취소", open: false };
   if (post.eventAvailable === false) return { label: "모집 마감", open: false };
@@ -101,8 +103,9 @@ export function RecruitTrack({
   canWrite: boolean;
 }) {
   const readPosts = useReadPosts();
+  const sampleTrack = posts.length > 0 && posts.every(isJanuaryRecruitmentSample);
   return (
-    <div className="sl-recruits__track">
+    <div className="sl-recruits__track" data-sample-track={sampleTrack || undefined}>
       {posts.map((post) => {
         const status = recruitStatus(post);
         const isLightning = post.meetupType === "lightning";

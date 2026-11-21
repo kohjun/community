@@ -39,6 +39,7 @@ import { EventLocationField } from "./event-location-field";
 import { ParticipationShell } from "./participation-shell";
 import { PostAuthorName } from "./post-author-name";
 import { ExampleGallery } from "./example-gallery";
+import { isJanuaryRecruitmentSample } from "@/demo/january-recruitments";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 
 const topics = CATEGORIES.filter((category) => category.sortOrder < 9);
@@ -409,86 +410,98 @@ export function LightningCommunity({
         !category &&
         !tag &&
         !search &&
-        !feed.posts.some((post) => !post.sample && post.eventAvailable) && (
-          <ExampleGallery kind="lightning" singleMobileRow />
-        )}
+        !feed.posts.some(
+          (post) => isJanuaryRecruitmentSample(post) || (!post.sample && post.eventAvailable),
+        ) && <ExampleGallery kind="lightning" singleMobileRow />}
       <div className="lightning-grid" aria-busy={loading}>
-        {feed.posts.map((post) => (
-          <article className="lightning-card" key={post.id}>
-            <Link className="lightning-card-main" href={`/events/${post.id}`}>
-              <div className="lightning-card-top">
-                <span>
-                  <LightningCategoryIcon slug={post.activityCategory} size={15} />
-                  {lightningCategory(post.activityCategory).name}
-                </span>
-                <ArrowUpRight size={17} />
-              </div>
-              <h3 className={readPosts.includes(post.id) ? "title-is-read" : undefined}>
-                {post.title}
-                {readPosts.includes(post.id) && <span className="sr-only"> (읽은 글)</span>}
-              </h3>
-              <p className="lightning-excerpt">{post.excerpt}</p>
-              {!!post.tags.length && (
-                <div className="lightning-card-tags">
-                  {post.tags.map((item) => (
-                    <span key={item}>#{item}</span>
-                  ))}
+        {feed.posts.map((post) => {
+          const sample = isJanuaryRecruitmentSample(post);
+          return (
+            <article
+              className="lightning-card"
+              key={post.id}
+              data-recruitment-sample={sample || undefined}
+            >
+              <Link
+                className="lightning-card-main"
+                href={sample ? `/posts/${post.id}` : `/events/${post.id}`}
+              >
+                <div className="lightning-card-top">
+                  <span>
+                    <LightningCategoryIcon slug={post.activityCategory} size={15} />
+                    {lightningCategory(post.activityCategory).name}
+                  </span>
+                  <ArrowUpRight size={17} />
                 </div>
-              )}
-              <div className="lightning-card-meta">
-                {post.location && (
-                  <span>
-                    <MapPin size={15} /> {post.location}
-                  </span>
+                <h3 className={readPosts.includes(post.id) ? "title-is-read" : undefined}>
+                  {post.title}
+                  {readPosts.includes(post.id) && <span className="sr-only"> (읽은 글)</span>}
+                </h3>
+                <p className="lightning-excerpt">{post.excerpt}</p>
+                {!!post.tags.length && (
+                  <div className="lightning-card-tags">
+                    {post.tags.map((item) => (
+                      <span key={item}>#{item}</span>
+                    ))}
+                  </div>
                 )}
-                {post.eventDate && (
-                  <span>
-                    <CalendarDays size={15} /> {post.eventDate}
-                  </span>
-                )}
+                <div className="lightning-card-meta">
+                  {post.location && (
+                    <span>
+                      <MapPin size={15} /> {post.location}
+                    </span>
+                  )}
+                  {post.eventDate && (
+                    <span>
+                      <CalendarDays size={15} /> {post.eventDate}
+                    </span>
+                  )}
+                </div>
+              </Link>
+              <div className="lightning-card-bottom">
+                <PostAuthorName post={post} icon={<UserRound size={13} aria-hidden="true" />} />
+                <small>
+                  {sample
+                    ? "1월 모집 샘플"
+                    : post.eventCancelledAt
+                      ? "행사 취소 · 취소 안내 보기"
+                      : post.eventAvailable === false
+                        ? "모집 마감"
+                        : post.applicationUrl
+                          ? "외부 신청 · 승인 후 참가"
+                          : "담당자 승인 후 참가"}{" "}
+                  · {post.time}
+                </small>
               </div>
-            </Link>
-            <div className="lightning-card-bottom">
-              <PostAuthorName post={post} icon={<UserRound size={13} aria-hidden="true" />} />
-              <small>
-                {post.eventCancelledAt
-                  ? "행사 취소 · 취소 안내 보기"
-                  : post.eventAvailable === false
-                    ? "모집 마감"
-                    : post.applicationUrl
-                      ? "외부 신청 · 승인 후 참가"
-                      : "담당자 승인 후 참가"}{" "}
-                · {post.time}
-              </small>
-            </div>
-            {post.applicationUrl && (
-              <>
+              {!sample && post.applicationUrl && (
+                <>
+                  <a
+                    className="lightning-map-link"
+                    href={post.applicationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    외부 플랫폼에서 신청 <ArrowUpRight size={13} />
+                  </a>
+                  <Link className="lightning-map-link" href={"/events/" + post.id}>
+                    결제 후 참가 확인 · 공지방 →
+                  </Link>
+                </>
+              )}
+              {!sample && post.venueLatitude != null && post.venueLongitude != null && (
                 <a
                   className="lightning-map-link"
-                  href={post.applicationUrl}
+                  href={`/map?event=${post.id}&lat=${post.venueLatitude}&lng=${post.venueLongitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label={`${post.title} 행사장 지도 보기 (새 창)`}
                 >
-                  외부 플랫폼에서 신청 <ArrowUpRight size={13} />
+                  <MapPin size={13} /> 행사장 지도 보기 <ArrowUpRight size={13} />
                 </a>
-                <Link className="lightning-map-link" href={"/events/" + post.id}>
-                  결제 후 참가 확인 · 공지방 →
-                </Link>
-              </>
-            )}
-            {post.venueLatitude != null && post.venueLongitude != null && (
-              <a
-                className="lightning-map-link"
-                href={`/map?event=${post.id}&lat=${post.venueLatitude}&lng=${post.venueLongitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`${post.title} 행사장 지도 보기 (새 창)`}
-              >
-                <MapPin size={13} /> 행사장 지도 보기 <ArrowUpRight size={13} />
-              </a>
-            )}
-          </article>
-        ))}
+              )}
+            </article>
+          );
+        })}
       </div>
       {!feed.posts.length && !loading && (
         <section className="participation-card participation-empty lightning-empty">

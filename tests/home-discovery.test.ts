@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { homeRecruitments } from "../src/domain/home-discovery";
 import type { CommunityPost } from "../src/domain/community";
+import { JANUARY_RECRUITMENTS } from "../src/demo/january-recruitments";
 const post = (patch: Partial<CommunityPost>) =>
   ({
     id: "one",
@@ -40,4 +41,29 @@ test("home recruitment limits each meetup type independently and excludes crews 
   assert.equal(new Set(result.event.map(({ id }) => id)).size, 12);
   assert.ok(result.event.every(({ sample, eventAvailable }) => !sample && eventAvailable));
   assert.deepEqual(result.lightning, [lightning]);
+});
+
+test("curated January samples fill only the empty meetup type and expire by start time", () => {
+  const samples = JANUARY_RECRUITMENTS.map(({ postId, startsAt, type }) =>
+    post({ id: postId, eventStartsAt: startsAt, meetupType: type, sample: true }),
+  ).reverse();
+  const upcoming = Date.parse("2026-11-22T00:00:00+09:00");
+  const both = homeRecruitments([], samples, [], upcoming);
+  assert.deepEqual(
+    both.event.map(({ id }) => id),
+    JANUARY_RECRUITMENTS.slice(0, 4).map(({ postId }) => postId),
+  );
+  assert.deepEqual(
+    both.lightning.map(({ id }) => id),
+    JANUARY_RECRUITMENTS.slice(4).map(({ postId }) => postId),
+  );
+
+  const real = post({ eventAvailable: true, meetupType: "event" });
+  const withReal = homeRecruitments([real], samples, [], upcoming);
+  assert.deepEqual(withReal.event, [real]);
+  assert.equal(withReal.lightning.length, 4);
+  assert.deepEqual(homeRecruitments([], samples, [], Date.parse("2027-02-01")), {
+    event: [],
+    lightning: [],
+  });
 });

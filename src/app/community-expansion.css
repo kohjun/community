@@ -360,25 +360,27 @@
 }
 .event-facts {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: 12px 16px;
+  margin: 0;
 }
 .event-facts > div {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  min-width: 0;
 }
 .event-facts svg {
   color: #63748b;
   flex-shrink: 0;
 }
-.event-facts small {
-  display: block;
-  font-size: 10px;
+.event-facts dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
   color: #63748b;
   margin-bottom: 2px;
 }
-.event-facts strong {
+.event-facts dd {
+  margin: 0;
   font-size: 13px;
   font-weight: 600;
   color: #334c69;
@@ -1416,7 +1418,7 @@
   .event-brief h3 {
     font-size: 17px;
   }
-  .event-facts strong {
+  .event-facts dd {
     font-size: 12px;
   }
   .poll-card {
