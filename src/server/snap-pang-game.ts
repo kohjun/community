@@ -8,6 +8,7 @@ import {
   SNAP_OBJECT_BANK,
   SNAP_PANG_BRIEFING_MS,
   SNAP_PANG_REVEAL_MS,
+  snapPangRoundPlan,
   type SnapFaceSubMode,
   type SnapMission,
   type SnapPangPlayer,
@@ -16,7 +17,6 @@ import {
   type SnapPangState,
   type SnapPangView,
   type SnapRoundEntryResult,
-  type SnapRoundKind,
   type SnapRoundResult,
 } from "../domain/snap-pang";
 import { AppError } from "./errors";
@@ -28,47 +28,6 @@ function shuffle<T>(items: readonly T[]): T[] {
     [list[i], list[j]] = [list[j]!, list[i]!];
   }
   return list;
-}
-
-function roundPattern(
-  settings: SnapPangSettings,
-): Array<{ kind: SnapRoundKind; face?: SnapFaceSubMode }> {
-  const plan: Array<{ kind: SnapRoundKind; face?: SnapFaceSubMode }> = [];
-  if (settings.preset === "light") {
-    for (let i = 0; i < settings.rounds; i++) {
-      plan.push({ kind: i % 2 === 0 ? "color" : "object" });
-    }
-    return plan;
-  }
-  if (settings.preset === "pokerface") {
-    const cycle: Array<{ kind: SnapRoundKind; face?: SnapFaceSubMode }> = [
-      { kind: "face", face: "smile-bomb" },
-      { kind: "face", face: "face-copy" },
-      { kind: "face", face: "smile-bomb" },
-      { kind: "color" },
-      { kind: "face", face: "smile-bomb" },
-      { kind: "object" },
-      { kind: "face", face: "face-copy" },
-      { kind: "face", face: "smile-bomb" },
-      { kind: "color" },
-    ];
-    for (let i = 0; i < settings.rounds; i++) plan.push(cycle[i % cycle.length]!);
-    return plan;
-  }
-  // Standard "mix" preset: Round 1 is always Color Sniper (0MB instant start while AI preloads).
-  const cycle: Array<{ kind: SnapRoundKind; face?: SnapFaceSubMode }> = [
-    { kind: "color" },
-    { kind: "object" },
-    { kind: "face", face: "smile-bomb" },
-    { kind: "color" },
-    { kind: "face", face: "face-copy" },
-    { kind: "object" },
-    { kind: "face", face: "smile-bomb" },
-    { kind: "color" },
-    { kind: "object" },
-  ];
-  for (let i = 0; i < settings.rounds; i++) plan.push(cycle[i % cycle.length]!);
-  return plan;
 }
 
 function buildDeck(settings: SnapPangSettings, roster: SnapPangPlayer[]): SnapMission[] {
@@ -83,7 +42,7 @@ function buildDeck(settings: SnapPangSettings, roster: SnapPangPlayer[]): SnapMi
   let comboIdx = 0;
   let attackerTurn = 0;
 
-  return roundPattern(settings).map((slot, index) => {
+  return snapPangRoundPlan(settings.preset, settings.rounds).map((slot, index) => {
     if (slot.kind === "color") {
       const picked = colors[colorIdx % colors.length]!;
       colorIdx++;

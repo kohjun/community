@@ -10,31 +10,35 @@ const SLIDE_MS = 6000;
 const POSTERS = [
   {
     id: "web-games",
-    title: "웹게임",
-    description: "설치 없이 친구와 바로 한 판 즐겨요.",
+    eyebrow: "NEW · 3D 카메라 파티 웹게임",
+    title: "설치 없이 바로 한 판, 웹게임",
+    description: "스냅 팡 3D부터 라이어·경매·마음의 온도까지 모임 자리에서 QR로 바로 시작해요.",
     href: "/games",
     action: "웹게임 둘러보기",
   },
   {
-    id: "stories",
-    title: "이야기",
-    description: "예능 이야기부터 모임 후기까지 함께 나눠요.",
-    href: "/stories",
-    action: "이야기 보러 가기",
-  },
-  {
     id: "events",
+    eyebrow: "SLIPER PUBLIC EVENT",
     title: MEETUP_TYPE_LABELS.event,
-    description: "미션 레이스와 추리 게임을 직접 체험해요.",
+    description: "미션 레이스와 심리 추리 게임, 예능 파티를 오프라인에서 직접 체험해요.",
     href: EVENT_RECRUITMENTS_HREF,
     action: "이벤트·행사 찾아보기",
   },
   {
     id: "lightning",
+    eyebrow: "소규모 번개 모임",
     title: MEETUP_TYPE_LABELS.lightning,
-    description: "시간과 취향이 맞는 소규모 모임을 찾아요.",
+    description: "시간과 취향이 맞는 사람들과 부담 없이 만나는 2~12명 번개를 찾아보세요.",
     href: "/lightning",
     action: "번개·모임 찾아보기",
+  },
+  {
+    id: "stories",
+    eyebrow: "예능 커뮤니티",
+    title: "우리들의 생생한 이야기",
+    description: "모임 참가 후기부터 기획 노하우, 재미있는 투표까지 함께 나눠요.",
+    href: "/stories",
+    action: "이야기 보러 가기",
   },
 ] as const;
 
@@ -62,7 +66,7 @@ export function HeroCarousel() {
       document.removeEventListener("visibilitychange", visibility);
     };
   }, []);
-  // A fresh timer per slide keeps every slide on screen for the full interval.
+
   useEffect(() => {
     if (stopped) return;
     const timer = setTimeout(() => setIndex((value) => (value + 1) % count), SLIDE_MS);
@@ -122,18 +126,19 @@ export function HeroCarousel() {
               >
                 <Link href={poster.href} data-poster={poster.id} draggable={false} prefetch={false}>
                   <span className="sl-carousel__copy">
+                    <span className="sl-carousel__eyebrow">{poster.eyebrow}</span>
                     <strong className="sl-carousel__title">{poster.title}</strong>
                     <span className="sl-carousel__description">{poster.description}</span>
                     <span className="sl-carousel__action">
                       {poster.action}
-                      <ArrowRight size={16} aria-hidden="true" />
+                      <ArrowRight size={15} aria-hidden="true" />
                     </span>
                   </span>
                   <span className="sl-carousel__art">
                     <img
                       src={`${image}-1440.webp`}
                       srcSet={`${image}-720.webp 720w, ${image}-1440.webp 1440w`}
-                      sizes="(max-width: 720px) 100vw, (max-width: 1600px) 63vw, 970px"
+                      sizes="(max-width: 720px) 100vw, (max-width: 1440px) 58vw, 720px"
                       alt=""
                       width={1440}
                       height={960}
@@ -148,8 +153,26 @@ export function HeroCarousel() {
           })}
         </div>
       </div>
-      <div className="sl-carousel__controls">
-        <div className="sl-carousel__progress" role="group" aria-label="배너 선택">
+
+      <button
+        type="button"
+        className="sl-carousel__arrow sl-carousel__arrow--prev"
+        aria-label="이전 배너"
+        onClick={() => move(-1)}
+      >
+        <ChevronLeft size={18} />
+      </button>
+      <button
+        type="button"
+        className="sl-carousel__arrow sl-carousel__arrow--next"
+        aria-label="다음 배너"
+        onClick={() => move(1)}
+      >
+        <ChevronRight size={18} />
+      </button>
+
+      <div className="sl-carousel__hud">
+        <div className="sl-carousel__dots" role="group" aria-label="배너 선택">
           {POSTERS.map((poster, i) => (
             <button
               key={poster.id}
@@ -157,28 +180,22 @@ export function HeroCarousel() {
               aria-label={`${i + 1}번째 배너, ${poster.title}`}
               aria-current={i === current ? "true" : undefined}
               onClick={() => setIndex(i)}
-            >
-              {i === current && <i key={`${i}:${stopped}`} />}
-            </button>
+            />
           ))}
         </div>
-        <span className="sl-carousel__count" aria-hidden="true">
-          {String(current + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
-        </span>
-        <button type="button" aria-label="이전 배너" onClick={() => move(-1)}>
-          <ChevronLeft size={17} />
-        </button>
-        <button type="button" aria-label="다음 배너" onClick={() => move(1)}>
-          <ChevronRight size={17} />
-        </button>
-        <button
-          type="button"
-          aria-label={paused ? "배너 자동 넘김 재생" : "배너 자동 넘김 일시정지"}
-          aria-pressed={paused}
-          onClick={() => setPaused((value) => !value)}
-        >
-          {paused ? <Play size={14} /> : <Pause size={14} />}
-        </button>
+        <div className="sl-carousel__pill">
+          <span className="sl-carousel__count" aria-hidden="true">
+            <strong>{current + 1}</strong> / {count}
+          </span>
+          <button
+            type="button"
+            aria-label={paused ? "배너 자동 넘김 재생" : "배너 자동 넘김 일시정지"}
+            aria-pressed={paused}
+            onClick={() => setPaused((value) => !value)}
+          >
+            {paused ? <Play size={12} /> : <Pause size={12} />}
+          </button>
+        </div>
       </div>
     </section>
   );

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Bookmark, Search, UserRound } from "lucide-react";
+import { BookOpen, Bookmark, MapPin, Search, UserRound } from "lucide-react";
 import type { SiteNavigationOverride } from "@/domain/navigation";
 import { NotificationBell } from "./notification-bell";
 import { SiteNavigation } from "./site-navigation";
@@ -8,7 +8,7 @@ import { TestAccountControls } from "./test-account-controls";
 import { SliperMark } from "./sliper-mark";
 import { AudienceToggle } from "./audience-toggle";
 
-/** The header shows the wordmark alone; the footer keeps the slipper mark beside it. */
+/** Brand mark and wordmark shared by header and footer. */
 export function SiteBrand({ mark = true }: { mark?: boolean }) {
   return (
     <Link className="sl-brand" href="/" aria-label="Sliper 홈">
@@ -21,8 +21,8 @@ export function SiteBrand({ mark = true }: { mark?: boolean }) {
 }
 
 /**
- * One header for every page. Pages with their own search (the community feed) pass it in;
- * everywhere else the search control links to the unified search page.
+ * Spacious two-row header on desktop (brand + utility row above primary navigation row),
+ * collapsing cleanly to a compact responsive two-row bar on phones.
  */
 export function SiteHeader({
   activeSection,
@@ -36,41 +36,59 @@ export function SiteHeader({
   return (
     <header className="sl-header">
       <div className="sl-header__inner">
-        <SiteBrand mark={false} />
-        <SiteNavigation {...(activeSection ? { activeSection } : {})} />
-        <AudienceToggle />
-        <div className="sl-header__tools">
-          <Link
-            className="sl-icon-button sl-header__favorites"
-            href="/?view=bookmarks&kind=모집"
-            prefetch={false}
-            aria-label="찜한 모임"
-            title="찜한 모임"
-            aria-current={savedMeetupsActive ? "page" : undefined}
-          >
-            <Bookmark
-              size={20}
-              fill={savedMeetupsActive ? "currentColor" : "none"}
-              aria-hidden="true"
-            />
-          </Link>
-          {search ?? (
-            <Link className="sl-search-link" href="/search" aria-label="모임·이야기 통합 검색">
-              <Search size={17} aria-hidden="true" />
-              <span>모임·이야기 검색</span>
+        <div className="sl-header__top">
+          <div className="sl-header__brand">
+            <SiteBrand mark />
+            <span className="sl-header__slogan">일상에 예능 한 스푼</span>
+          </div>
+          <div className="sl-header__tools">
+            <Link
+              className="sl-icon-button sl-header__favorites"
+              href="/?view=bookmarks&kind=모집"
+              prefetch={false}
+              aria-label="찜한 모임"
+              title="찜한 모임"
+              aria-current={savedMeetupsActive ? "page" : undefined}
+            >
+              <Bookmark
+                size={20}
+                fill={savedMeetupsActive ? "currentColor" : "none"}
+                aria-hidden="true"
+              />
             </Link>
-          )}
-          <span className="sl-header__desktop-only">
-            <NotificationBell />
-          </span>
-          <Link
-            className="sl-icon-button sl-header__desktop-only"
-            href="/mypage"
-            aria-label="마이페이지"
-          >
-            <UserRound size={19} aria-hidden="true" />
-          </Link>
-          <TestAccountControls fallbackLogin />
+            {search ?? (
+              <Link className="sl-search-link" href="/search" aria-label="모임·이야기 통합 검색">
+                <span>모임·이야기, 웹게임 검색</span>
+                <Search size={18} aria-hidden="true" />
+              </Link>
+            )}
+            <span className="sl-header__desktop-only">
+              <NotificationBell />
+            </span>
+            <Link
+              className="sl-icon-button sl-header__desktop-only"
+              href="/mypage"
+              aria-label="마이페이지"
+              title="마이페이지"
+            >
+              <UserRound size={19} aria-hidden="true" />
+            </Link>
+            <TestAccountControls fallbackLogin />
+          </div>
+          <AudienceToggle />
+        </div>
+        <div className="sl-header__nav-row">
+          <SiteNavigation {...(activeSection ? { activeSection } : {})} />
+          <div className="sl-header__shortcuts" aria-label="빠른 바로가기">
+            <Link href="/map" className="sl-header__shortcut" prefetch={false}>
+              <MapPin size={14} aria-hidden="true" />
+              이벤트 맵
+            </Link>
+            <Link href="/archive" className="sl-header__shortcut" prefetch={false}>
+              <BookOpen size={14} aria-hidden="true" />
+              아카이브
+            </Link>
+          </div>
         </div>
       </div>
     </header>

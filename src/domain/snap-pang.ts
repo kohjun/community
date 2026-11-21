@@ -12,27 +12,87 @@ export const SNAP_PANG_REVEAL_MS = 6_500;
 
 export const SNAP_PANG_PRESET_META: Record<
   SnapPangPreset,
-  { title: string; subtitle: string; badge: string; usesFace: boolean }
+  {
+    title: string;
+    subtitle: string;
+    badge: string;
+    cameraNote: string;
+    games: readonly string[];
+    usesFace: boolean;
+  }
 > = {
   light: {
-    title: "라이트 · 얼굴 비노출",
-    subtitle: "첫 만남 추천! 후면 카메라로 색깔 스나이퍼와 테이블 헌터만 즐겨요.",
-    badge: "얼굴 미사용",
+    title: "색깔·물건만 찾기",
+    subtitle: "테이블 위 색깔과 물건(컵·폰·가방 등)만 찍어 겨뤄요. 처음 만난 모임에 부담 없어요.",
+    badge: "얼굴 안 찍음 · 첫 만남 추천",
+    cameraNote: "후면 카메라만 사용",
+    games: ["🎨 색깔 찾기", "📦 물건 찾기"],
     usesFace: false,
   },
   mix: {
-    title: "스탠다드 믹스",
-    subtitle: "색깔·사물·3D 아바타 표정/웃참을 골고루 섞어 진행해요.",
-    badge: "3D 아바타 가리기",
+    title: "색깔·물건·표정 골고루",
+    subtitle: "색깔 찾기, 물건 찾기, 웃음 참기·표정 카피를 골고루 섞어 진행해요.",
+    badge: "추천 · 3D 아바타 가리기",
+    cameraNote: "내 얼굴은 3D 캐릭터가 가려줌",
+    games: ["🎨 색깔 찾기", "📦 물건 찾기", "💣 웃음 참기", "🎭 표정 카피"],
     usesFace: true,
   },
   pokerface: {
-    title: "웃참 스페셜",
-    subtitle: "3D 풍선 폭탄 웃음 참기와 표정 카피 비중을 높인 예능 모드예요.",
-    badge: "예능 풀파워",
+    title: "웃음 참기·표정 집중",
+    subtitle: "서로 웃겨서 3D 풍선 폭탄을 터뜨리는 웃음 참기와 표정 카피 위주로 진행해요.",
+    badge: "친한 모임 · 3D 폭탄",
+    cameraNote: "내 얼굴은 3D 캐릭터가 가려줌",
+    games: ["💣 웃음 참기", "🎭 표정 카피", "🎨 보너스 색깔·물건"],
     usesFace: true,
   },
 };
+
+export type SnapRoundSlot = { kind: SnapRoundKind; face?: SnapFaceSubMode };
+
+export function snapPangRoundPlan(preset: SnapPangPreset, rounds: number): SnapRoundSlot[] {
+  const plan: SnapRoundSlot[] = [];
+  if (preset === "light") {
+    for (let i = 0; i < rounds; i++) {
+      plan.push({ kind: i % 2 === 0 ? "color" : "object" });
+    }
+    return plan;
+  }
+  if (preset === "pokerface") {
+    const cycle: SnapRoundSlot[] = [
+      { kind: "face", face: "smile-bomb" },
+      { kind: "face", face: "face-copy" },
+      { kind: "face", face: "smile-bomb" },
+      { kind: "color" },
+      { kind: "face", face: "smile-bomb" },
+      { kind: "object" },
+      { kind: "face", face: "face-copy" },
+      { kind: "face", face: "smile-bomb" },
+      { kind: "color" },
+    ];
+    for (let i = 0; i < rounds; i++) plan.push(cycle[i % cycle.length]!);
+    return plan;
+  }
+  // Standard "mix": Round 1 is always Color Sniper (0MB instant start while AI preloads).
+  const cycle: SnapRoundSlot[] = [
+    { kind: "color" },
+    { kind: "object" },
+    { kind: "face", face: "smile-bomb" },
+    { kind: "color" },
+    { kind: "face", face: "face-copy" },
+    { kind: "object" },
+    { kind: "face", face: "smile-bomb" },
+    { kind: "color" },
+    { kind: "object" },
+  ];
+  for (let i = 0; i < rounds; i++) plan.push(cycle[i % cycle.length]!);
+  return plan;
+}
+
+export function snapPangSlotLabel(slot: SnapRoundSlot): string {
+  if (slot.kind === "color") return "🎨 색깔 찾기";
+  if (slot.kind === "object") return "📦 물건 찾기";
+  return slot.face === "face-copy" ? "🎭 표정 카피" : "💣 웃음 참기";
+}
 
 export type SnapPangSettings = {
   preset: SnapPangPreset;

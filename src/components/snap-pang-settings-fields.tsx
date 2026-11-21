@@ -1,13 +1,17 @@
 "use client";
 
+import { useId } from "react";
+import { Check } from "lucide-react";
 import {
   SNAP_PANG_PRESETS,
   SNAP_PANG_PRESET_META,
   SNAP_PANG_ROUND_COUNTS,
   SNAP_PANG_SECONDS,
-  type SnapPangPreset,
+  snapPangRoundPlan,
+  snapPangSlotLabel,
   type SnapPangSettings,
 } from "@/domain/snap-pang";
+import styles from "./snap-pang-settings-fields.module.css";
 
 export function SnapPangSettingsFields({
   value,
@@ -18,27 +22,61 @@ export function SnapPangSettingsFields({
   disabled?: boolean;
   onChange: (next: Partial<SnapPangSettings>) => void;
 }) {
+  const uid = useId();
+  const activeMeta = SNAP_PANG_PRESET_META[value.preset];
+  const plan = snapPangRoundPlan(value.preset, value.rounds);
+
   return (
-    <>
-      <label>
-        모임 분위기 프리셋
-        <select
-          aria-label="스냅 팡 프리셋"
-          value={value.preset}
-          disabled={disabled}
-          onChange={(e) => onChange({ preset: e.target.value as SnapPangPreset })}
-        >
-          {SNAP_PANG_PRESETS.map((preset) => (
-            <option key={preset} value={preset}>
-              {SNAP_PANG_PRESET_META[preset].title} ({SNAP_PANG_PRESET_META[preset].badge})
-            </option>
-          ))}
-        </select>
-      </label>
-      <p style={{ margin: "4px 0 8px", fontSize: 12, color: "#526174", lineHeight: 1.55 }}>
-        {SNAP_PANG_PRESET_META[value.preset].subtitle}
-      </p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+    <div className={styles.group}>
+      <fieldset className={styles.fieldset} disabled={disabled}>
+        <legend>플레이 모드</legend>
+        <div className={styles.cards}>
+          {SNAP_PANG_PRESETS.map((preset) => {
+            const meta = SNAP_PANG_PRESET_META[preset];
+            const selected = value.preset === preset;
+            const inputId = `${uid}-${preset}`;
+            return (
+              <label
+                key={preset}
+                htmlFor={inputId}
+                className={styles.card}
+                data-selected={selected}
+                data-disabled={disabled}
+              >
+                <input
+                  id={inputId}
+                  name={`${uid}-snap-preset`}
+                  type="radio"
+                  value={preset}
+                  checked={selected}
+                  disabled={disabled}
+                  className={styles.srOnly}
+                  onChange={() => onChange({ preset })}
+                />
+                <div className={styles.cardTop}>
+                  <span className={styles.titleRow}>
+                    <span className={styles.checkCircle} aria-hidden="true">
+                      {selected && <Check size={12} strokeWidth={3} />}
+                    </span>
+                    {meta.title}
+                  </span>
+                  <span className={styles.badge}>{meta.badge}</span>
+                </div>
+                <p className={styles.desc}>{meta.subtitle}</p>
+                <div className={styles.tags}>
+                  {meta.games.map((tag) => (
+                    <span key={tag} className={styles.tag}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <div className={styles.selectGrid}>
         <label>
           총 라운드 수
           <select
@@ -74,6 +112,20 @@ export function SnapPangSettingsFields({
           </select>
         </label>
       </div>
-    </>
+
+      <div className={styles.preview} aria-live="polite">
+        <div className={styles.previewHead}>
+          <span>진행 순서 미리보기 ({value.rounds}라운드)</span>
+          <span className={styles.previewCamera}>{activeMeta.cameraNote}</span>
+        </div>
+        <div className={styles.planFlow}>
+          {plan.map((slot, idx) => (
+            <span key={`${idx}-${slot.kind}-${slot.face ?? ""}`} className={styles.planPill}>
+              <b>{idx + 1}R</b> {snapPangSlotLabel(slot)}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

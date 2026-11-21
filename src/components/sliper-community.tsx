@@ -512,7 +512,11 @@ export function SliperCommunity({
         }
       />
 
-      <main className="sl-page" id="main-content" tabIndex={-1}>
+      <main
+        className={cn("sl-page", homeLanding && "sl-page--home")}
+        id="main-content"
+        tabIndex={-1}
+      >
         {homeLanding ? (
           <HomeHero audience={audience} onHost={startHosting} />
         ) : (

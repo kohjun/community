@@ -42,33 +42,40 @@ function Section({
   title,
   description,
   action,
+  tinted = false,
   children,
 }: {
   id: string;
   title: string;
   description: string;
   action: ReactNode;
+  tinted?: boolean;
   children: ReactNode;
 }) {
   return (
-    <section className="sl-section" aria-labelledby={id}>
-      <header className="sl-section__head">
-        <div>
-          <h2 id={id}>{title}</h2>
-          <p>{description}</p>
-        </div>
-        <div className="sl-section__actions">{action}</div>
-      </header>
-      {children}
+    <section
+      className={cn("sl-section-band", tinted && "sl-section-band--tinted")}
+      aria-labelledby={id}
+    >
+      <div className="sl-section">
+        <header className="sl-section__head">
+          <div>
+            <h2 id={id}>{title}</h2>
+            <p>{description}</p>
+          </div>
+          <div className="sl-section__actions">{action}</div>
+        </header>
+        {children}
+      </div>
     </section>
   );
 }
 
 function MoreLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link className="sl-text-link" href={href}>
+    <Link className="sl-pill-link" href={href}>
       {children}
-      <ArrowRight size={15} aria-hidden="true" />
+      <ArrowRight size={14} aria-hidden="true" />
     </Link>
   );
 }
@@ -76,17 +83,20 @@ function MoreLink({ href, children }: { href: string; children: ReactNode }) {
 function StoriesSection({
   posts,
   onOpen,
+  tinted = false,
 }: {
   posts: CommunityPost[];
   onOpen: (post: CommunityPost) => void;
+  tinted?: boolean;
 }) {
   const readPosts = useReadPosts();
   return (
     <Section
       id="sl-section-stories"
-      title="인기 이야기"
-      description="반응이 모인 글과 최근 이야기를 살펴보세요."
-      action={<MoreLink href="/stories?sort=popular">이야기 더 보기</MoreLink>}
+      title="지금 인기 이야기"
+      description="반응이 모인 모임 후기와 예능 이야기를 한눈에 살펴보세요."
+      tinted={tinted}
+      action={<MoreLink href="/stories?sort=popular">이야기 전체 보기</MoreLink>}
     >
       {posts.length ? (
         <div className="sl-section__grid">
@@ -139,6 +149,7 @@ function RecruitSection({
   bookmarked,
   busy,
   canWrite,
+  tinted = false,
 }: {
   type: MeetupType;
   posts: CommunityPost[];
@@ -147,6 +158,7 @@ function RecruitSection({
   bookmarked: string[];
   busy: boolean;
   canWrite: boolean;
+  tinted?: boolean;
 }) {
   const isEvent = type === "event";
   const label = MEETUP_TYPE_LABELS[type];
@@ -159,6 +171,7 @@ function RecruitSection({
           ? "이벤트·행사 · 미션 레이스, 추리 게임, 테마 파티에 참여해요."
           : "번개·모임 · 시간과 취향이 맞는 사람들과 가볍게 만나요."
       }
+      tinted={tinted}
       action={
         <>
           {isEvent && (
@@ -175,7 +188,7 @@ function RecruitSection({
     >
       {posts.length ? (
         <RecruitTrack
-          posts={posts}
+          posts={posts.slice(0, HOME_SECTION_LIMIT)}
           onOpen={onOpen}
           onSave={onSave}
           bookmarked={bookmarked}
@@ -191,14 +204,15 @@ function RecruitSection({
   );
 }
 
-function GamesSection({ audience }: { audience: Audience }) {
+function GamesSection({ audience, tinted = false }: { audience: Audience; tinted?: boolean }) {
   const [saved, toggle] = useSavedGames();
   return (
     <Section
       id="sl-section-games"
       title={audience === "host" ? "모임에 바로 쓰는 웹게임" : "친구와 즐기는 웹게임"}
-      description="링크 하나로 모이고, 설치나 가입 없이 휴대폰으로 함께해요."
-      action={<MoreLink href="/games">웹게임 전체</MoreLink>}
+      description="링크 하나로 모이고, 설치나 가입 없이 휴대폰으로 바로 함께해요."
+      tinted={tinted}
+      action={<MoreLink href="/games">웹게임 전체 보기</MoreLink>}
     >
       <div className="sl-section__grid">
         {GAME_CATALOG.slice(0, HOME_SECTION_LIMIT).map((game) => {
@@ -235,7 +249,7 @@ function GamesSection({ audience }: { audience: Audience }) {
 }
 
 /** Host home: partner crews for staffing and co-hosting. */
-function CrewsSection() {
+function CrewsSection({ tinted = false }: { tinted?: boolean }) {
   const [crews, setCrews] = useState<CrewSummary[] | null>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -267,7 +281,8 @@ function CrewsSection() {
       id="sl-section-crews"
       title="같이 모임을 만들 크루"
       description="MC·스태프·기획 파트너를 찾는 크루와 함께 모임을 키워보세요."
-      action={<MoreLink href="/players?tab=crews">크루 전체</MoreLink>}
+      tinted={tinted}
+      action={<MoreLink href="/players?tab=crews">크루 전체 보기</MoreLink>}
     >
       {crews === null ? (
         <p className="sl-section__empty" role="status">
@@ -310,7 +325,7 @@ function CrewsSection() {
   );
 }
 
-function PlayersSection({ signedIn }: { signedIn: boolean }) {
+function PlayersSection({ signedIn, tinted = false }: { signedIn: boolean; tinted?: boolean }) {
   const [players, setPlayers] = useState<PlayerCard[] | null>(null);
   useEffect(() => {
     // The directory is members-only, so visitors get a sign-in prompt instead of a request.
@@ -337,7 +352,8 @@ function PlayersSection({ signedIn }: { signedIn: boolean }) {
       id="sl-section-players"
       title="같이 놀 플레이어 찾기"
       description="역할 성향과 매너 온도를 보고 나와 잘 맞는 플레이어를 찾아보세요."
-      action={<MoreLink href="/players">플레이어 전체</MoreLink>}
+      tinted={tinted}
+      action={<MoreLink href="/players">플레이어 전체 보기</MoreLink>}
     >
       {!signedIn ? (
         <div className="sl-player-card__login">
@@ -396,7 +412,7 @@ function PlayersSection({ signedIn }: { signedIn: boolean }) {
 }
 
 /** Host home: ready-to-run event templates. */
-function TemplatesSection() {
+function TemplatesSection({ tinted = false }: { tinted?: boolean }) {
   const [items, setItems] = useState<LibraryPage["items"] | null>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -423,7 +439,8 @@ function TemplatesSection() {
       id="sl-section-templates"
       title="그대로 열면 되는 이벤트 템플릿"
       description="진행 순서와 준비물이 정리된 템플릿으로 기획 시간을 줄여보세요."
-      action={<MoreLink href="/archive?kind=template">템플릿 전체</MoreLink>}
+      tinted={tinted}
+      action={<MoreLink href="/archive?kind=template">템플릿 전체 보기</MoreLink>}
     >
       {items === null ? (
         <p className="sl-section__empty" role="status">
@@ -491,12 +508,11 @@ export function HomeSections({
     audience === "host"
       ? [
           <TemplatesSection key="templates" />,
-          <CrewsSection key="crews" />,
+          <CrewsSection key="crews" tinted />,
           <GamesSection key="games" audience={audience} />,
-          <StoriesSection key="stories" posts={stories} onOpen={onOpen} />,
+          <StoriesSection key="stories" posts={stories} onOpen={onOpen} tinted />,
         ]
       : [
-          <StoriesSection key="stories" posts={stories} onOpen={onOpen} />,
           ...(["event", "lightning"] as const).map((type) => (
             <RecruitSection
               key={type}
@@ -507,10 +523,12 @@ export function HomeSections({
               bookmarked={bookmarked}
               busy={busy}
               canWrite={canWrite}
+              tinted={type === "lightning"}
             />
           )),
+          <StoriesSection key="stories" posts={stories} onOpen={onOpen} />,
           <GamesSection key="games" audience={audience} />,
-          <PlayersSection key="players" signedIn={canWrite} />,
+          <PlayersSection key="players" signedIn={canWrite} tinted />,
         ];
   return <div className="sl-sections">{sections}</div>;
 }
