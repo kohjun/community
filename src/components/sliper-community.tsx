@@ -854,10 +854,7 @@ export function SliperCommunity({
                 (store.pagination?.page ?? 1) === 1 && <ExampleGallery kind="event" mobileSwipe />}
               {filtered.length ? (
                 recruitmentCards ? (
-                  <div
-                    className="recruitment-card-grid"
-                    data-meetup-swipe={showRecruitmentImages || undefined}
-                  >
+                  <div className="recruitment-card-grid">
                     {filtered.map((post, index) => (
                       <Fragment key={post.id}>
                         <CommunityRecruitmentCard

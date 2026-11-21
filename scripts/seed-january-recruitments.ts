@@ -10,6 +10,7 @@ const marker = "january-2027-recruitment";
 const hostId = "6f027000-2027-4101-8100-000000000000";
 const hostName = "슬리퍼 1월 샘플팀";
 const ids = JANUARY_RECRUITMENTS.map(({ postId }) => postId);
+const typeById = new Map(JANUARY_RECRUITMENTS.map(({ postId, type }) => [postId, type]));
 const databaseUrl = new URL(process.env.DATABASE_URL ?? "http://missing");
 const local = process.argv[2] === "--local";
 const apply = local || process.argv[2] === "--apply";
@@ -161,11 +162,17 @@ try {
       .where(inArray(posts.id, ids));
     if (
       verified.length !== ids.length ||
-      verified.some((post) => !post.sample || post.open) ||
-      verified.filter((post) => post.type === "event").length !== 4
+      verified.some((post) => !post.sample || post.open || typeById.get(post.id) !== post.type)
     )
       throw new Error("The sample publication did not verify.");
-    console.log(JSON.stringify({ event: 4, lightning: 4, registrationsOpen: false, ids }));
+    console.log(
+      JSON.stringify({
+        event: verified.filter(({ type }) => type === "event").length,
+        lightning: verified.filter(({ type }) => type === "lightning").length,
+        registrationsOpen: false,
+        ids,
+      }),
+    );
   }
 } finally {
   await connection.close();

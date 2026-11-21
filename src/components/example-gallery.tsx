@@ -14,7 +14,7 @@ export function ExampleGallery({
   return (
     <section className={styles.examples} aria-label={title}>
       <h3>{title}</h3>
-      <div className={styles.grid} data-meetup-swipe={mobileSwipe ? "examples" : undefined}>
+      <div className={styles.grid} data-mobile-swipe={mobileSwipe || undefined}>
         {EXAMPLES[kind].map((example) => (
           <Link
             className={styles.card}

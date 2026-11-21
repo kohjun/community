@@ -407,7 +407,7 @@ export function LightningCommunity({
         </p>
       )}
       {!loading && !category && !tag && !search && <ExampleGallery kind="lightning" mobileSwipe />}
-      <div className="lightning-grid" aria-busy={loading} data-meetup-swipe>
+      <div className="lightning-grid" aria-busy={loading}>
         {feed.posts.map((post) => {
           const sample = isJanuaryRecruitmentSample(post);
           return (

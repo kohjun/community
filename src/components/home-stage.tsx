@@ -104,7 +104,7 @@ export function RecruitTrack({
 }) {
   const readPosts = useReadPosts();
   return (
-    <div className="sl-recruits__track" data-meetup-swipe>
+    <div className="sl-recruits__track">
       {posts.map((post) => {
         const status = recruitStatus(post);
         const isLightning = post.meetupType === "lightning";

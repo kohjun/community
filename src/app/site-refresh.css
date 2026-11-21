@@ -2218,37 +2218,6 @@ body {
   grid-template-rows: repeat(2, auto);
 }
 
-@media (max-width: 720px) {
-  [data-meetup-swipe]:is(
-    .sl-recruits__track,
-    .recruitment-card-grid,
-    .lightning-grid,
-    [data-meetup-swipe="examples"]
-  ) {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: min(17rem, 66%);
-    gap: 10px;
-    min-inline-size: 0;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
-  }
-
-  [data-meetup-swipe]:has(> :nth-child(2)) {
-    grid-template-rows: repeat(2, auto);
-  }
-
-  [data-meetup-swipe] > * {
-    min-inline-size: 0;
-    scroll-snap-align: start;
-  }
-
-  [data-meetup-swipe]::-webkit-scrollbar {
-    display: none;
-  }
-}
 .sl-story-card,
 .sl-crew-card,
 .sl-template-card {

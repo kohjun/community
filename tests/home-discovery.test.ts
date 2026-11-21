@@ -49,19 +49,22 @@ test("curated January samples fill only the empty meetup type and expire by star
   ).reverse();
   const upcoming = Date.parse("2026-11-22T00:00:00+09:00");
   const both = homeRecruitments([], samples, [], upcoming);
-  assert.deepEqual(
-    both.event.map(({ id }) => id),
-    JANUARY_RECRUITMENTS.slice(0, 4).map(({ postId }) => postId),
-  );
-  assert.deepEqual(
-    both.lightning.map(({ id }) => id),
-    JANUARY_RECRUITMENTS.slice(4).map(({ postId }) => postId),
-  );
+  assert.equal(new Set(samples.map(({ id }) => id)).size, 12);
+  for (const type of ["event", "lightning"] as const) {
+    const expected = JANUARY_RECRUITMENTS.filter((entry) => entry.type === type)
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+      .map(({ postId }) => postId);
+    assert.equal(expected.length, 6);
+    assert.deepEqual(
+      both[type].map(({ id }) => id),
+      expected,
+    );
+  }
 
   const real = post({ eventAvailable: true, meetupType: "event" });
   const withReal = homeRecruitments([real], samples, [], upcoming);
   assert.deepEqual(withReal.event, [real]);
-  assert.equal(withReal.lightning.length, 4);
+  assert.equal(withReal.lightning.length, 6);
   assert.deepEqual(homeRecruitments([], samples, [], Date.parse("2027-02-01")), {
     event: [],
     lightning: [],

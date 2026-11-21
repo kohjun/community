@@ -111,6 +111,32 @@
     gap: 8px;
   }
 
+  .grid[data-mobile-swipe] {
+    grid-template-columns: none;
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .grid[data-mobile-swipe]::-webkit-scrollbar {
+    display: none;
+  }
+
+  .grid[data-mobile-swipe] > .card {
+    grid-template-columns: minmax(0, 28%) minmax(0, 1fr);
+    align-items: center;
+    padding-inline-start: 8px;
+    scroll-snap-align: start;
+  }
+
+  .grid[data-mobile-swipe] .cover {
+    border-radius: 8px;
+  }
+
   .copy {
     padding: 10px;
   }
