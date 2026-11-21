@@ -406,13 +406,9 @@ export function LightningCommunity({
           {loadError}
         </p>
       )}
-      {!loading &&
-        !category &&
-        !tag &&
-        !search &&
-        !feed.posts.some(
-          (post) => isJanuaryRecruitmentSample(post) || (!post.sample && post.eventAvailable),
-        ) && <ExampleGallery kind="lightning" singleMobileRow />}
+      {!loading && !category && !tag && !search && (
+        <ExampleGallery kind="lightning" singleMobileRow />
+      )}
       <div className="lightning-grid" aria-busy={loading}>
         {feed.posts.map((post) => {
           const sample = isJanuaryRecruitmentSample(post);

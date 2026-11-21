@@ -90,6 +90,17 @@ export function RecruitmentCta({ post }: { post: CommunityPost }) {
           </div>
         ))}
       </dl>
+      <RecruitmentActions post={post} />
+    </section>
+  );
+}
+
+export function RecruitmentActions({ post }: { post: CommunityPost }) {
+  const cancelled = !!post.eventCancelledAt;
+  const sample = januaryRecruitmentSample(post);
+  const lightning = post.meetupType === "lightning" && !post.applicationUrl;
+  return (
+    <>
       {!sample && post.venueLatitude != null && post.venueLongitude != null && (
         <a
           className="location-map-link"
@@ -143,6 +154,6 @@ export function RecruitmentCta({ post }: { post: CommunityPost }) {
           행사 관리 →
         </Link>
       )}
-    </section>
+    </>
   );
 }

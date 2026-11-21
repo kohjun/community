@@ -20,19 +20,39 @@ export function PostDetailPage({
   const store = useCommunity(initialState, {}, { initialDetail, detailOnly: true });
   const [unavailable, setUnavailable] = useState(false);
   const post = store.detailPost;
+  const displayedPost = post ?? initialDetail.post;
+  const eventDetail = displayedPost.kind === "모집" && displayedPost.meetupType !== "lightning";
+  const content = post && (
+    <PostDetailContent
+      key={post.id}
+      post={post}
+      store={store}
+      presentation="page"
+      onUnavailable={() => {
+        setUnavailable(true);
+        store.closePost();
+      }}
+    />
+  );
   return (
     <>
       <a className="skip-link" href="#post-content">
         본문으로 바로가기
       </a>
       <SiteHeader />
-      <main className="post-detail-page" id="post-content">
-        <div className="post-page-breadcrumb">
-          <Link href={initialDetail.post.kind === "모집" ? "/" : "/stories"}>
-            <ArrowLeft size={15} /> {initialDetail.post.kind === "모집" ? "홈으로" : "이야기 목록"}
-          </Link>
-          <span>Sliper 커뮤니티</span>
-        </div>
+      <main
+        className={eventDetail ? "participation-page event-post-page" : "post-detail-page"}
+        id="post-content"
+      >
+        {!eventDetail && (
+          <div className="post-page-breadcrumb">
+            <Link href={initialDetail.post.kind === "모집" ? "/" : "/stories"}>
+              <ArrowLeft size={15} />{" "}
+              {initialDetail.post.kind === "모집" ? "홈으로" : "이야기 목록"}
+            </Link>
+            <span>Sliper 커뮤니티</span>
+          </div>
+        )}
         {unavailable ? (
           <section className="post-page-empty">
             <h1>이 글은 더 이상 볼 수 없어요.</h1>
@@ -41,19 +61,14 @@ export function PostDetailPage({
               이야기 둘러보기
             </Link>
           </section>
-        ) : post ? (
-          <article className="post-page-card" aria-label="게시글 상세">
-            <PostDetailContent
-              key={post.id}
-              post={post}
-              store={store}
-              presentation="page"
-              onUnavailable={() => {
-                setUnavailable(true);
-                store.closePost();
-              }}
-            />
-          </article>
+        ) : content ? (
+          eventDetail ? (
+            content
+          ) : (
+            <article className="post-page-card" aria-label="게시글 상세">
+              {content}
+            </article>
+          )
         ) : (
           <section className="post-page-empty" aria-busy={store.loadingPost}>
             <h1>{store.loadingPost ? "글을 불러오는 중이에요." : "글을 불러오지 못했어요."}</h1>

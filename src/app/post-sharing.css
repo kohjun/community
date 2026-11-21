@@ -42,22 +42,37 @@
 .post-page-card .detail-author {
   margin-top: 15px;
 }
-.post-page-card .detail-support-actions,
-.post-dialog .detail-support-actions {
+.event-detail-byline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 12px;
+}
+.event-detail-byline .detail-author {
+  margin: 0;
+}
+.event-detail-actions {
+  margin-block: 16px 0;
+}
+.event-detail-actions .event-contact {
+  margin-top: 12px;
+  padding-top: 12px;
+}
+:is(.post-page-card, .post-dialog, .event-post-detail) .detail-support-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 16px;
   margin-top: 18px;
 }
-.post-page-card .detail-support-actions > button,
-.post-dialog .detail-support-actions > button {
+:is(.post-page-card, .post-dialog, .event-post-detail) .detail-support-actions > button {
   min-block-size: 2.25rem;
   padding: 6px 10px;
   font-size: 0.8125rem;
 }
-.post-page-card .detail-footer,
-.post-dialog .detail-footer {
+:is(.post-page-card, .post-dialog, .event-post-detail) .detail-footer {
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
@@ -66,8 +81,7 @@
   padding: 14px 0;
   border-bottom: 1px solid var(--border);
 }
-.post-page-card .detail-footer .detail-tags,
-.post-dialog .detail-footer .detail-tags {
+:is(.post-page-card, .post-dialog, .event-post-detail) .detail-footer .detail-tags {
   flex: 1 1 0;
   flex-wrap: nowrap;
   align-items: center;
@@ -79,13 +93,11 @@
   scrollbar-width: thin;
   min-height: 36px;
 }
-.post-page-card .detail-footer .detail-tags span,
-.post-dialog .detail-footer .detail-tags span {
+:is(.post-page-card, .post-dialog, .event-post-detail) .detail-footer .detail-tags span {
   flex: none;
   white-space: nowrap;
 }
-.post-page-card .detail-reactions,
-.post-dialog .detail-reactions {
+:is(.post-page-card, .post-dialog, .event-post-detail) .detail-reactions {
   flex: none;
   margin-left: auto;
   justify-content: flex-end;
@@ -94,8 +106,7 @@
   padding: 0;
   border-bottom: 0;
 }
-.post-page-card .detail-reactions > button,
-.post-dialog .detail-reactions > button {
+:is(.post-page-card, .post-dialog, .event-post-detail) .detail-reactions > button {
   flex: none;
   min-width: 36px;
   min-height: 36px;
@@ -181,8 +192,7 @@ a.post-body-open:focus-visible {
     gap: 12px;
     align-items: flex-start;
   }
-  .post-page-card .detail-reactions button,
-  .post-dialog .detail-reactions button {
+  :is(.post-page-card, .post-dialog, .event-post-detail) .detail-reactions button {
     padding: 0 11px;
     height: 36px;
     font-size: 12px;
@@ -228,18 +238,18 @@ a.post-body-open:focus-visible {
     font-size: 15px;
     white-space: normal;
   }
-  .post-page-card > .post-mobile-apply {
+  :is(.post-page-card, .event-post-page) > .post-mobile-apply {
     position: fixed;
     inset-inline: 0;
     bottom: calc(var(--mobile-nav-height) + var(--mobile-safe-bottom));
     z-index: 39;
   }
-  body:has(.post-page-card > .post-mobile-apply) {
+  body:has(:is(.post-page-card, .event-post-page) > .post-mobile-apply) {
     padding-bottom: calc(
       var(--post-mobile-apply-space) + var(--mobile-nav-height) + var(--mobile-safe-bottom) + 16px
     );
   }
-  html:has(.post-page-card > .post-mobile-apply) {
+  html:has(:is(.post-page-card, .event-post-page) > .post-mobile-apply) {
     scroll-padding-bottom: calc(
       var(--post-mobile-apply-space) + var(--mobile-nav-height) + var(--mobile-safe-bottom) + 20px
     );
@@ -266,7 +276,9 @@ a.post-body-open:focus-visible {
 }
 
 @media (pointer: coarse) {
-  :is(.post-page-card, .post-dialog) :is(.detail-support-actions, .detail-reactions) > button {
+  :is(.post-page-card, .post-dialog, .event-post-detail)
+    :is(.detail-support-actions, .detail-reactions)
+    > button {
     min-inline-size: 44px;
     min-block-size: 44px;
     height: auto;

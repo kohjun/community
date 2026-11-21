@@ -10,13 +10,15 @@ import dynamic from "next/dynamic";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Markdown } from "./markdown";
-import { PostBody } from "./post-body";
+import { isPostMediaImage, PostBody } from "./post-body";
 import { PostAuthorName } from "./post-author-name";
 import { RelatedTopics } from "./topic-connections";
 import { PollCard } from "./poll-card";
 import { SafetyActions } from "./safety-actions";
 import { PostShareButton } from "./post-share-button";
-import { RecruitmentApplyButton, RecruitmentCta } from "./recruitment-cta";
+import { RecruitmentActions, RecruitmentApplyButton, RecruitmentCta } from "./recruitment-cta";
+import { MeetupDetailLayout } from "./meetup-detail-layout";
+import { EVENT_RECRUITMENTS_HREF } from "@/domain/meetup-types";
 import { januaryRecruitmentSample } from "@/demo/january-recruitments";
 import { exampleImage } from "@/demo/showcase";
 import { CATEGORIES } from "@/domain/categories";
@@ -150,6 +152,14 @@ export function PostDetailContent({
     setToast("댓글을 남겼어요.");
   }
   const sample = januaryRecruitmentSample(active);
+  const eventDetail = active.kind === "모집" && active.meetupType !== "lightning";
+  const eventCover = eventDetail && !concealed ? active.images.find(isPostMediaImage) : undefined;
+  const cover = eventCover
+    ? { src: eventCover.src, alt: "행사 대표 이미지" }
+    : eventDetail && !concealed && sample?.type === "event"
+      ? { src: exampleImage(sample.exampleId) }
+      : undefined;
+  const title = concealed ? safePostTitle(active) : active.title;
   const applyButton =
     active.kind === "모집" && !sample ? (
       <RecruitmentApplyButton
@@ -158,39 +168,46 @@ export function PostDetailContent({
         cancelledAt={active.eventCancelledAt}
       />
     ) : null;
+  const authorLine = (
+    <div className="detail-author">
+      <strong>
+        <PostAuthorName
+          post={active}
+          icon={
+            <span className="avatar" aria-hidden="true">
+              <UserRound size={20} />
+            </span>
+          }
+        />
+      </strong>
+      <Description className="detail-author-stats">
+        {active.time} · 조회 {active.views}
+      </Description>
+    </div>
+  );
   const detail = (
     <>
-      <div className="detail-overline">
-        <span>{label(active.category)}</span>
-        <span className="kind-badge">
-          {active.kind === "모집" && active.eventCancelledAt ? "모집 취소" : active.kind}
-        </span>
-        {active.verifiedParticipation && (
-          <span className="verified-review-badge">
-            QR 참가 인증 · {active.verifiedParticipation.rating}점
-          </span>
-        )}
-        {active.sample && <span className="preview-pill">예시 콘텐츠</span>}
-      </div>
-      <div className="detail-title-row">
-        <Title className="detail-title">{concealed ? safePostTitle(active) : active.title}</Title>
-        {applyButton && <div className="post-title-apply">{applyButton}</div>}
-      </div>
-      <div className="detail-author">
-        <strong>
-          <PostAuthorName
-            post={active}
-            icon={
-              <span className="avatar" aria-hidden="true">
-                <UserRound size={20} />
+      {!eventDetail && (
+        <>
+          <div className="detail-overline">
+            <span>{label(active.category)}</span>
+            <span className="kind-badge">
+              {active.kind === "모집" && active.eventCancelledAt ? "모집 취소" : active.kind}
+            </span>
+            {active.verifiedParticipation && (
+              <span className="verified-review-badge">
+                QR 참가 인증 · {active.verifiedParticipation.rating}점
               </span>
-            }
-          />
-        </strong>
-        <Description className="detail-author-stats">
-          {active.time} · 조회 {active.views}
-        </Description>
-      </div>
+            )}
+            {active.sample && <span className="preview-pill">예시 콘텐츠</span>}
+          </div>
+          <div className="detail-title-row">
+            <Title className="detail-title">{title}</Title>
+            {applyButton && <div className="post-title-apply">{applyButton}</div>}
+          </div>
+          {authorLine}
+        </>
+      )}
       {active.isMine && (
         <div className="owner-actions">
           <Button
@@ -270,24 +287,19 @@ export function PostDetailContent({
         </section>
       ) : (
         <>
-          {active.kind === "모집" && <RecruitmentCta post={active} />}
-          {sample?.type === "event" && !active.images.length && (
-            <img
-              className="detail-image"
-              src={exampleImage(sample.exampleId)}
-              width={768}
-              height={432}
-              alt=""
-              loading="lazy"
-              decoding="async"
-            />
-          )}
+          {active.kind === "모집" && !eventDetail && <RecruitmentCta post={active} />}
           <PostBody
             document={active.bodyDocument ?? null}
             body={active.body}
             images={active.images}
+            coverImageId={eventCover?.id}
             videos={active.videos ?? []}
           />
+          {eventDetail && (
+            <div className="event-detail-actions">
+              <RecruitmentActions post={active} />
+            </div>
+          )}
           {(active.category === "knowledge" || active.category === "lab") && (
             <PostLibraryLinks postId={active.id} enabled={store.canWrite} />
           )}
@@ -624,10 +636,54 @@ export function PostDetailContent({
     </>
   );
 
-  if (!applyButton) return detail;
+  const content = eventDetail ? (
+    <MeetupDetailLayout
+      className="event-post-detail"
+      label={`${sample ? "1월 모집 샘플" : active.eventCancelledAt ? "모집 취소" : "이벤트·행사"} · ${label(active.category)}`}
+      title={
+        presentation === "dialog" ? (
+          <DialogTitle asChild>
+            <h1>{title}</h1>
+          </DialogTitle>
+        ) : (
+          <h1>{title}</h1>
+        )
+      }
+      back={
+        presentation === "page" && (
+          <Link className="participation-flow-back" href={EVENT_RECRUITMENTS_HREF}>
+            ← 이벤트·행사 둘러보기
+          </Link>
+        )
+      }
+      summary={concealed ? undefined : (sample?.example.summary ?? active.excerpt)}
+      meta={
+        <div className="event-detail-byline">
+          {authorLine}
+          {applyButton && <div className="post-title-apply">{applyButton}</div>}
+        </div>
+      }
+      cover={cover}
+      facts={
+        concealed
+          ? []
+          : [
+              ["장소", active.location || "장소 확인 필요"],
+              ["일정", active.eventDate || "일정 확인 필요"],
+              ["인원", active.eventCapacity ? `${active.eventCapacity}명` : "정원 확인 필요"],
+              ["참가비", active.eventFee || "참가비 확인 필요"],
+            ]
+      }
+    >
+      {detail}
+    </MeetupDetailLayout>
+  ) : (
+    detail
+  );
+  if (!applyButton) return content;
   return (
     <>
-      {presentation === "dialog" ? <div className="post-detail-scroll">{detail}</div> : detail}
+      {presentation === "dialog" ? <div className="post-detail-scroll">{content}</div> : content}
       <div className="post-mobile-apply">{applyButton}</div>
     </>
   );

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ParticipationShell } from "@/components/participation-shell";
 import { ExampleGallery } from "@/components/example-gallery";
+import { MeetupDetailLayout } from "@/components/meetup-detail-layout";
 import styles from "@/components/example-gallery.module.css";
 import { EXAMPLES, EXAMPLE_LABELS, exampleImage, type ExampleKind } from "@/demo/showcase";
 import { EVENT_RECRUITMENTS_HREF } from "@/domain/meetup-types";
@@ -33,35 +34,23 @@ export default async function Page({ params }: Props) {
   const avatar = kind === "player";
   return (
     <ParticipationShell advertising={false}>
-      <article className={styles.detail}>
-        <header className="participation-heading">
+      <MeetupDetailLayout
+        label={`예시 · ${example.category}`}
+        title={<h1>{example.title}</h1>}
+        summary={example.summary}
+        cover={{ src: exampleImage(example.id), avatar }}
+        facts={example.facts}
+        back={
           <Link className="participation-flow-back" href={browseLinks[kind]}>
             ← {EXAMPLE_LABELS[kind]} 둘러보기
           </Link>
-          <span className={styles.tag}>예시 · {example.category}</span>
-          <h1>{example.title}</h1>
-          <p>{example.summary}</p>
-        </header>
-        <img
-          className={avatar ? styles.avatar : styles.cover}
-          src={exampleImage(example.id)}
-          width={avatar ? 320 : 768}
-          height={avatar ? 320 : 432}
-          alt=""
-        />
-        <dl>
-          {example.facts.map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
+        }
+      >
         <p>{example.detail}</p>
         <p className={styles.tag}>
           슬리퍼를 둘러보기 위한 가상의 {EXAMPLE_LABELS[kind]} 예시입니다.
         </p>
-      </article>
+      </MeetupDetailLayout>
       <ExampleGallery kind={kind} />
     </ParticipationShell>
   );

@@ -37,7 +37,7 @@ function markedText(text: string, marks: PostDocumentMark[] = []): ReactNode {
   }, text);
 }
 
-function privateImage(image: PublicImage | undefined): image is PublicImage {
+export function isPostMediaImage(image: PublicImage | undefined): image is PublicImage {
   return (
     !!image &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(image.id) &&
@@ -49,11 +49,13 @@ export function PostBody({
   document,
   body,
   images,
+  coverImageId,
   videos = [],
 }: {
   document?: PostDocument | null;
   body: string;
   images: PublicImage[];
+  coverImageId?: string | undefined;
   videos?: PublicVideo[];
 }) {
   const videoById = new Map(
@@ -62,11 +64,12 @@ export function PostBody({
       .map((video) => [video.id, video]),
   );
   const parsed = document ? postDocumentSchema.safeParse(document) : null;
-  const byId = new Map(images.filter(privateImage).map((image) => [image.id, image]));
+  const byId = new Map(images.filter(isPostMediaImage).map((image) => [image.id, image]));
+  const attachments = [...byId.values()].filter((image) => image.id !== coverImageId);
   if (!parsed?.success) {
     return (
       <>
-        {[...byId.values()].map((image) => (
+        {attachments.map((image) => (
           <img
             key={image.id}
             className="detail-image"
@@ -153,7 +156,7 @@ export function PostBody({
       }
     });
   const content = renderNodes(parsed.data.content);
-  const unplaced = [...byId.values()].filter((image) => !placed.has(image.id));
+  const unplaced = attachments.filter((image) => !placed.has(image.id));
   return (
     <div className="rich-post-body">
       {content}

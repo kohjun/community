@@ -29,7 +29,6 @@ import { PostDetailContent } from "./post-detail-content";
 import dynamic from "next/dynamic";
 import { HomeSections } from "./home-sections";
 import { ExampleGallery } from "./example-gallery";
-import { isJanuaryRecruitmentSample } from "@/demo/january-recruitments";
 import { CATEGORY_ICONS } from "./category-icons";
 import { CommunityCategoryMenu } from "./community-category-menu";
 import { useAudience } from "@/lib/audience";
@@ -852,11 +851,9 @@ export function SliperCommunity({
                 !discoveryActive &&
                 !store.loading &&
                 !store.feedError &&
-                (store.pagination?.page ?? 1) === 1 &&
-                !filtered.some(
-                  (post) =>
-                    isJanuaryRecruitmentSample(post) || (!post.sample && post.eventAvailable),
-                ) && <ExampleGallery kind="event" singleMobileRow />}
+                (store.pagination?.page ?? 1) === 1 && (
+                  <ExampleGallery kind="event" singleMobileRow />
+                )}
               {filtered.length ? (
                 recruitmentCards ? (
                   <div className="recruitment-card-grid">
