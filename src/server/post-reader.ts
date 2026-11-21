@@ -164,17 +164,8 @@ export function createPostReader(db: Database) {
           attachedVideos,
         );
         const sample = januaryRecruitmentSample(post);
-        const displayedImages =
-          !images.length && sample?.type === "event"
-            ? [
-                {
-                  id: dto.id,
-                  src: exampleImage(sample.exampleId),
-                  contentType: "image/webp" as const,
-                  sortOrder: 0,
-                },
-              ]
-            : images;
+        const cover =
+          images[0]?.src ?? (sample?.type === "event" ? exampleImage(sample.exampleId) : undefined);
         const result: CommunityPost = {
           id: dto.id,
           discussionType: post.kind === "이야기" ? (post.discussionType ?? "free") : null,
@@ -202,9 +193,9 @@ export function createPostReader(db: Database) {
           ...(popular ? { popularityScore } : {}),
           views,
           comments: count,
-          images: displayedImages,
+          images,
           videos: dto.videos ?? [],
-          ...(displayedImages[0] ? { image: displayedImages[0].src } : {}),
+          ...(cover ? { image: cover } : {}),
           ...(post.location ? { location: post.location } : {}),
           ...(post.eventDate ? { eventDate: post.eventDate } : {}),
           meetupType: post.kind === "모집" && meetupType === "lightning" ? "lightning" : "event",

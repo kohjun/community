@@ -17,7 +17,8 @@ import { PollCard } from "./poll-card";
 import { SafetyActions } from "./safety-actions";
 import { PostShareButton } from "./post-share-button";
 import { RecruitmentApplyButton, RecruitmentCta } from "./recruitment-cta";
-import { isJanuaryRecruitmentSample } from "@/demo/january-recruitments";
+import { januaryRecruitmentSample } from "@/demo/january-recruitments";
+import { exampleImage } from "@/demo/showcase";
 import { CATEGORIES } from "@/domain/categories";
 import { createCommentSchema } from "@/domain/validation";
 import { evaluateContentPolicy } from "@/domain/content-policy";
@@ -148,8 +149,9 @@ export function PostDetailContent({
     setCommentError("");
     setToast("댓글을 남겼어요.");
   }
+  const sample = januaryRecruitmentSample(active);
   const applyButton =
-    active.kind === "모집" && !isJanuaryRecruitmentSample(active) ? (
+    active.kind === "모집" && !sample ? (
       <RecruitmentApplyButton
         postId={active.id}
         url={active.applicationUrl}
@@ -269,6 +271,17 @@ export function PostDetailContent({
       ) : (
         <>
           {active.kind === "모집" && <RecruitmentCta post={active} />}
+          {sample?.type === "event" && !active.images.length && (
+            <img
+              className="detail-image"
+              src={exampleImage(sample.exampleId)}
+              width={768}
+              height={432}
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+          )}
           <PostBody
             document={active.bodyDocument ?? null}
             body={active.body}
