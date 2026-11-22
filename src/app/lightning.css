@@ -145,21 +145,13 @@
   font-weight: 650;
 }
 .lightning-card h3 {
-  margin: 17px 0 10px;
-  font-size: 19px;
-  line-height: 1.45;
-  letter-spacing: -0.5px;
+  margin: 0.75rem 0 0.625rem;
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
+  word-break: keep-all;
   overflow-wrap: anywhere;
-}
-.lightning-excerpt {
-  margin: 0 0 22px;
-  font-size: 13px;
-  line-height: 1.7;
-  color: #707782;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 .lightning-card-meta {
   margin-top: auto;

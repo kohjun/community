@@ -32,6 +32,7 @@ import {
 import { LightningCategoryPicker, LightningCategoryIcon } from "./lightning-category-picker";
 import { koreanDateTimeInput, koreanDateTimeISO } from "@/domain/refund";
 import { meetupVenueLabel, type MeetupVenuePreset } from "@/domain/venue-meetup";
+import { postPath } from "@/domain/post-sharing";
 import { useReadPosts } from "@/lib/use-read-posts";
 import { appRequest } from "@/lib/api-client";
 import type { VenuePoint } from "@/domain/discovery";
@@ -412,10 +413,7 @@ export function LightningCommunity({
           const sample = isJanuaryRecruitmentSample(post);
           return (
             <article className="lightning-card" key={post.id}>
-              <Link
-                className="lightning-card-main"
-                href={sample ? `/posts/${post.id}` : `/events/${post.id}`}
-              >
+              <Link className="lightning-card-main" href={postPath(post.id)}>
                 <div className="lightning-card-top">
                   <span>
                     <LightningCategoryIcon slug={post.activityCategory} size={15} />
@@ -427,7 +425,6 @@ export function LightningCommunity({
                   {post.title}
                   {readPosts.includes(post.id) && <span className="sr-only"> (읽은 글)</span>}
                 </h3>
-                <p className="lightning-excerpt">{post.excerpt}</p>
                 {!!post.tags.length && (
                   <div className="lightning-card-tags">
                     {post.tags.map((item) => (
