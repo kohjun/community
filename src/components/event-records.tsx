@@ -5,10 +5,12 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  BadgeCheck,
   BookOpenCheck,
   CalendarDays,
   CheckCircle2,
   MapPin,
+  PenLine,
   Star,
   Users,
 } from "lucide-react";
@@ -21,6 +23,7 @@ import { SafetyActions } from "./safety-actions";
 import { ParticipationShell } from "./participation-shell";
 import { PostBody } from "./post-body";
 import { RecordEditor } from "./record-editor";
+import { ReviewComposeModal } from "./review-compose-modal";
 import { CREDIT_STATUS_LABELS, EventCreditManager } from "./event-credits";
 
 import { recordDate, recordStatus } from "./record-list";
@@ -37,10 +40,12 @@ export function RecordDetailPage({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [withdrawConfirm, setWithdrawConfirm] = useState(false),
-    [templateBusy, setTemplateBusy] = useState(false);
+    [templateBusy, setTemplateBusy] = useState(false),
+    [reviewModalOpen, setReviewModalOpen] = useState(false),
+    [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    setData(null);
+    if (reloadKey === 0) setData(null);
     setError("");
     appRequest<RecordDetail>("/api/records/" + postId, "GET", undefined, controller.signal)
       .then((next) => {
@@ -51,7 +56,7 @@ export function RecordDetailPage({
           setError(cause instanceof Error ? cause.message : "행사 기록을 불러오지 못했어요.");
       });
     return () => controller.abort();
-  }, [postId]);
+  }, [postId, reloadKey]);
   async function createTemplateDraft() {
     if (!data?.canEdit || busy) return;
     setBusy(true);
@@ -279,29 +284,154 @@ export function RecordDetailPage({
                 <p className="record-note place-tip-text">{data.venueTips}</p>
               </section>
             )}
-            <section className="record-panel">
-              <h2>
-                <Star size={17} />
-                참가 인증 후기
-              </h2>
-              <p className="record-note">
-                행사에 대한 만족도와 후기예요. 제작진 개인에 대한 평점은 아닙니다.
-              </p>
-              <div className="record-linked-list">
-                {data.reviews.map((review) => (
-                  <Link key={review.postId} href={review.href}>
-                    <span>
-                      {review.title}
-                      <small> · {review.author}</small>
-                    </span>
-                    <span>★ {review.rating}</span>
-                  </Link>
-                ))}
+            <section className="record-panel record-reviews-panel" id="record-reviews">
+              <div className="record-reviews-panel__head">
+                <div>
+                  <h2>
+                    <Star size={18} fill="#f59e0b" color="#f59e0b" aria-hidden="true" />
+                    별점 및 참가 후기
+                  </h2>
+                  <p className="record-note">
+                    참가가 확정된 인원들이 행사 종료 후 남긴 별점과 솔직한 후기예요.
+                  </p>
+                </div>
+                <div className="record-actions">
+                  {data.canReview && (
+                    <button
+                      type="button"
+                      className="participation-primary"
+                      onClick={() => setReviewModalOpen(true)}
+                    >
+                      <PenLine size={15} aria-hidden="true" />
+                      참가 후기 쓰기
+                    </button>
+                  )}
+                  {data.ownReviewPostId && (
+                    <Link
+                      className="participation-secondary"
+                      href={`/stories?post=${data.ownReviewPostId}`}
+                    >
+                      내 후기 보기
+                    </Link>
+                  )}
+                </div>
               </div>
-              {!data.reviews.length && (
-                <p className="record-note">아직 등록된 인증 후기가 없어요.</p>
+
+              <div className="record-rating-summary">
+                <div className="record-rating-score">
+                  <strong>
+                    {data.averageRating !== null ? data.averageRating.toFixed(1) : "—"}
+                  </strong>
+                  <div
+                    className="record-rating-stars"
+                    aria-label={
+                      data.averageRating !== null
+                        ? `평균 별점 ${data.averageRating.toFixed(1)}점`
+                        : "아직 별점 없음"
+                    }
+                  >
+                    {[1, 2, 3, 4, 5].map((value) => {
+                      const active =
+                        data.averageRating !== null && value <= Math.round(data.averageRating);
+                      return (
+                        <Star
+                          key={value}
+                          size={16}
+                          fill={active ? "currentColor" : "none"}
+                          aria-hidden="true"
+                        />
+                      );
+                    })}
+                  </div>
+                  <small>참가 후기 {data.reviewCount}개</small>
+                </div>
+                <div className="record-rating-bars" aria-label="별점 분포">
+                  {(["5", "4", "3", "2", "1"] as const).map((tier) => {
+                    const count = data.ratingCounts[tier] ?? 0;
+                    const pct =
+                      data.reviewCount > 0 ? Math.round((count / data.reviewCount) * 100) : 0;
+                    return (
+                      <div className="record-rating-bar-row" key={tier}>
+                        <span>{tier}점</span>
+                        <div className="record-rating-bar-track" aria-hidden="true">
+                          <div className="record-rating-bar-fill" style={{ width: `${pct}%` }} />
+                        </div>
+                        <small>{count}</small>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {data.reviews.length > 0 ? (
+                <div className="record-review-cards">
+                  {data.reviews.map((review) => (
+                    <article className="record-review-card" key={review.postId}>
+                      <div className="record-review-card__top">
+                        <div className="record-review-card__author">
+                          <strong>{review.author}</strong>
+                          <span
+                            className={
+                              review.qrVerified
+                                ? "record-review-badge record-review-badge--qr"
+                                : "record-review-badge"
+                            }
+                          >
+                            <BadgeCheck size={12} aria-hidden="true" />
+                            {review.qrVerified ? "QR 참가 인증" : "참가 확정 후기"}
+                          </span>
+                        </div>
+                        <span
+                          className="record-review-card__stars"
+                          aria-label={`별점 ${review.rating}점`}
+                        >
+                          {[1, 2, 3, 4, 5].map((value) => (
+                            <Star
+                              key={value}
+                              size={13}
+                              fill={value <= review.rating ? "currentColor" : "none"}
+                              aria-hidden="true"
+                            />
+                          ))}
+                          <strong>{review.rating}.0</strong>
+                        </span>
+                      </div>
+                      <Link href={review.href} className="record-review-card__title">
+                        <h3>{review.title}</h3>
+                      </Link>
+                      <p className="record-review-card__body">
+                        {review.body.slice(0, 220)}
+                        {review.body.length > 220 ? "…" : ""}
+                      </p>
+                      <div className="record-review-card__foot">
+                        <small>{recordDate(review.createdAt)}</small>
+                        <Link href={review.href}>
+                          전체 후기 보기 <ArrowRight size={13} aria-hidden="true" />
+                        </Link>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="record-note">
+                  아직 등록된 참가 후기가 없어요. 참여하신 분이라면 첫 별점과 후기를 남겨보세요!
+                </p>
               )}
             </section>
+            <ReviewComposeModal
+              open={reviewModalOpen}
+              onOpenChange={setReviewModalOpen}
+              target={{
+                postId: data.postId,
+                title: data.title,
+                category: data.category,
+                meetupType: data.meetupType,
+                endsAt: data.endsAt,
+                location: data.location,
+                hostNickname: data.hostNickname,
+              }}
+              onSubmitted={() => setReloadKey((prev) => prev + 1)}
+            />
             <section className="record-panel">
               <h2>
                 <Users size={17} />

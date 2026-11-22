@@ -56,7 +56,16 @@ async function member(nickname: string) {
   await db.insert(base.profiles).values({ id, nickname, phoneNumber: "01012345678" });
   return id;
 }
-async function event(options: { sample?: boolean; completed?: boolean; record?: boolean } = {}) {
+async function event(
+  options: {
+    sample?: boolean;
+    completed?: boolean;
+    record?: boolean;
+    meetupType?: "event" | "lightning";
+    completedAt?: Date;
+  } = {},
+) {
+  const isLightning = options.meetupType === "lightning";
   const [post] = await db
     .insert(base.posts)
     .values({
@@ -66,16 +75,27 @@ async function event(options: { sample?: boolean; completed?: boolean; record?: 
       title: "추리 모임의 남는 기록",
       bodyMarkdown: "기록 서비스 검증용 모집글입니다.",
       sample: options.sample ?? false,
+      ...(isLightning ? { eventFee: "무료" } : {}),
     })
     .returning();
   const id = post!.id,
-    ended = new Date("2020-01-01T03:00:00Z");
+    ended = options.completedAt ?? new Date("2020-01-01T03:00:00Z");
   await db.insert(base.eventSettings).values({
     postId: id,
+    meetupType: options.meetupType ?? "event",
+    ...(isLightning
+      ? {
+          approvalMode: "manual",
+          activityCategory: "other",
+          venueLatitude: 37.5665,
+          venueLongitude: 126.978,
+          createdAt: new Date(ended.getTime() - 3 * 3600000),
+        }
+      : {}),
     amountKRW: 0,
-    capacity: 20,
+    capacity: isLightning ? 8 : 20,
     open: true,
-    startsAt: new Date("2020-01-01T01:00:00Z"),
+    startsAt: new Date(ended.getTime() - 2 * 3600000),
     endsAt: ended,
     completedAt: options.completed === false ? null : ended,
     completedBy: options.completed === false ? null : owner,
@@ -591,4 +611,154 @@ test("record material origin is immutable and hidden origins cannot be newly pub
     }),
     code("FORBIDDEN"),
   );
+});
+
+test("record list supports competitive ranking sorts, meetupType filters, and detail rating breakdown", async () => {
+  await publish(postId);
+
+  const highRated = await event({
+    meetupType: "lightning",
+    completedAt: new Date("2020-01-02T03:00:00Z"),
+  });
+  await publish(highRated);
+
+  const bigTurnout = await event({
+    completedAt: new Date("2020-01-03T03:00:00Z"),
+  });
+  await publish(bigTurnout);
+
+  const charlie = await member("세번째 참가자");
+  const dave = await member("네번째 참가자");
+
+  async function addAttendAndReview(
+    targetPostId: string,
+    userId: string,
+    opts: { qr: boolean; lightningEndsAt?: Date; rating?: number },
+  ) {
+    const isLightning = !!opts.lightningEndsAt;
+    const [application] = await db
+      .insert(base.eventApplications)
+      .values({
+        postId: targetPostId,
+        userId,
+        attendeeName: "참가자",
+        contact: "contact-" + randomUUID(),
+        amountKRW: 0,
+        status: isLightning ? "pending_approval" : "confirmed",
+        ...(isLightning ? {} : { confirmedAt: new Date("2020-01-01T00:00:00Z") }),
+        expiresAt: opts.lightningEndsAt ?? new Date("2020-01-01T04:00:00Z"),
+      })
+      .returning();
+    if (isLightning) {
+      await db
+        .update(base.eventApplications)
+        .set({ status: "confirmed", confirmedAt: new Date("2020-01-01T00:00:00Z") })
+        .where(eq(base.eventApplications.id, application!.id));
+    }
+    if (opts.qr) {
+      await db.insert(eventAdmissions).values({
+        applicationId: application!.id,
+        postId: targetPostId,
+        userId,
+        checkedBy: owner,
+        checkedAt: new Date("2020-01-01T02:00:00Z"),
+      });
+    }
+    await db.insert(eventResults).values({
+      applicationId: application!.id,
+      postId: targetPostId,
+      userId,
+      recorderId: owner,
+      presence: "attended",
+    });
+    if (opts.rating !== undefined) {
+      const [reviewPost] = await db
+        .insert(base.posts)
+        .values({
+          authorId: userId,
+          kind: "후기",
+          categorySlug: "party",
+          title: `별점 ${opts.rating}점 후기`,
+          bodyMarkdown: "진행이 정말 알차고 재미있었던 모임이었습니다.",
+        })
+        .returning();
+      await db.insert(verifiedEventReviews).values({
+        reviewPostId: reviewPost!.id,
+        eventPostId: targetPostId,
+        applicationId: application!.id,
+        userId,
+        hostId: owner,
+        eventTitle: "행사 기록",
+        rating: opts.rating,
+      });
+    }
+  }
+
+  // highRated (lightning): 2 reviews (5★, 5★ => avg 5.0), 2 attended
+  const highRatedEndsAt = new Date("2020-01-02T03:00:00Z");
+  await addAttendAndReview(highRated, alice, {
+    qr: true,
+    lightningEndsAt: highRatedEndsAt,
+    rating: 5,
+  });
+  await addAttendAndReview(highRated, bob, {
+    qr: false,
+    lightningEndsAt: highRatedEndsAt,
+    rating: 5,
+  });
+
+  // bigTurnout (event): 3 reviews (4★, 4★, 3★ => avg 3.67), 4 attended
+  await addAttendAndReview(bigTurnout, alice, { qr: true, rating: 4 });
+  await addAttendAndReview(bigTurnout, bob, { qr: false, rating: 4 });
+  await addAttendAndReview(bigTurnout, charlie, { qr: false, rating: 3 });
+  await addAttendAndReview(bigTurnout, dave, { qr: false });
+
+  // By rating: highRated (5.0) #1, bigTurnout (3.67) #2, postId (null) #3
+  const byRating = await service.list(outsider, { sort: "rating" });
+  assert.equal(byRating.total, 3);
+  assert.equal(byRating.sort, "rating");
+  assert.deepEqual(
+    byRating.items.map((item) => [item.postId, item.rank]),
+    [
+      [highRated, 1],
+      [bigTurnout, 2],
+      [postId, 3],
+    ],
+  );
+
+  // By reviews: bigTurnout (3) #1, highRated (2) #2, postId (0) #3
+  const byReviews = await service.list(outsider, { sort: "reviews" });
+  assert.equal(byReviews.items[0]?.postId, bigTurnout);
+  assert.equal(byReviews.items[0]?.rank, 1);
+  assert.equal(byReviews.items[1]?.postId, highRated);
+  assert.equal(byReviews.items[1]?.rank, 2);
+
+  // By attended: bigTurnout (4) #1, highRated (2) #2, postId (0) #3
+  const byAttended = await service.list(outsider, { sort: "attended" });
+  assert.equal(byAttended.items[0]?.postId, bigTurnout);
+  assert.equal(byAttended.items[0]?.attended, 4);
+
+  // Popular sort ranks reviewed/attended events above unreviewed postId
+  const byPopular = await service.list(outsider, { sort: "popular" });
+  assert.equal(byPopular.items[2]?.postId, postId);
+  assert.equal(byPopular.items[0]?.rank, 1);
+
+  // Meetup type filter isolates lightning vs event
+  const onlyLightning = await service.list(outsider, { meetupType: "lightning", sort: "rating" });
+  assert.equal(onlyLightning.total, 1);
+  assert.equal(onlyLightning.items[0]?.postId, highRated);
+  assert.equal(onlyLightning.items[0]?.meetupType, "lightning");
+
+  // Detail includes rating distribution, review body, qrVerified badge, and canReview for unreviewed confirmed attendee (dave)
+  const detailForDave = await service.detail(dave, bigTurnout);
+  assert.equal(detailForDave.canReview, true);
+  assert.equal(detailForDave.ownReviewPostId, null);
+  assert.deepEqual(detailForDave.ratingCounts, { "1": 0, "2": 0, "3": 1, "4": 2, "5": 0 });
+  assert.equal(detailForDave.reviews.length, 3);
+  assert.ok(detailForDave.reviews.every((r) => r.body.includes("진행이 정말 알차고")));
+  assert.equal(detailForDave.reviews.filter((r) => r.qrVerified).length, 1);
+
+  const detailForAlice = await service.detail(alice, bigTurnout);
+  assert.equal(detailForAlice.canReview, false);
+  assert.ok(detailForAlice.ownReviewPostId);
 });

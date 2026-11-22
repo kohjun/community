@@ -38,6 +38,8 @@ async function handle(request: Request, context: { params: Promise<{ path?: stri
       return service.home(actor, cursor);
     if (path.length === 1 && path[0] === "management" && method === "GET")
       return service.managedEvents(actor, cursor);
+    if (path.length === 1 && path[0] === "pending-reviews" && method === "GET")
+      return eventOperationsService(getDatabase()).pendingReviews(actor);
     const [resource, id, action] = path;
     if (
       resource === "refunds" &&

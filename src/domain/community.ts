@@ -20,6 +20,7 @@ export interface CommunityPost {
     eventPostId: string;
     eventTitle: string;
     rating: number;
+    qrVerified?: boolean;
     templateEntryId: string | null;
     hostPublicId: string | null;
   };

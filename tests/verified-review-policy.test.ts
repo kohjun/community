@@ -298,24 +298,29 @@ test("post-attendance refunds preserve existing reviews and attendance while for
   assert.equal((await portfolio.self(host.id)).summary.hostReviewCount, 1);
 });
 
-test("hosts, manual-only attendance and events that have not ended never gain review controls or certification", async () => {
+test("hosts and events that have not ended never gain review controls, while confirmed participants without QR can review ended events", async () => {
   const postId = await event();
   await application(postId, host);
   const manual = await application(postId, bob, false);
   await legacyResult(postId, manual, bob, "attended");
   assert.equal((await operations.reviews(host.id, postId)).canReview, false);
-  assert.equal((await operations.reviews(bob.id, postId)).canReview, false);
+  assert.equal((await operations.reviews(bob.id, postId)).canReview, true);
   await assert.rejects(operations.writeReview(host.id, postId, review), code("FORBIDDEN"));
-  await assert.rejects(operations.writeReview(bob.id, postId, review), code("FORBIDDEN"));
-  assert.equal((await aftercare.list(bob.id, { scope: "participation" })).total, 0);
+  assert.equal((await aftercare.list(bob.id, { scope: "participation" })).total, 1);
   assert.equal(
     (await aftercare.list(bob.id, { scope: "participation", view: "all" })).items.length,
     1,
   );
+  const submitted = await operations.writeReview(bob.id, postId, review);
+  assert.equal(submitted.reviews.length, 1);
+  assert.equal(submitted.reviews[0]?.qrVerified, false);
+  assert.equal(submitted.canReview, false);
+  assert.equal((await aftercare.list(bob.id, { scope: "participation" })).total, 0);
+
   const future = await event(new Date(Date.now() + 3600000));
   await application(future);
   assert.equal((await operations.reviews(alice.id, future)).canReview, false);
   await assert.rejects(operations.writeReview(alice.id, future, review), code("CONFLICT"));
   assert.equal((await aftercare.list(alice.id, { scope: "participation" })).total, 0);
-  assert.equal((await db.select().from(verifiedEventReviews)).length, 0);
+  assert.equal((await db.select().from(verifiedEventReviews)).length, 1);
 });

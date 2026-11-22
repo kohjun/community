@@ -53,6 +53,7 @@ import "./mobile-experience.css";
 import "./site-refresh.css";
 import { NotificationProvider } from "@/components/notification-bell";
 import { SessionProvider } from "@/components/session-provider";
+import { PendingReviewPromptModal } from "@/components/pending-review-prompt-modal";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -99,6 +100,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <SiteOperationsProvider value={readSiteOperations(process.env)}>
           <SessionProvider>
+            <PendingReviewPromptModal />
             <PushOnboardingProvider>
               <NotificationProvider>
                 <ActivityDayTracker />

@@ -2,10 +2,16 @@ import { sql } from "drizzle-orm";
 import { posts } from "../db/schema";
 import type { CommunityPost } from "../domain/community";
 import type { PublicImage, PublicVideo } from "../domain/contracts";
-import { verifiedReviewParticipation } from "./verified-review-policy";
+import { hasQrAdmission, verifiedReviewParticipation } from "./verified-review-policy";
 
 /** Correlated, indexed reads travel with their authorized parent rows in one DB round trip. */
 export function postMetadataColumns(actor: string | null) {
+  const reviewIdentity = {
+    applicationId: sql`vr.application_id`,
+    postId: sql`vr.event_post_id`,
+    userId: sql`vr.user_id`,
+    hostId: sql`vr.host_id`,
+  };
   return {
     images: sql<PublicImage[]>`coalesce((select jsonb_agg(jsonb_build_object(
       'id',m.id,'src','/api/media/'||m.id::text,'contentType',m.content_type,'sortOrder',m.sort_order
@@ -29,15 +35,8 @@ export function postMetadataColumns(actor: string | null) {
     > | null>`(select jsonb_build_object(
       'eventPostId',vr.event_post_id,
       'eventTitle',case when exists(select 1 from sliper.posts e where e.id=vr.event_post_id and e.status='published' and not exists(select 1 from sliper.content_restrictions cr where cr.target_type='post' and cr.target_id=e.id and cr.hidden)) then vr.event_title else '참가한 행사' end,
-      'rating',vr.rating,'templateEntryId',vr.template_entry_id,
+      'rating',vr.rating,'templateEntryId',vr.template_entry_id,'qrVerified',${hasQrAdmission(reviewIdentity)},
       'hostPublicId',case when exists(select 1 from sliper.posts e where e.id=vr.event_post_id and not e.is_anonymous and e.status='published' and not exists(select 1 from sliper.content_restrictions cr where cr.target_type='post' and cr.target_id=e.id and cr.hidden)) then (select p.public_id::text from sliper.profiles p where p.id=vr.host_id) else null end
-    ) from sliper.verified_event_reviews vr where vr.review_post_id=${posts.id} and ${verifiedReviewParticipation(
-      {
-        applicationId: sql`vr.application_id`,
-        postId: sql`vr.event_post_id`,
-        userId: sql`vr.user_id`,
-        hostId: sql`vr.host_id`,
-      },
-    )})`,
+    ) from sliper.verified_event_reviews vr where vr.review_post_id=${posts.id} and ${verifiedReviewParticipation(reviewIdentity)})`,
   };
 }

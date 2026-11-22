@@ -81,7 +81,7 @@ export const verifiedEventReviews = sliper
       applicationId: uuid("application_id")
         .notNull()
         .unique()
-        .references(() => eventAdmissions.applicationId, { onDelete: "restrict" }),
+        .references(() => eventApplications.id, { onDelete: "restrict" }),
       userId: uuid("user_id")
         .notNull()
         .references(() => profiles.id, { onDelete: "restrict" }),
@@ -96,13 +96,9 @@ export const verifiedEventReviews = sliper
     (t) => [
       unique("verified_review_event_member").on(t.eventPostId, t.userId),
       foreignKey({
-        name: "verified_review_admission_identity_fk",
+        name: "verified_review_application_identity_fk",
         columns: [t.applicationId, t.eventPostId, t.userId],
-        foreignColumns: [
-          eventAdmissions.applicationId,
-          eventAdmissions.postId,
-          eventAdmissions.userId,
-        ],
+        foreignColumns: [eventApplications.id, eventApplications.postId, eventApplications.userId],
       }).onDelete("restrict"),
       index("verified_review_event_idx").on(t.eventPostId, t.createdAt),
       check("verified_review_rating", sql`${t.rating} between 1 and 5`),

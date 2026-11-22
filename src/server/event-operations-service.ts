@@ -30,6 +30,7 @@ import {
   type AdmissionCandidate,
   type AdmissionRoster,
   type EventReviewView,
+  type PendingReviewsView,
   type TicketView,
 } from "../domain/event-operations";
 import { AppError, requireActor } from "./errors";
@@ -37,7 +38,11 @@ import { assertContentVisible, authorVisible, contentVisible } from "./safety-vi
 import { enforceRequestLimit } from "./request-limits";
 import { awardActivity } from "./activity";
 import { assertEventRunning, isEventCancelled } from "./event-lifecycle-service";
-import { canWriteVerifiedReview, verifiedReviewParticipation } from "./verified-review-policy";
+import {
+  canWriteVerifiedReview,
+  hasQrAdmission,
+  verifiedReviewParticipation,
+} from "./verified-review-policy";
 import { assertContentAllowed } from "./content-policy";
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 const hash = (code: string) => createHash("sha256").update(code).digest("hex");
@@ -296,7 +301,13 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
   async function reviews(actor: string | null, postId: string, page = 1): Promise<EventReviewView> {
     z.uuid().parse(postId);
     const [event] = await db
-      .select({ title: posts.title, endsAt: eventSettings.endsAt, authorId: posts.authorId })
+      .select({
+        title: posts.title,
+        endsAt: eventSettings.endsAt,
+        completedAt: eventSettings.completedAt,
+        meetupType: eventSettings.meetupType,
+        authorId: posts.authorId,
+      })
       .from(posts)
       .innerJoin(eventSettings, eq(eventSettings.postId, posts.id))
       .where(
@@ -321,17 +332,23 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
               hostId: sql`${event.authorId}::uuid`,
               applicationStatus: sql`"sliper"."event_applications"."status"`,
               endsAt: sql`${event.endsAt?.toISOString() ?? null}::timestamptz`,
+              completedAt: sql`${event.completedAt?.toISOString() ?? null}::timestamptz`,
               reviewPostId: sql`"sliper"."verified_event_reviews"."review_post_id"`,
               now: sql`${clock().toISOString()}::timestamptz`,
             }),
           })
-          .from(eventAdmissions)
-          .innerJoin(eventApplications, eq(eventApplications.id, eventAdmissions.applicationId))
+          .from(eventApplications)
+          .leftJoin(eventAdmissions, eq(eventAdmissions.applicationId, eventApplications.id))
           .leftJoin(
             verifiedEventReviews,
-            eq(verifiedEventReviews.applicationId, eventAdmissions.applicationId),
+            eq(verifiedEventReviews.applicationId, eventApplications.id),
           )
-          .where(and(eq(eventAdmissions.postId, postId), eq(eventAdmissions.userId, actor)))
+          .where(and(eq(eventApplications.postId, postId), eq(eventApplications.userId, actor)))
+          .orderBy(
+            desc(sql`${eventApplications.status}='confirmed'`),
+            desc(eventApplications.createdAt),
+          )
+          .limit(1)
       : [];
     const rows = await db
       .select({
@@ -341,6 +358,11 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
         author: profiles.nickname,
         rating: verifiedEventReviews.rating,
         createdAt: posts.createdAt,
+        qrVerified: hasQrAdmission({
+          applicationId: sql`"sliper"."verified_event_reviews"."application_id"`,
+          postId: sql`"sliper"."verified_event_reviews"."event_post_id"`,
+          userId: sql`"sliper"."verified_event_reviews"."user_id"`,
+        }),
       })
       .from(verifiedEventReviews)
       .innerJoin(posts, eq(posts.id, verifiedEventReviews.reviewPostId))
@@ -365,16 +387,88 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
     return {
       postId,
       title: event.title,
+      meetupType: event.meetupType === "lightning" ? "lightning" : "event",
       canReview: !cancelled && !!own?.canReview,
-      checkedAt: own?.checkedAt.toISOString() ?? null,
+      checkedAt: own?.checkedAt?.toISOString() ?? null,
       ownReviewPostId: own?.reviewPostId ?? null,
       reviews: rows.slice(0, 20).map((r) => ({
         ...r,
         author: r.author ?? "탈퇴한 회원",
         createdAt: r.createdAt.toISOString(),
+        qrVerified: Boolean(r.qrVerified),
       })),
       page,
       hasMore: rows.length > 20,
+    };
+  }
+  async function pendingReviews(actor: string | null): Promise<PendingReviewsView> {
+    if (!actor) return { items: [] };
+    const [state] = await db.select().from(memberSafety).where(eq(memberSafety.userId, actor));
+    if (!membershipActive(state)) return { items: [] };
+    const nowIso = clock().toISOString();
+    const rows = await db
+      .select({
+        postId: posts.id,
+        title: posts.title,
+        category: posts.categorySlug,
+        meetupType: eventSettings.meetupType,
+        endsAt: eventSettings.endsAt,
+        completedAt: eventSettings.completedAt,
+        location: posts.location,
+        hostNickname: profiles.nickname,
+        qrVerified: hasQrAdmission({
+          applicationId: sql`"sliper"."event_applications"."id"`,
+          postId: sql`"sliper"."event_applications"."post_id"`,
+          userId: sql`"sliper"."event_applications"."user_id"`,
+        }),
+      })
+      .from(eventApplications)
+      .innerJoin(posts, eq(posts.id, eventApplications.postId))
+      .innerJoin(eventSettings, eq(eventSettings.postId, posts.id))
+      .leftJoin(profiles, eq(profiles.id, posts.authorId))
+      .leftJoin(
+        verifiedEventReviews,
+        and(eq(verifiedEventReviews.eventPostId, posts.id), eq(verifiedEventReviews.userId, actor)),
+      )
+      .where(
+        and(
+          eq(eventApplications.userId, actor),
+          eq(eventApplications.status, "confirmed"),
+          eq(posts.kind, "모집"),
+          eq(posts.status, "published"),
+          eq(posts.sample, false),
+          sql`not exists(select 1 from sliper.event_lifecycle el where el.post_id=${posts.id} and el.cancelled_at is not null)`,
+          contentVisible("post", posts.id),
+          authorVisible(posts.authorId, actor),
+          canWriteVerifiedReview({
+            applicationId: sql`"sliper"."event_applications"."id"`,
+            postId: sql`"sliper"."event_applications"."post_id"`,
+            userId: sql`"sliper"."event_applications"."user_id"`,
+            hostId: sql`"sliper"."posts"."author_id"`,
+            applicationStatus: sql`"sliper"."event_applications"."status"`,
+            endsAt: sql`"sliper"."event_settings"."ends_at"`,
+            completedAt: sql`"sliper"."event_settings"."completed_at"`,
+            reviewPostId: sql`"sliper"."verified_event_reviews"."review_post_id"`,
+            now: sql`${nowIso}::timestamptz`,
+          }),
+        ),
+      )
+      .orderBy(
+        desc(sql`coalesce(${eventSettings.completedAt}, ${eventSettings.endsAt})`),
+        desc(posts.id),
+      )
+      .limit(5);
+    return {
+      items: rows.map((row) => ({
+        postId: row.postId,
+        title: row.title,
+        category: row.category as PendingReviewsView["items"][number]["category"],
+        meetupType: row.meetupType === "lightning" ? "lightning" : "event",
+        endsAt: (row.completedAt ?? row.endsAt ?? clock()).toISOString(),
+        location: row.location ?? "",
+        hostNickname: row.hostNickname ?? "호스트",
+        qrVerified: Boolean(row.qrVerified),
+      })),
     };
   }
   async function writeReview(actor: string | null, postId: string, input: unknown) {
@@ -396,35 +490,38 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
           ),
         );
       if (!visible) throw new AppError("NOT_FOUND", "행사를 찾을 수 없어요.");
-      if (!settings.endsAt || settings.endsAt > clock())
-        throw new AppError("CONFLICT", "행사가 종료된 뒤 후기를 남길 수 있어요.");
+      const hasEnded =
+        settings.completedAt !== null || (settings.endsAt !== null && settings.endsAt <= clock());
+      if (!hasEnded)
+        throw new AppError("CONFLICT", "행사나 모임이 종료된 뒤 후기를 남길 수 있어요.");
       if (post.authorId === user)
         throw new AppError("FORBIDDEN", "주최자는 자신의 행사에 참가 후기를 남길 수 없어요.");
-      const [admission] = await tx
-        .select()
-        .from(eventAdmissions)
-        .innerJoin(eventApplications, eq(eventApplications.id, eventAdmissions.applicationId))
+      const [application] = await tx
+        .select({ id: eventApplications.id })
+        .from(eventApplications)
         .where(
           and(
-            eq(eventAdmissions.postId, postId),
-            eq(eventAdmissions.userId, user),
+            eq(eventApplications.postId, postId),
+            eq(eventApplications.userId, user),
             canWriteVerifiedReview({
               applicationId: sql`"sliper"."event_applications"."id"`,
               postId: sql`"sliper"."event_applications"."post_id"`,
               userId: sql`"sliper"."event_applications"."user_id"`,
               hostId: sql`${post.authorId}::uuid`,
               applicationStatus: sql`"sliper"."event_applications"."status"`,
-              endsAt: sql`${settings.endsAt.toISOString()}::timestamptz`,
+              endsAt: sql`${settings.endsAt?.toISOString() ?? null}::timestamptz`,
+              completedAt: sql`${settings.completedAt?.toISOString() ?? null}::timestamptz`,
               // The duplicate check below preserves the existing conflict response.
               reviewPostId: sql`null::uuid`,
               now: sql`${clock().toISOString()}::timestamptz`,
             }),
           ),
-        );
-      if (!admission)
+        )
+        .limit(1);
+      if (!application)
         throw new AppError(
           "FORBIDDEN",
-          "현재 참가가 확인된 QR 입장 참가자만 인증 후기를 작성할 수 있어요.",
+          "참가가 확정된 인원만 종료 후 참가 후기를 작성할 수 있어요.",
         );
       const [prior] = await tx
         .select()
@@ -456,7 +553,7 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
       await tx.insert(verifiedEventReviews).values({
         reviewPostId: created!.id,
         eventPostId: postId,
-        applicationId: admission.event_admissions.applicationId,
+        applicationId: application.id,
         userId: user,
         hostId: post.authorId,
         templateEntryId: source?.entryId ?? null,
@@ -547,5 +644,5 @@ export function eventOperationsService(db: Database, clock = () => new Date()) {
       return { recorded: created.length };
     });
   }
-  return { issue, scan, roster, reviews, writeReview, finalize, lock };
+  return { issue, scan, roster, reviews, pendingReviews, writeReview, finalize, lock };
 }

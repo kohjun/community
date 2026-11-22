@@ -346,7 +346,7 @@ test("rejected and withdrawn contributions disappear; accepted and correction re
   assert.equal(result.items.find((r) => r.postId === correction)?.stage, "credits");
   assert.equal(result.items.find((r) => r.postId === correction)?.pending, false);
 });
-test("review eligibility follows QR confirmed ended nonhost nonduplicate policy, refunds preserve actual attendance", async () => {
+test("review eligibility follows confirmed ended nonhost non-no_show nonduplicate policy, refunds preserve actual attendance", async () => {
   const qr = await event({ completed: true, status: "published" });
   await attend(qr, viewer, { qr: true, result: "attended" });
   const manual = await event({ completed: true });
@@ -360,14 +360,17 @@ test("review eligibility follows QR confirmed ended nonhost nonduplicate policy,
   const refundNoAttendance = await event({ completed: true });
   await attend(refundNoAttendance, viewer, { status: "refunded" });
   const pending = await service.list(viewer, { scope: "participation" });
-  assert.equal(pending.total, 1);
-  assert.equal(pending.items[0]?.postId, qr);
-  assert.equal(pending.items[0]?.stage, "review");
-  assert.equal(pending.items[0]?.actions[0]?.href, `/events/${qr}#event-reviews`);
+  assert.equal(pending.total, 2);
+  assert.deepEqual(pending.items.map((item) => item.postId).sort(), [qr, manual].sort());
+  assert.ok(pending.items.every((item) => item.stage === "review"));
+  assert.equal(
+    pending.items.find((item) => item.postId === qr)?.actions[0]?.href,
+    `/events/${qr}#event-reviews`,
+  );
   const all = await service.list(viewer, { scope: "participation", view: "all" });
   assert.equal(all.total, 4);
-  assert.equal(all.pendingTotal, 1);
-  assert.equal(all.items.find((r) => r.postId === manual)?.stage, "ready");
+  assert.equal(all.pendingTotal, 2);
+  assert.equal(all.items.find((r) => r.postId === manual)?.stage, "review");
   assert.equal(all.items.find((r) => r.postId === refunded)?.stage, "ready");
   assert.ok(all.items.find((r) => r.postId === refunded)?.description.includes("환불"));
   assert.equal(all.items.find((r) => r.postId === priorReview)?.stage, "ready");

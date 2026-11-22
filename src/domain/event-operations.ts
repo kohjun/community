@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CategorySlug } from "./categories";
 export const ticketCodeSchema = z
   .string()
   .regex(/^[A-Za-z0-9_-]{43}$/, "올바른 QR 입장권을 확인해주세요.");
@@ -56,6 +57,7 @@ export type AdmissionRoster = {
 export type EventReviewView = {
   postId: string;
   title: string;
+  meetupType?: "event" | "lightning";
   canReview: boolean;
   checkedAt: string | null;
   ownReviewPostId: string | null;
@@ -66,9 +68,23 @@ export type EventReviewView = {
     author: string;
     rating: number;
     createdAt: string;
+    qrVerified?: boolean;
   }>;
   page: number;
   hasMore: boolean;
+};
+export type PendingReviewPromptItem = {
+  postId: string;
+  title: string;
+  category: CategorySlug;
+  meetupType: "event" | "lightning";
+  endsAt: string;
+  location: string;
+  hostNickname: string;
+  qrVerified: boolean;
+};
+export type PendingReviewsView = {
+  items: PendingReviewPromptItem[];
 };
 export const PAYMENT_ISSUE_LABELS = {
   paid_unconfirmed: "결제 확인 · 참가 미확정",

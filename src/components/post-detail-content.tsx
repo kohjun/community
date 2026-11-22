@@ -196,7 +196,8 @@ export function PostDetailContent({
             </span>
             {active.verifiedParticipation && (
               <span className="verified-review-badge">
-                QR 참가 인증 · {active.verifiedParticipation.rating}점
+                {active.verifiedParticipation.qrVerified ? "QR 참가 인증" : "참가 확정 후기"} ·{" "}
+                {active.verifiedParticipation.rating}점
               </span>
             )}
             {active.sample && <span className="preview-pill">예시 콘텐츠</span>}

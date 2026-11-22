@@ -2,7 +2,14 @@ import { previewTitleSql } from "./discussion-policy";
 import { and, asc, desc, eq, ilike, inArray, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { Database } from "../db/connection";
-import { eventRecords, mediaAssets, posts, profiles } from "../db/schema";
+import {
+  eventApplications,
+  eventRecords,
+  eventSettings,
+  mediaAssets,
+  posts,
+  profiles,
+} from "../db/schema";
 import { eventRecordLinks } from "../db/records-schema";
 import { libraryEntries, templateProvenance } from "../db/library-schema";
 import { crews, crewEvents } from "../db/crew-schema";
@@ -16,6 +23,7 @@ import {
   type RecordDetail,
   type RecordPage,
   type RecordLink,
+  type RecordSort,
   type RecordStatus,
 } from "../domain/records";
 import { postDocumentToMarkdown, type PostDocument } from "../domain/post-document";
@@ -28,7 +36,11 @@ import { contentVisible } from "./safety-visibility";
 import { registeredVenueSnapshotVisible, visibleRegisteredVenue } from "./place-policy";
 import { preciseTimestamp } from "./pagination";
 import { enforceRequestLimit } from "./request-limits";
-import { verifiedReviewParticipation } from "./verified-review-policy";
+import {
+  canWriteVerifiedReview,
+  hasQrAdmission,
+  verifiedReviewParticipation,
+} from "./verified-review-policy";
 import { assertContentAllowed } from "./content-policy";
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type QueryDb = Database | Tx;
@@ -65,6 +77,11 @@ const recordProjection = {
   updatedAt: preciseTimestamp(eventRecords.updatedAt),
   hostPublicId: profiles.publicId,
   hostNickname: profiles.nickname,
+  meetupType: eventSettings.meetupType,
+  coverImageId: sql<string | null>`coalesce(
+    (select ma.id::text from sliper.media_assets ma where ma.record_post_id=${eventRecords.postId} and ma.status='ready' order by ma.sort_order asc, ma.id asc limit 1),
+    (select ma.id::text from sliper.media_assets ma where ma.post_id=${eventRecords.postId} and ma.status='ready' order by ma.sort_order asc, ma.id asc limit 1)
+  )`,
   canManage: sql<boolean>`false`,
 };
 type RecordRow = {
@@ -75,6 +92,8 @@ type RecordRow = {
   updatedAt: string;
   hostPublicId: string | null;
   hostNickname: string | null;
+  meetupType?: string | null;
+  coverImageId?: string | null;
   canManage: boolean;
   venueVisible: boolean;
   attended: number;
@@ -83,11 +102,12 @@ type RecordRow = {
   reviewCount: number;
   averageRating: number | null;
 };
-export function recordSummary(row: RecordRow, actor: string): RecordSummary {
+export function recordSummary(row: RecordRow, actor: string, rank = 0): RecordSummary {
   return {
     postId: row.record.postId,
     title: row.record.snapshot.title,
     category: row.record.snapshot.category,
+    meetupType: row.meetupType === "lightning" ? "lightning" : "event",
     location:
       row.record.snapshot.venue && !row.venueVisible
         ? "장소 정보 비공개"
@@ -103,9 +123,51 @@ export function recordSummary(row: RecordRow, actor: string): RecordSummary {
     managerAttended: Number(row.managerAttended),
     reviewCount: Number(row.reviewCount),
     averageRating: row.averageRating === null ? null : Number(row.averageRating),
+    rank,
+    coverImageSrc: row.coverImageId ? "/api/media/" + row.coverImageId : null,
     updatedAt: row.updatedAt,
     canEdit: row.record.ownerId === actor,
   };
+}
+function recordOrderBy(sort: RecordSort, metrics: ReturnType<typeof recordMetricProjection>) {
+  const popularScore = sql`(case when (${metrics.reviewCount}) > 0 then (((coalesce(${metrics.averageRating}, 0)::float8 * (${metrics.reviewCount}) + 3.8 * 2.0) / ((${metrics.reviewCount}) + 2.0)) * 20.0) else 0.0 end + ln(1.0 + greatest((${metrics.attended}), 0)::float8) * 6.0 + ln(1.0 + greatest((${metrics.reviewCount}), 0)::float8) * 8.0)`;
+  switch (sort) {
+    case "popular":
+      return [
+        sql`${popularScore} desc`,
+        sql`${metrics.averageRating} desc nulls last`,
+        sql`${metrics.reviewCount} desc`,
+        desc(eventRecords.completedAt),
+        desc(eventRecords.postId),
+      ];
+    case "rating":
+      return [
+        sql`${metrics.averageRating} desc nulls last`,
+        sql`${metrics.reviewCount} desc`,
+        sql`${metrics.attended} desc`,
+        desc(eventRecords.completedAt),
+        desc(eventRecords.postId),
+      ];
+    case "reviews":
+      return [
+        sql`${metrics.reviewCount} desc`,
+        sql`${metrics.averageRating} desc nulls last`,
+        sql`${metrics.attended} desc`,
+        desc(eventRecords.completedAt),
+        desc(eventRecords.postId),
+      ];
+    case "attended":
+      return [
+        sql`${metrics.attended} desc`,
+        sql`${metrics.averageRating} desc nulls last`,
+        sql`${metrics.reviewCount} desc`,
+        desc(eventRecords.completedAt),
+        desc(eventRecords.postId),
+      ];
+    case "latest":
+    default:
+      return [desc(eventRecords.completedAt), desc(eventRecords.postId)];
+  }
 }
 function assertPublishable(record: {
   purpose: string;
@@ -133,6 +195,7 @@ export function recordService(db: Database) {
         canManage: sql<boolean>`(${eventRecords.ownerId}=${user}::uuid or exists(select 1 from sliper.room_managers rm where rm.post_id=${eventRecords.postId} and rm.user_id=${user}::uuid))`,
       })
       .from(eventRecords)
+      .innerJoin(eventSettings, eq(eventSettings.postId, eventRecords.postId))
       .leftJoin(profiles, eq(profiles.id, eventRecords.ownerId))
       .where(and(id ? eq(eventRecords.postId, id) : undefined, recordVisible(user, true)));
   }
@@ -155,34 +218,44 @@ export function recordService(db: Database) {
         throw new AppError("NOT_FOUND", "볼 수 있는 자료의 행사 기록만 찾아볼 수 있어요.");
     }
     const search = "%" + value.q.replace(/[\\%_]/g, "\\$&") + "%";
-    const found = await db
-      .select({
-        ...recordProjection,
-        ...recordMetricProjection(user),
-        venueVisible: registeredVenueSnapshotVisible(user, sql`${eventRecords.snapshot}`),
-      })
-      .from(eventRecords)
-      .leftJoin(profiles, eq(profiles.id, eventRecords.ownerId))
-      .where(
-        and(
-          recordVisible(user, value.mine === "1"),
-          value.mine === "1"
-            ? eq(eventRecords.ownerId, user)
-            : eq(eventRecords.status, "published"),
-          value.libraryId
-            ? sql`(exists(select 1 from sliper.event_record_links link where link.record_post_id=${eventRecords.postId} and link.library_entry_id=${value.libraryId}::uuid) or exists(select 1 from sliper.template_provenance source where source.post_id=${eventRecords.postId} and source.entry_id=${value.libraryId}::uuid))`
-            : undefined,
-          value.category ? sql`${eventRecords.snapshot}->>'category'=${value.category}` : undefined,
-          value.q ? ilike(sql`${eventRecords.snapshot}->>'title'`, search) : undefined,
-        ),
-      )
-      .orderBy(desc(eventRecords.completedAt), desc(eventRecords.postId))
-      .limit(21)
-      .offset((value.page - 1) * 20);
+    const metrics = recordMetricProjection(user);
+    const whereClause = and(
+      recordVisible(user, value.mine === "1"),
+      value.mine === "1" ? eq(eventRecords.ownerId, user) : eq(eventRecords.status, "published"),
+      value.libraryId
+        ? sql`(exists(select 1 from sliper.event_record_links link where link.record_post_id=${eventRecords.postId} and link.library_entry_id=${value.libraryId}::uuid) or exists(select 1 from sliper.template_provenance source where source.post_id=${eventRecords.postId} and source.entry_id=${value.libraryId}::uuid))`
+        : undefined,
+      value.category ? sql`${eventRecords.snapshot}->>'category'=${value.category}` : undefined,
+      value.meetupType !== "all" ? eq(eventSettings.meetupType, value.meetupType) : undefined,
+      value.q ? ilike(sql`${eventRecords.snapshot}->>'title'`, search) : undefined,
+    );
+    const offset = (value.page - 1) * 20;
+    const [found, totalRows] = await Promise.all([
+      db
+        .select({
+          ...recordProjection,
+          ...metrics,
+          venueVisible: registeredVenueSnapshotVisible(user, sql`${eventRecords.snapshot}`),
+        })
+        .from(eventRecords)
+        .innerJoin(eventSettings, eq(eventSettings.postId, eventRecords.postId))
+        .leftJoin(profiles, eq(profiles.id, eventRecords.ownerId))
+        .where(whereClause)
+        .orderBy(...recordOrderBy(value.sort, metrics))
+        .limit(21)
+        .offset(offset),
+      db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(eventRecords)
+        .innerJoin(eventSettings, eq(eventSettings.postId, eventRecords.postId))
+        .where(whereClause),
+    ]);
     return {
-      items: found.slice(0, 20).map((row) => recordSummary(row, user)),
+      items: found.slice(0, 20).map((row, index) => recordSummary(row, user, offset + index + 1)),
       page: value.page,
       hasMore: found.length > 20,
+      sort: value.sort,
+      total: Number(totalRows[0]?.total ?? 0),
     };
   }
   async function related(connection: QueryDb, user: string, postId: string) {
@@ -262,50 +335,104 @@ export function recordService(db: Database) {
     z.uuid().parse(postId);
     const [row] = await rows(db, user, postId);
     if (!row) throw new AppError("NOT_FOUND", "행사 기록을 찾을 수 없어요.");
-    const [imageRows, videoRows, relatedView, reviewRows, credits] = await Promise.all([
-      db
-        .select()
-        .from(mediaAssets)
-        .where(and(eq(mediaAssets.recordPostId, postId), eq(mediaAssets.status, "ready")))
-        .orderBy(asc(mediaAssets.sortOrder)),
-      db
-        .select()
-        .from(videoAssets)
-        .where(and(eq(videoAssets.recordPostId, postId), eq(videoAssets.status, "ready")))
-        .orderBy(asc(videoAssets.sortOrder)),
-      related(db, user, postId),
-      db
-        .select({
-          postId: posts.id,
-          title: previewTitleSql,
-          rating: verifiedEventReviews.rating,
-          author: profiles.nickname,
-        })
-        .from(verifiedEventReviews)
-        .innerJoin(posts, eq(posts.id, verifiedEventReviews.reviewPostId))
-        .leftJoin(profiles, eq(profiles.id, posts.authorId))
-        .where(
-          and(
-            eq(verifiedEventReviews.eventPostId, postId),
-            eq(posts.status, "published"),
-            eq(posts.sample, false),
-            contentVisible("post", posts.id),
-            creditMemberVisible(user, posts.authorId),
-            verifiedReviewParticipation(
-              {
-                applicationId: sql`"sliper"."verified_event_reviews"."application_id"`,
-                postId: sql`"sliper"."verified_event_reviews"."event_post_id"`,
-                userId: sql`"sliper"."verified_event_reviews"."user_id"`,
-                hostId: sql`${row.record.ownerId}::uuid`,
-              },
-              { requireRecordedAttendance: true },
-            ),
-          ),
-        )
-        .orderBy(desc(posts.createdAt), desc(posts.id))
-        .limit(20),
-      acceptedCreditViews(db, user, postId),
-    ]);
+    const reviewEligibility = and(
+      eq(verifiedEventReviews.eventPostId, postId),
+      eq(posts.status, "published"),
+      eq(posts.sample, false),
+      contentVisible("post", posts.id),
+      creditMemberVisible(user, posts.authorId),
+      verifiedReviewParticipation(
+        {
+          applicationId: sql`"sliper"."verified_event_reviews"."application_id"`,
+          postId: sql`"sliper"."verified_event_reviews"."event_post_id"`,
+          userId: sql`"sliper"."verified_event_reviews"."user_id"`,
+          hostId: sql`${row.record.ownerId}::uuid`,
+        },
+        { requireRecordedAttendance: true },
+      ),
+    );
+    const [imageRows, videoRows, relatedView, reviewRows, ratingRows, ownReviewRows, credits] =
+      await Promise.all([
+        db
+          .select()
+          .from(mediaAssets)
+          .where(and(eq(mediaAssets.recordPostId, postId), eq(mediaAssets.status, "ready")))
+          .orderBy(asc(mediaAssets.sortOrder)),
+        db
+          .select()
+          .from(videoAssets)
+          .where(and(eq(videoAssets.recordPostId, postId), eq(videoAssets.status, "ready")))
+          .orderBy(asc(videoAssets.sortOrder)),
+        related(db, user, postId),
+        db
+          .select({
+            postId: posts.id,
+            title: previewTitleSql,
+            body: posts.bodyMarkdown,
+            rating: verifiedEventReviews.rating,
+            author: profiles.nickname,
+            createdAt: posts.createdAt,
+            qrVerified: hasQrAdmission({
+              applicationId: sql`"sliper"."verified_event_reviews"."application_id"`,
+              postId: sql`"sliper"."verified_event_reviews"."event_post_id"`,
+              userId: sql`"sliper"."verified_event_reviews"."user_id"`,
+            }),
+          })
+          .from(verifiedEventReviews)
+          .innerJoin(posts, eq(posts.id, verifiedEventReviews.reviewPostId))
+          .leftJoin(profiles, eq(profiles.id, posts.authorId))
+          .where(reviewEligibility)
+          .orderBy(desc(posts.createdAt), desc(posts.id))
+          .limit(30),
+        db
+          .select({
+            rating: verifiedEventReviews.rating,
+            count: sql<number>`count(*)::int`,
+          })
+          .from(verifiedEventReviews)
+          .innerJoin(posts, eq(posts.id, verifiedEventReviews.reviewPostId))
+          .where(reviewEligibility)
+          .groupBy(verifiedEventReviews.rating),
+        db
+          .select({
+            reviewPostId: verifiedEventReviews.reviewPostId,
+            canReview: canWriteVerifiedReview({
+              applicationId: sql`"sliper"."event_applications"."id"`,
+              postId: sql`"sliper"."event_applications"."post_id"`,
+              userId: sql`"sliper"."event_applications"."user_id"`,
+              hostId: sql`${row.record.ownerId}::uuid`,
+              applicationStatus: sql`"sliper"."event_applications"."status"`,
+              endsAt: sql`"sliper"."event_settings"."ends_at"`,
+              completedAt: sql`"sliper"."event_settings"."completed_at"`,
+              reviewPostId: sql`"sliper"."verified_event_reviews"."review_post_id"`,
+            }),
+          })
+          .from(eventApplications)
+          .innerJoin(eventSettings, eq(eventSettings.postId, eventApplications.postId))
+          .leftJoin(
+            verifiedEventReviews,
+            eq(verifiedEventReviews.applicationId, eventApplications.id),
+          )
+          .where(and(eq(eventApplications.postId, postId), eq(eventApplications.userId, user)))
+          .orderBy(
+            desc(sql`${eventApplications.status}='confirmed'`),
+            desc(eventApplications.createdAt),
+          )
+          .limit(1),
+        acceptedCreditViews(db, user, postId),
+      ]);
+    const ratingCounts: Record<"1" | "2" | "3" | "4" | "5", number> = {
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0,
+      "5": 0,
+    };
+    for (const item of ratingRows) {
+      const key = String(item.rating) as "1" | "2" | "3" | "4" | "5";
+      if (key in ratingCounts) ratingCounts[key] = Number(item.count);
+    }
+    const [ownReview] = ownReviewRows;
     const images: PublicImage[] = imageRows.map((image) => ({
       id: image.id,
       src: "/api/media/" + image.id,
@@ -347,10 +474,18 @@ export function recordService(db: Database) {
       videos,
       ...relatedView,
       reviews: reviewRows.map((review) => ({
-        ...review,
+        postId: review.postId,
+        title: review.title,
+        body: review.body,
+        rating: review.rating,
         author: review.author ?? "탈퇴한 회원",
+        createdAt: review.createdAt.toISOString(),
+        qrVerified: Boolean(review.qrVerified),
         href: "/posts/" + review.postId,
       })),
+      ratingCounts,
+      canReview: Boolean(ownReview?.canReview),
+      ownReviewPostId: ownReview?.reviewPostId ?? null,
       credits,
       canManage: row.canManage,
     };

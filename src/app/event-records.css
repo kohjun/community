@@ -756,3 +756,785 @@
   margin: 0;
   line-height: 1.8;
 }
+
+/* Competitive Ranking & Card Grid for Event Records ------------------------------------------ */
+.record-ranking-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.record-sort-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.record-sort-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid #dce5ef;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.record-sort-pill:hover {
+  border-color: #b8cde4;
+  color: #0f172a;
+}
+.record-sort-pill.is-active {
+  border-color: #0a84fe;
+  background: #0a84fe;
+  color: #ffffff;
+  box-shadow: 0 6px 16px -8px rgba(10, 132, 254, 0.55);
+}
+.record-meetup-bar {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: #eff4f9;
+  gap: 2px;
+}
+.record-meetup-pill {
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.record-meetup-pill.is-active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+.record-ranking-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 16px;
+}
+.record-ranking-summary .record-results-count {
+  margin: 0;
+  font-size: 13.5px;
+  color: #334155;
+}
+.record-ranking-caption {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.record-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.record-card {
+  display: flex;
+  min-width: 0;
+}
+.record-card__link {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid #e2e9f1;
+  border-radius: 16px;
+  background: #ffffff;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.record-card__link:hover {
+  transform: translateY(-2px);
+  border-color: #c2d7ef;
+  box-shadow: 0 14px 28px -18px rgba(15, 23, 42, 0.22);
+}
+.record-card__link:focus-visible {
+  outline: 2px solid #0a84fe;
+  outline-offset: 2px;
+}
+.record-card__cover {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 55%, #0ea5e9 100%);
+}
+.record-card__cover[data-category="party"] {
+  background: linear-gradient(135deg, #0f4c81 0%, #2563eb 55%, #38bdf8 100%);
+}
+.record-card__cover[data-category="mind-games"] {
+  background: linear-gradient(135deg, #312e81 0%, #6366f1 60%, #818cf8 100%);
+}
+.record-card__cover[data-category="travel"] {
+  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 60%, #38bdf8 100%);
+}
+.record-card__cover[data-category="sports"] {
+  background: linear-gradient(135deg, #b45309 0%, #f59e0b 65%, #fbbf24 100%);
+}
+.record-card__cover[data-category="dating"] {
+  background: linear-gradient(135deg, #be185d 0%, #ec4899 60%, #f472b6 100%);
+}
+.record-card__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.record-card__cover-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 14px 16px;
+  background: radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.25), transparent 52%);
+}
+.record-card__cover-label {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+.record-rank-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.22);
+}
+.record-rank-badge[data-tier="gold"] {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  color: #ffffff;
+}
+.record-rank-badge[data-tier="silver"] {
+  background: linear-gradient(135deg, #475569 0%, #64748b 100%);
+  color: #ffffff;
+}
+.record-rank-badge[data-tier="bronze"] {
+  background: linear-gradient(135deg, #9a3412 0%, #c2410c 100%);
+  color: #ffffff;
+}
+.record-type-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0874dc;
+  font-size: 11px;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
+}
+.record-type-badge--lightning {
+  color: #c2410c;
+}
+.record-card__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 15px 16px 16px;
+  gap: 10px;
+}
+.record-card__body .record-tags {
+  margin-bottom: 0;
+}
+.record-card__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.38;
+  letter-spacing: -0.025em;
+  color: #0f172a;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: keep-all;
+}
+.record-card__link:hover .record-card__title {
+  color: #0874dc;
+}
+.record-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.record-card__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.record-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #edf2f7;
+}
+.record-metric-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 7px 6px;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+.record-metric-cell.is-highlight {
+  background: #eff7ff;
+  box-shadow: inset 0 0 0 1px #cde4ff;
+}
+.record-metric-cell__value {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0f172a;
+  font-size: 14px;
+}
+.record-metric-cell__value--star svg {
+  color: #f59e0b;
+}
+.record-metric-cell small {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Record Detail: Rating Distribution & Rich Review Cards ------------------------------------- */
+.record-reviews-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.record-reviews-panel__head h2 {
+  margin-bottom: 4px;
+}
+.record-rating-summary {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e6edf5;
+}
+.record-rating-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-right: 16px;
+  border-right: 1px solid #e2eaf3;
+}
+.record-rating-score strong {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #0f172a;
+}
+.record-rating-stars {
+  display: inline-flex;
+  gap: 2px;
+  color: #f59e0b;
+}
+.record-rating-score small {
+  font-size: 12px;
+  color: #64748b;
+}
+.record-rating-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.record-rating-bar-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #475569;
+}
+.record-rating-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+.record-rating-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+  transition: width 0.25s ease;
+}
+.record-rating-bar-row small {
+  text-align: right;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+.record-review-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.record-review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid #e4ecf4;
+  border-radius: 14px;
+  background: #ffffff;
+}
+.record-review-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.record-review-card__author {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: #0f172a;
+}
+.record-review-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 650;
+}
+.record-review-badge--qr {
+  background: #edf6ff;
+  color: #0874dc;
+}
+.record-review-card__stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #f59e0b;
+  font-size: 12.5px;
+}
+.record-review-card__stars strong {
+  margin-left: 4px;
+  color: #0f172a;
+}
+.record-review-card__title {
+  text-decoration: none;
+  color: #0f172a;
+}
+.record-review-card__title h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.record-review-card__title:hover h3 {
+  color: #0874dc;
+}
+.record-review-card__body {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+.record-review-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+.record-review-card__foot a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0874dc;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+/* Post-Event Review Prompt Modal & Interactive Star Picker ----------------------------------- */
+.ops-rating-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 13px;
+  font-weight: 750;
+}
+.ops-rating-pill svg {
+  color: #f59e0b;
+}
+.review-modal-dialog {
+  max-width: 520px;
+  width: min(520px, calc(100vw - 28px));
+  max-height: min(90dvh, 760px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+  border-radius: 20px;
+}
+.review-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.review-modal-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 28px;
+}
+.review-modal-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.review-modal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.review-modal-badge--type {
+  background: #edf6ff;
+  color: #0874dc;
+}
+.review-modal-badge--verified {
+  background: #ecfdf5;
+  color: #047857;
+}
+.review-modal-progress {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+}
+.review-modal-title {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+}
+.review-modal-subtitle {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #64748b;
+}
+.review-modal-event-box {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.review-modal-event-box strong {
+  font-size: 14.5px;
+  color: #0f172a;
+}
+.review-modal-event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12px;
+  color: #64748b;
+}
+.review-modal-event-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.review-modal-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.review-star-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 12px;
+  border-radius: 14px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+.review-star-picker__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #92400e;
+}
+.review-star-picker__stars {
+  display: inline-flex;
+  gap: 6px;
+}
+.review-star-picker__stars button {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    color 0.12s ease;
+}
+.review-star-picker__stars button:hover {
+  transform: scale(1.1);
+}
+.review-star-picker__stars button.is-filled {
+  color: #f59e0b;
+}
+.review-star-picker__caption {
+  font-size: 13.5px;
+  color: #92400e;
+}
+.review-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.review-modal-field__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.review-modal-field label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e293b;
+}
+.review-modal-field input,
+.review-modal-field textarea {
+  width: 100%;
+  border: 1px solid #d7e2ee;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: #0f172a;
+  background: #ffffff;
+}
+.review-modal-field input:focus,
+.review-modal-field textarea:focus {
+  outline: 2px solid #0a84fe;
+  outline-offset: -1px;
+}
+.review-modal-field textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+.review-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.review-quick-chips button {
+  border: 1px solid #dce6f1;
+  background: #f8fafc;
+  color: #475569;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.review-quick-chips button:hover {
+  border-color: #0a84fe;
+  color: #0874dc;
+  background: #edf6ff;
+}
+.review-char-meter {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: #64748b;
+}
+.review-char-meter.is-ready {
+  color: #059669;
+}
+.review-modal-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+.review-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.review-modal-actions .participation-primary {
+  flex: 1 1 180px;
+  justify-content: center;
+}
+.review-modal-dismiss {
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 8px;
+  cursor: pointer;
+  margin-left: auto;
+}
+.review-modal-dismiss:hover {
+  color: #0f172a;
+  text-decoration: underline;
+}
+.review-modal-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 12px 4px;
+}
+.review-modal-done__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #059669;
+}
+.review-modal-done__stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #f59e0b;
+  margin: 4px 0 8px;
+}
+.review-modal-done__stars strong {
+  margin-left: 4px;
+  color: #92400e;
+  font-size: 14px;
+}
+
+@media (max-width: 960px) {
+  .record-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .record-card-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .record-sort-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    width: 100%;
+    scrollbar-width: none;
+  }
+  .record-sort-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .record-sort-pill {
+    flex: none;
+  }
+  .record-rating-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .record-rating-score {
+    padding-right: 0;
+    padding-bottom: 12px;
+    border-right: 0;
+    border-bottom: 1px solid #e2eaf3;
+  }
+  .record-review-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .review-modal-dialog {
+    padding: 18px;
+  }
+}

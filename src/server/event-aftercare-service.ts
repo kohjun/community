@@ -10,7 +10,11 @@ import {
 import { creditMemberVisible } from "./event-credit-service";
 import { recordVisible, requireRecordMember } from "./record-policy";
 import { contentVisible } from "./safety-visibility";
-import { canWriteVerifiedReview, participationAttended } from "./verified-review-policy";
+import {
+  canWriteVerifiedReview,
+  noShowCorrection,
+  participationAttended,
+} from "./verified-review-policy";
 
 type Row = {
   id: string;
@@ -85,17 +89,17 @@ function item(row: Row, ownPublicId: string): AftercareItem {
     actions.push({ label: "나의 기여 확인", href: "/players/me/credits" });
     if (row.record_visible) actions.push({ label: "행사 기록 보기", href: recordHref });
   } else {
-    label = row.stage === "review" ? "참가 인증 후기 쓰기" : "나의 참가 기록";
+    label = row.stage === "review" ? "참가 후기 쓰기" : "나의 참가 기록";
     description =
       row.stage === "review"
-        ? "QR 입장이 확인된 행사예요. 직접 경험한 내용을 인증 후기로 남겨주세요."
+        ? "참가가 확정된 종료 모임이에요. 별점과 생생한 후기를 남겨주세요."
         : row.refunded
           ? "실제 참석한 기록은 환불 내역과 구분해서 보관돼요. 환불 후에는 새 인증 후기를 작성할 수 없어요."
           : row.completed
             ? "담당자가 확인한 참가 전적과 내가 작성한 후기를 확인해보세요."
             : "참가 경험을 확인할 수 있어요. 공식 전적에는 담당자의 행사 완료 확인이 필요해요.";
     if (row.stage === "review")
-      actions.push({ label: "인증 후기 쓰기", href: eventHref + "#event-reviews" });
+      actions.push({ label: "참가 후기 쓰기", href: eventHref + "#event-reviews" });
     actions.push({ label: "내 참가 전적 보기", href: "/players/" + ownPublicId });
     if (row.record_visible) actions.push({ label: "행사 기록 보기", href: recordHref });
     else actions.push({ label: "행사 보기", href: eventHref });
@@ -188,7 +192,7 @@ export function eventAftercareService(db: Database) {
             b.record_visible,b.pending_credits,b.correction_credits,b.own_pending,b.own_corrections,bool_or(a.status='refunded') refunded,b.completed,'participation' scope
           from base b join sliper.event_applications a on a.post_id=b.post_id and a.user_id=${user}::uuid
           left join sliper.verified_event_reviews r on r.application_id=a.id
-          where not b.is_host and ${participationAttended({ applicationId: sql`a.id`, postId: sql`a.post_id`, userId: sql`a.user_id` })}
+          where not b.is_host and (${participationAttended({ applicationId: sql`a.id`, postId: sql`a.post_id`, userId: sql`a.user_id` })} or (a.status='confirmed' and not ${noShowCorrection({ applicationId: sql`a.id`, postId: sql`a.post_id`, userId: sql`a.user_id` })}))
           group by b.post_id,b.title,b.category,b.ends_at,b.sort_ends_at,b.record_visible,b.pending_credits,b.correction_credits,b.own_pending,b.own_corrections,b.completed
         ), contributions as (
           select 'credits:' || b.post_id::text id,b.post_id,b.title,b.category,b.ends_at,b.sort_ends_at,'contributor' role,

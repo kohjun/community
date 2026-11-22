@@ -435,7 +435,7 @@ test("database constraints reject an admission assigned to another applicant", a
   assert.equal((await db.select().from(opsSchema.eventAdmissions)).length, 0);
 });
 
-test("database constraints bind a certified review to the attendee that actually checked in", async () => {
+test("database constraints bind a certified review to the confirmed application identity", async () => {
   await admit();
   const [post] = await db
     .insert(base.posts)
@@ -459,10 +459,96 @@ test("database constraints bind a certified review to the attendee that actually
     }),
     (error: unknown) =>
       String((error as { cause?: unknown }).cause).includes(
-        "verified_review_admission_identity_fk",
+        "verified_review_application_identity_fk",
       ),
   );
   assert.equal((await db.select().from(opsSchema.verifiedEventReviews)).length, 0);
+});
+
+test("pendingReviews prompts confirmed participants of ended events and lightning meetups without requiring QR", async () => {
+  // Future event does not trigger prompt yet
+  assert.equal((await service.pendingReviews(alice)).items.length, 0);
+
+  // Create a lightning meetup that ends at the same time
+  const [lightningPost] = await db
+    .insert(base.posts)
+    .values({
+      authorId: owner,
+      kind: "모집",
+      categorySlug: "party",
+      title: "주말 번개 보드게임",
+      bodyMarkdown: "가볍게 모이는 번개 모임입니다.",
+      eventFee: "무료",
+    })
+    .returning();
+  const lightningEndsAt = new Date(now.getTime() + 3600000);
+  await db.insert(base.eventSettings).values({
+    postId: lightningPost!.id,
+    meetupType: "lightning",
+    approvalMode: "manual",
+    activityCategory: "other",
+    venueLatitude: 37.5665,
+    venueLongitude: 126.978,
+    amountKRW: 0,
+    capacity: 8,
+    createdAt: new Date(now.getTime() - 60 * 60000),
+    startsAt: new Date(now.getTime() - 30 * 60000),
+    endsAt: lightningEndsAt,
+  });
+  const [lightningApp] = await db
+    .insert(base.eventApplications)
+    .values({
+      postId: lightningPost!.id,
+      userId: alice,
+      attendeeName: "신청 참가자",
+      contact: "test@example.invalid",
+      amountKRW: 0,
+      status: "pending_approval",
+      expiresAt: lightningEndsAt,
+    })
+    .returning();
+  await db
+    .update(base.eventApplications)
+    .set({ status: "confirmed", confirmedAt: now })
+    .where(eq(base.eventApplications.id, lightningApp!.id));
+  const lightningAppId = lightningApp!.id;
+  assert.ok(lightningAppId);
+
+  // Advance time past event end; alice has NO QR scan on either event
+  now = new Date(now.getTime() + 3600001);
+  const pending = await service.pendingReviews(alice);
+  assert.equal(pending.items.length, 2);
+  assert.ok(
+    pending.items.some(
+      (item) =>
+        item.postId === lightningPost!.id &&
+        item.meetupType === "lightning" &&
+        item.qrVerified === false,
+    ),
+  );
+  // Host and non-participants never receive prompts
+  assert.equal((await service.pendingReviews(owner)).items.length, 0);
+  assert.equal((await service.pendingReviews(bob)).items.length, 0);
+
+  // Confirmed participant without QR can submit a review and is removed from pending prompt
+  const created = await service.writeReview(alice, lightningPost!.id, review);
+  assert.equal(created.reviews.length, 1);
+  assert.equal(created.reviews[0]?.qrVerified, false);
+  assert.equal(created.canReview, false);
+  const remaining = await service.pendingReviews(alice);
+  assert.equal(remaining.items.length, 1);
+  assert.equal(remaining.items[0]?.postId, postId);
+
+  // Marking alice as no_show removes the remaining event from pending prompt and blocks writing
+  await db.insert(eventResults).values({
+    applicationId,
+    postId,
+    userId: alice,
+    recorderId: owner,
+    presence: "no_show",
+  });
+  assert.equal((await service.pendingReviews(alice)).items.length, 0);
+  await assert.rejects(service.writeReview(alice, postId, review), code("FORBIDDEN"));
 });
 
 test("a new refund request with the same amount never reuses review notes for an older request", async () => {

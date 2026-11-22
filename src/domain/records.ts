@@ -16,6 +16,17 @@ export type CreditRole = (typeof CREDIT_ROLES)[number];
 export type CreditStatus =
   "pending" | "accepted" | "rejected" | "withdrawn" | "correction_requested";
 export type RecordStatus = "draft" | "published" | "withdrawn";
+export const RECORD_SORTS = ["popular", "rating", "reviews", "attended", "latest"] as const;
+export type RecordSort = (typeof RECORD_SORTS)[number];
+export const RECORD_SORT_LABELS: Record<RecordSort, string> = {
+  popular: "종합 랭킹",
+  rating: "별점 높은 순",
+  reviews: "후기 많은 순",
+  attended: "참가자 많은 순",
+  latest: "최신 완료 순",
+};
+export const RECORD_MEETUP_FILTERS = ["all", "event", "lightning"] as const;
+export type RecordMeetupFilter = (typeof RECORD_MEETUP_FILTERS)[number];
 export interface EventRecordSnapshot {
   participantGuide?: ParticipantGuide | null;
   title: string;
@@ -37,6 +48,7 @@ export interface RecordSummary {
   postId: string;
   title: string;
   category: CategorySlug;
+  meetupType: "event" | "lightning";
   location: string;
   startsAt: string | null;
   endsAt: string | null;
@@ -49,6 +61,8 @@ export interface RecordSummary {
   managerAttended: number;
   reviewCount: number;
   averageRating: number | null;
+  rank: number;
+  coverImageSrc: string | null;
   updatedAt: string;
   canEdit: boolean;
 }
@@ -87,7 +101,19 @@ export interface RecordDetail extends RecordSummary {
   images: PublicImage[];
   videos: PublicVideo[];
   links: RecordLink[];
-  reviews: Array<{ postId: string; title: string; rating: number; author: string; href: string }>;
+  reviews: Array<{
+    postId: string;
+    title: string;
+    body: string;
+    rating: number;
+    author: string;
+    createdAt: string;
+    qrVerified: boolean;
+    href: string;
+  }>;
+  ratingCounts: Record<"1" | "2" | "3" | "4" | "5", number>;
+  canReview: boolean;
+  ownReviewPostId: string | null;
   credits: CreditView[];
   canManage: boolean;
   relatedPostIds: string[];
@@ -97,11 +123,15 @@ export interface RecordPage {
   items: RecordSummary[];
   page: number;
   hasMore: boolean;
+  sort: RecordSort;
+  total: number;
 }
 export const recordQuerySchema = z.strictObject({
   q: z.string().trim().max(100).default(""),
   libraryId: z.uuid().optional(),
   category: z.enum(CATEGORY_SLUGS).optional(),
+  meetupType: z.enum(RECORD_MEETUP_FILTERS).default("all"),
+  sort: z.enum(RECORD_SORTS).default("latest"),
   mine: z.enum(["0", "1"]).default("0"),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
