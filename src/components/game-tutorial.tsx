@@ -22,10 +22,10 @@ function PracticeExample({ game }: { game: TutorialGame }) {
   if (game === "snap-pang")
     return (
       <div className={styles.practice}>
-        <strong>색깔 스나이퍼 · 테이블 헌터 · 3D 포커페이스 & 웃참 폭탄</strong>
+        <strong>🎨 색깔 · 📦 물건 · 😆 표정 · 🎲 랜덤 모드</strong>
         <p>
-          카메라 인식은 모두 내 스마트폰 안에서만 처리돼요. 표정 라운드에서도 원본 얼굴 대신 3D
-          슬리퍼 아바타가 표정만 따라 하며, 카메라 없이도 대체 모드로 함께 즐길 수 있어요.
+          카메라 인식은 모두 내 스마트폰 안에서만 처리돼요. 표정 라운드에서는 원하면 내 얼굴 대신 3D
+          아바타만 보이게 가릴 수 있고, 카메라 없이도 대체 모드로 함께 즐길 수 있어요.
         </p>
       </div>
     );

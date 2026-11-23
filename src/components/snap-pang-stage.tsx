@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Camera,
   CameraOff,
@@ -23,9 +23,12 @@ import {
 import type { GameRoomView } from "@/domain/game-room";
 import {
   SNAP_COLOR_BANK,
+  SNAP_COLOR_MIN_ACCURACY,
   SNAP_EXPRESSION_LABELS,
   SNAP_PANG_PRESET_META,
+  snapPangSlotLabel,
   type SnapExpressionId,
+  type SnapMission,
   type SnapPangView,
 } from "@/domain/snap-pang";
 import { computeColorMatchScore, rgbToHex, sampleCenterRgb } from "@/lib/vision/color-lab";
@@ -49,15 +52,124 @@ import {
 import { snapSfx } from "@/lib/vision/sfx";
 import { SnapPang3dStage, type Snap3dLiveState } from "./snap-pang-3d";
 import styles from "./snap-pang-stage.module.css";
-import { GameRoundActions } from "./game-round-layout";
 
 type Send = (action: Record<string, unknown>, host?: boolean) => Promise<boolean> | void;
 
-const KIND_LABELS = {
-  color: "🎨 컬러 스나이퍼",
-  object: "📦 테이블 헌터",
-  face: "😶 3D 포커페이스",
-} as const;
+const missionLabel = (mission: SnapMission) =>
+  snapPangSlotLabel(
+    mission.kind === "face" ? { kind: "face", face: mission.subMode } : { kind: mission.kind },
+  );
+
+// Detection tuning: how recent and confident a sighting must be, and how long a face must hold.
+const OBJECT_FRESH_MS = 700;
+const OBJECT_MATCH_SCORE = 0.32;
+const FACE_HOLD_MS = 420;
+const FACE_MATCH_SCORE = 0.45;
+const TOAST_MS = 3_600;
+const FLASH_MS = 1_400;
+const SMILE_THRESHOLD = 0.28;
+
+/** Per-round detection progress. Lives in a ref so re-renders and room updates never reset it. */
+type RoundProgress = {
+  /** When the target object(s) were last in view, and the best detector score then. */
+  lastMatchAt: number;
+  lastMatchScore: number;
+  confidence: number;
+  tension: number;
+  lastPulseAt: number;
+  lastPulseTension: number;
+  copyStep: number;
+  holdMs: number;
+  /** The round goal is met locally (captured, combo done or bomb popped) and must reach the server. */
+  done: boolean;
+  acked: boolean;
+  inFlight: boolean;
+  attempts: number;
+  lastAttemptAt: number;
+};
+const freshProgress = (): RoundProgress => ({
+  lastMatchAt: -Infinity,
+  lastMatchScore: 0,
+  confidence: 0,
+  tension: 0,
+  lastPulseAt: 0,
+  lastPulseTension: 0,
+  copyStep: 0,
+  holdMs: 0,
+  done: false,
+  acked: false,
+  inFlight: false,
+  attempts: 0,
+  lastAttemptAt: 0,
+});
+
+type StageToast = { id: number; eyebrow: string; title: string; detail: string; swatch?: string };
+/** Big pass/fail feedback shown over the play area. */
+type StageFlash = { id: number; tone: "success" | "fail"; title: string; detail?: string };
+
+/** Maps a detector box (video pixels) onto the object-fit: cover video element, mirrored if needed. */
+function toDisplayBox(
+  box: DetectedObjectBox,
+  video: HTMLVideoElement,
+  mirrored: boolean,
+): DetectedObjectBox {
+  const cw = video.clientWidth || 1,
+    ch = video.clientHeight || 1,
+    vw = video.videoWidth || cw,
+    vh = video.videoHeight || ch;
+  const scale = Math.max(cw / vw, ch / vh);
+  const dx = (cw - vw * scale) / 2,
+    dy = (ch - vh * scale) / 2;
+  const width = (box.width * vw * scale) / cw,
+    height = (box.height * vh * scale) / ch;
+  let x = (dx + box.x * vw * scale) / cw;
+  const y = (dy + box.y * vh * scale) / ch;
+  if (mirrored) x = 1 - x - width;
+  const clamp = (v: number) => Math.max(0, Math.min(1, v));
+  return { ...box, x: clamp(x), y: clamp(y), width: clamp(width), height: clamp(height) };
+}
+
+function missionToast(
+  mission: SnapMission,
+  isAttacker: boolean,
+  attackerName: string | null,
+): Omit<StageToast, "id"> {
+  if (mission.kind === "color")
+    return {
+      eyebrow: "🎨 찾을 색깔",
+      title: mission.colorName,
+      detail: "이 색깔의 물건을 가운데 원에 맞추고 셔터를 눌러요.",
+      swatch: mission.targetHex,
+    };
+  if (mission.kind === "object")
+    return {
+      eyebrow: "📦 찾을 물건",
+      title: mission.label,
+      detail:
+        mission.targetCount > 1
+          ? `${mission.targetCount}개를 한 화면에 담고 초록 상자가 보이면 셔터를 눌러요.`
+          : "물건을 비추고 초록 상자가 보이면 셔터를 눌러요.",
+    };
+  if (mission.subMode === "smile-bomb")
+    return isAttacker
+      ? {
+          eyebrow: "💣 웃음 참기 · 내가 공격자",
+          title: "다른 사람들을 웃겨보세요!",
+          detail: mission.attackCard ?? "카드 미션으로 테이블을 웃겨요.",
+        }
+      : {
+          eyebrow: "💣 웃음 참기",
+          title: "웃으면 내 폭탄이 터져요!",
+          detail: `${attackerName ?? "공격자"}님이 웃기는 동안 무표정을 지키세요.`,
+        };
+  return {
+    eyebrow: "🎭 표정 릴레이",
+    title: mission.expressions
+      .map((expr) => `${SNAP_EXPRESSION_LABELS[expr].emoji} ${SNAP_EXPRESSION_LABELS[expr].label}`)
+      .join(" → "),
+    detail: "순서대로 표정을 짓고 잠깐 유지하면 다음으로 넘어가요.",
+  };
+}
 
 const OBJECT_LABEL_KO: Record<string, string> = {
   cup: "컵",
@@ -101,8 +213,6 @@ export function SnapPangStage({
   const me = game.roster.find((p) => p.id === viewerId) ?? null;
   const isPlayer = !!me;
   const mission = game.mission;
-  const missionKind = mission?.kind;
-  const hasSubmission = Boolean(game.mySubmission);
   const isSmileBomb = mission?.kind === "face" && mission.subMode === "smile-bomb";
   const isFaceCopy = mission?.kind === "face" && mission.subMode === "face-copy";
   const isAttacker = isSmileBomb && mission?.attackerId === viewerId;
@@ -112,9 +222,12 @@ export function SnapPangStage({
   const [cameraError, setCameraError] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
   const [facingOverride, setFacingOverride] = useState<CameraFacing | null>(null);
-  const [showRawFace, setShowRawFace] = useState(false);
+  // Face rounds show the player's own camera; they can swap it for the 3D avatar instead.
+  const [faceMasked, setFaceMasked] = useState(false);
   const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [lowLight, setLowLight] = useState(false);
+  const [toast, setToast] = useState<StageToast | null>(null);
+  const [flash, setFlash] = useState<StageFlash | null>(null);
 
   // Live HUD readouts
   const [sampleHex, setSampleHex] = useState("#94A3B8");
@@ -126,6 +239,10 @@ export function SnapPangStage({
   const [faceStepIndex, setFaceStepIndex] = useState(0);
   const [faceStepProgress, setFaceStepProgress] = useState(0);
   const [faceDetected, setFaceDetected] = useState(false);
+  // Live "is it working?" signals for the in-camera HUD.
+  const [objectReady, setObjectReady] = useState(false);
+  const [faceMatch, setFaceMatch] = useState(0);
+  const [smiling, setSmiling] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Fallback mini-game states
@@ -140,12 +257,7 @@ export function SnapPangStage({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const sampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const submittedRoundRef = useRef<string>("");
-  const lastPulseSentRef = useRef<{ at: number; tension: number; popped: boolean }>({
-    at: 0,
-    tension: 0,
-    popped: false,
-  });
+  const progressRef = useRef<RoundProgress>(freshProgress());
   const liveRef = useRef<Snap3dLiveState>({
     sampleHex: "#94A3B8",
     colorAccuracy: 0,
@@ -158,27 +270,85 @@ export function SnapPangStage({
     burstColor: "#0A84FE",
   });
 
-  const roundKey = `${game.runId ?? "none"}:${game.round}:${game.stage}`;
-  // The mission is fixed for a round. Fresh room snapshots must not restart tracking timers.
-  const getRoundMission = useEffectEvent(() => game.mission);
-  const sendDetection = useEffectEvent((action: Record<string, unknown>) => onAction(action));
-  const canAnalyze = useEffectEvent(() => !game.paused && !document.hidden);
+  // Detection loops read the latest props through refs, so a parent re-render (a new `onAction`
+  // or a fresh `mission` object from a room update) never restarts them mid-round.
+  const latest = useRef({ onAction, mission, runId: game.runId, round: game.round, color: "" });
+  useEffect(() => {
+    latest.current = {
+      onAction,
+      mission,
+      runId: game.runId,
+      round: game.round,
+      color: me?.color ?? "#0A84FE",
+    };
+  });
+
+  const missionId = mission?.id ?? null;
+  const missionKind = mission?.kind ?? null;
+  const faceSubMode = mission?.kind === "face" ? mission.subMode : null;
+  const hasSubmitted = !!game.mySubmission;
   const desiredFacing: CameraFacing =
     facingOverride ?? (mission?.kind === "face" ? "user" : "environment");
+  const mirrored = desiredFacing === "user";
   const needsCamera =
     isPlayer &&
     !fallbackMode &&
     !isAttacker &&
     (game.stage === "briefing" || game.stage === "active") &&
-    !game.mySubmission;
+    !hasSubmitted;
+  // The live camera is the play area; masked face rounds show the 3D avatar there instead.
+  const cameraFront = needsCamera && !(mission?.kind === "face" && faceMasked);
+  // Players on camera get the target, live feedback and shutter drawn over the play area.
+  const playHud = needsCamera && !!mission;
+  const attackerName =
+    isSmileBomb && mission.attackerId
+      ? (game.roster.find((p) => p.id === mission.attackerId)?.nickname ?? "공격자")
+      : null;
 
-  // Gently preload MediaPipe WASM & models in background when game enters play
+  const showToast = useCallback(
+    (next: Omit<StageToast, "id">) => setToast({ ...next, id: Date.now() }),
+    [],
+  );
   useEffect(() => {
-    preloadSnapVision(game.settings.preset !== "light");
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [toast]);
+  const showFlash = useCallback(
+    (next: Omit<StageFlash, "id">) => setFlash({ ...next, id: Date.now() }),
+    [],
+  );
+  useEffect(() => {
+    if (!flash) return;
+    const timer = setTimeout(() => setFlash(null), FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [flash]);
+
+  // Announce the target as a toast once per round, when play starts.
+  const announcedRef = useRef("");
+  useEffect(() => {
+    if (game.stage !== "active" || !mission) return;
+    const key = `${game.runId ?? "none"}:${game.round}`;
+    if (announcedRef.current === key) return;
+    announcedRef.current = key;
+    showToast(missionToast(mission, isAttacker, attackerName));
+  }, [game.stage, game.runId, game.round, mission, isAttacker, attackerName, showToast]);
+
+  // Gently preload only the on-device models this mode will use.
+  useEffect(() => {
+    const preset = game.settings.preset;
+    preloadSnapVision({
+      object: preset === "object" || preset === "random",
+      face: SNAP_PANG_PRESET_META[preset]?.usesFace ?? true,
+    });
   }, [game.settings.preset]);
 
   // Reset per-round local state
   useEffect(() => {
+    progressRef.current = freshProgress();
+    setObjectReady(false);
+    setFaceMatch(0);
+    setSmiling(false);
     setLockProgress(0);
     setDetectedBoxes([]);
     setMyTension(0);
@@ -189,13 +359,27 @@ export function SnapPangStage({
     setFallbackFaceClicks(0);
     setSubmitting(false);
     setFacingOverride(null);
-    submittedRoundRef.current = "";
-    lastPulseSentRef.current = { at: 0, tension: 0, popped: false };
     liveRef.current.lockProgress = 0;
     liveRef.current.tension = 0;
     liveRef.current.popped = false;
     liveRef.current.face = NEUTRAL_FACE_TELEMETRY;
   }, [game.runId, game.round]);
+
+  // At each reveal, flash the player's own pass/fail so it is noticed without reading the list.
+  const revealFlashRef = useRef("");
+  useEffect(() => {
+    if (game.stage !== "reveal" || !game.lastResult || !isPlayer) return;
+    const key = `${game.runId ?? "none"}:${game.lastResult.round}`;
+    if (revealFlashRef.current === key) return;
+    revealFlashRef.current = key;
+    const mine = game.lastResult.entries.find((entry) => entry.playerId === viewerId);
+    if (!mine) return;
+    showFlash(
+      mine.points > 0
+        ? { tone: "success", title: `통과! +${mine.points}점`, detail: mine.detail }
+        : { tone: "fail", title: "이번 라운드는 실패", detail: mine.detail },
+    );
+  }, [game.stage, game.runId, game.lastResult, isPlayer, viewerId, showFlash]);
 
   // Play victory fanfare when reaching 3D podium
   useEffect(() => {
@@ -265,14 +449,36 @@ export function SnapPangStage({
     liveRef.current.burstCounter += 1;
   }, []);
 
-  // Round 1: Color Sniper live center sampler (0MB pure Canvas + CIE Lab)
+  /**
+   * Sends the round's result until the server accepts it. The room drops an action while another
+   * is in flight (e.g. a tension pulse), so a single fire-and-forget send could be lost for good.
+   */
+  const deliverResult = useCallback((payload: Record<string, unknown>) => {
+    const progress = progressRef.current;
+    const now = performance.now();
+    if (progress.acked || progress.inFlight || progress.attempts >= 8) return;
+    if (now - progress.lastAttemptAt < 650) return;
+    progress.inFlight = true;
+    progress.attempts += 1;
+    progress.lastAttemptAt = now;
+    void Promise.resolve(latest.current.onAction(payload))
+      .then((ok) => {
+        if (ok !== false) progress.acked = true;
+      })
+      .catch(() => {})
+      .finally(() => {
+        progress.inFlight = false;
+      });
+  }, []);
+
+  // Color round: live center sampler (pure Canvas + CIE Lab, no model download)
   useEffect(() => {
     if (
       game.stage !== "active" ||
-      mission?.kind !== "color" ||
+      missionKind !== "color" ||
       !cameraReady ||
       fallbackMode ||
-      !!game.mySubmission
+      hasSubmitted
     )
       return;
     if (!sampleCanvasRef.current) {
@@ -285,14 +491,15 @@ export function SnapPangStage({
     if (!ctx) return;
 
     const timer = setInterval(() => {
-      if (!canAnalyze()) return;
       const video = videoRef.current;
-      if (!video || video.readyState < 2 || video.videoWidth <= 0) return;
+      const current = latest.current.mission;
+      if (!video || video.readyState < 2 || video.videoWidth <= 0 || current?.kind !== "color")
+        return;
       ctx.drawImage(video, 0, 0, 96, 96);
       const pixels = ctx.getImageData(0, 0, 96, 96).data;
       const { rgb, luma } = sampleCenterRgb(pixels, 96, 96, 0.16);
       const hex = rgbToHex(rgb);
-      const accuracy = computeColorMatchScore(mission.targetHex, hex);
+      const accuracy = computeColorMatchScore(current.targetHex, hex);
       setSampleHex(hex);
       setColorAccuracy(accuracy);
       setLowLight(luma < 36);
@@ -300,26 +507,21 @@ export function SnapPangStage({
       liveRef.current.colorAccuracy = accuracy;
     }, 120);
     return () => clearInterval(timer);
-  }, [game.stage, mission, cameraReady, fallbackMode, game.mySubmission]);
+  }, [game.stage, missionId, missionKind, cameraReady, fallbackMode, hasSubmitted]);
 
-  // Round 2: Table Hunter MediaPipe ObjectDetector loop (~10fps throttled)
+  // Object round: on-device ObjectDetector loop (~9fps)
   useEffect(() => {
     if (
       game.stage !== "active" ||
       missionKind !== "object" ||
       !cameraReady ||
       fallbackMode ||
-      hasSubmission ||
+      hasSubmitted ||
       !isPlayer
     )
       return;
-    const mission = getRoundMission();
-    if (mission?.kind !== "object") return;
 
     let alive = true;
-    let lockMs = 0;
-    let lastTick = performance.now();
-    let tickMilestone = 0;
     let timer: ReturnType<typeof setInterval> | null = null;
     setModelStatus("loading");
 
@@ -328,53 +530,42 @@ export function SnapPangStage({
         if (!alive) return;
         setModelStatus("ready");
         timer = setInterval(() => {
+          const { mission: current, runId, round } = latest.current;
+          const progress = progressRef.current;
+          if (current?.kind !== "object" || !runId) return;
+          const submit = () =>
+            deliverResult({
+              action: "snap-object",
+              runId,
+              round,
+              confidence: progress.confidence,
+              fallback: false,
+            });
+          if (progress.done) {
+            submit();
+            return;
+          }
           const video = videoRef.current;
-          if (!video || video.readyState < 2 || submittedRoundRef.current === roundKey) return;
+          if (!video || video.readyState < 2) return;
           const now = performance.now();
-          const dt = Math.min(250, now - lastTick);
-          lastTick = now;
-          if (!canAnalyze()) return;
           const boxes = runObjectDetection(detector, video, now);
           const matching = boxes.filter(
-            (b) => mission.cocoLabels.includes(b.label) && b.score >= 0.36,
+            (b) => current.cocoLabels.includes(b.label) && b.score >= OBJECT_MATCH_SCORE,
           );
-          setDetectedBoxes(matching.length > 0 ? matching : boxes.slice(0, 2));
+          setDetectedBoxes(
+            (matching.length > 0 ? matching : boxes.slice(0, 2)).map((box) =>
+              toDisplayBox(box, video, mirrored),
+            ),
+          );
 
-          if (matching.length >= mission.targetCount) {
-            lockMs = Math.min(600, lockMs + dt);
-          } else {
-            lockMs = Math.max(0, lockMs - dt * 0.7);
+          // Capture is manual (the in-camera shutter); the loop only reports whether it would hit.
+          if (matching.length >= current.targetCount) {
+            progress.lastMatchAt = now;
+            progress.lastMatchScore = Math.max(...matching.map((m) => m.score));
           }
-          const progress = Math.min(1, lockMs / 600);
-          setLockProgress(progress);
-          liveRef.current.lockProgress = progress;
-
-          if (progress >= 0.35 && tickMilestone < 1) {
-            tickMilestone = 1;
-            snapSfx.play("lockTick");
-          } else if (progress >= 0.7 && tickMilestone < 2) {
-            tickMilestone = 2;
-            snapSfx.play("lockTick");
-          }
-
-          if (progress >= 1 && game.runId) {
-            submittedRoundRef.current = roundKey;
-            const bestConf = Math.max(...matching.map((m) => m.score), 0.5);
-            snapSfx.play("capture");
-            trigger3dBurst("capture", me?.color ?? "#0A84FE");
-            setSubmitting(true);
-            void sendDetection({
-              action: "snap-object",
-              runId: game.runId,
-              round: game.round,
-              confidence: Number(bestConf.toFixed(2)),
-              fallback: false,
-            })?.then((ok) => {
-              if (ok || !alive) return;
-              submittedRoundRef.current = "";
-              setSubmitting(false);
-            });
-          }
+          const ready = now - progress.lastMatchAt <= OBJECT_FRESH_MS;
+          setObjectReady(ready);
+          liveRef.current.lockProgress = ready ? 1 : 0;
         }, 110);
       })
       .catch(() => {
@@ -389,19 +580,17 @@ export function SnapPangStage({
     };
   }, [
     game.stage,
-    game.runId,
-    game.round,
-    hasSubmission,
+    missionId,
     missionKind,
     cameraReady,
     fallbackMode,
+    hasSubmitted,
     isPlayer,
-    roundKey,
-    me?.color,
-    trigger3dBurst,
+    mirrored,
+    deliverResult,
   ]);
 
-  // Round 3: 3D Pokerface & Smile Bomb MediaPipe FaceLandmarker loop (~11fps throttled)
+  // Face rounds: on-device FaceLandmarker loop (~11fps) for 웃음 참기 and 표정 릴레이
   useEffect(() => {
     if (
       game.stage !== "active" ||
@@ -409,18 +598,12 @@ export function SnapPangStage({
       isAttacker ||
       !cameraReady ||
       fallbackMode ||
-      hasSubmission ||
+      hasSubmitted ||
       !isPlayer
     )
       return;
-    const mission = getRoundMission();
-    if (mission?.kind !== "face") return;
 
     let alive = true;
-    let tensionVal = 0;
-    let poppedLocal = false;
-    let copyStep = 0;
-    let holdMs = 0;
     let lastTick = performance.now();
     let timer: ReturnType<typeof setInterval> | null = null;
     setModelStatus("loading");
@@ -430,91 +613,125 @@ export function SnapPangStage({
         if (!alive) return;
         setModelStatus("ready");
         timer = setInterval(() => {
+          const { mission: current, runId, round, color } = latest.current;
+          const progress = progressRef.current;
+          if (current?.kind !== "face" || !runId) return;
+
+          if (current.subMode === "smile-bomb" && progress.done) {
+            deliverResult({
+              action: "snap-tension",
+              runId,
+              round,
+              tension: 100,
+              popped: true,
+              fallback: false,
+            });
+            return;
+          }
+          if (current.subMode === "face-copy" && progress.done) {
+            deliverResult({ action: "snap-face-copy", runId, round, fallback: false });
+            return;
+          }
+
           const video = videoRef.current;
           if (!video || video.readyState < 2) return;
           const now = performance.now();
-          const dtSec = Math.min(0.25, (now - lastTick) / 1000);
+          const dtMs = Math.min(250, now - lastTick);
           lastTick = now;
-          if (!canAnalyze()) return;
 
           const telemetry = runFaceTelemetry(landmarker, video, now);
           liveRef.current.face = telemetry;
           setFaceDetected(telemetry.faceDetected);
 
-          if (mission.subMode === "smile-bomb") {
-            if (poppedLocal) return;
+          if (current.subMode === "smile-bomb") {
             const intensity = smileBurstIntensity(telemetry);
-            if (intensity > 0.28) {
-              tensionVal = Math.min(100, tensionVal + (intensity - 0.23) * 145 * dtSec);
-            } else {
-              tensionVal = Math.max(0, tensionVal - 8 * dtSec);
-            }
-            const rounded = Math.round(tensionVal);
+            setSmiling(intensity > SMILE_THRESHOLD);
+            progress.tension =
+              intensity > SMILE_THRESHOLD
+                ? Math.min(100, progress.tension + (intensity - 0.23) * 0.145 * dtMs)
+                : Math.max(0, progress.tension - 0.008 * dtMs);
+            const rounded = Math.round(progress.tension);
             setMyTension(rounded);
             liveRef.current.tension = rounded;
 
-            const shouldPop = rounded >= 100;
-            const last = lastPulseSentRef.current;
-            const changedEnough = Math.abs(rounded - last.tension) >= 12;
-            if (game.runId && (shouldPop || (now - last.at >= 1400 && changedEnough))) {
-              lastPulseSentRef.current = { at: now, tension: rounded, popped: shouldPop };
-              if (shouldPop) {
-                poppedLocal = true;
-                setMyPopped(true);
-                liveRef.current.popped = true;
-                snapSfx.play("pop");
-                trigger3dBurst("pop", me?.color ?? "#EF4444");
-              }
-              void sendDetection({
+            if (rounded >= 100) {
+              progress.done = true;
+              setMyPopped(true);
+              liveRef.current.popped = true;
+              snapSfx.play("pop");
+              trigger3dBurst("pop", color);
+              showFlash({
+                tone: "fail",
+                title: "💥 팡! 웃어버렸어요",
+                detail: "이번 라운드는 실패예요. 이제 다른 사람을 웃겨보세요!",
+              });
+              deliverResult({
                 action: "snap-tension",
-                runId: game.runId,
-                round: game.round,
+                runId,
+                round,
+                tension: 100,
+                popped: true,
+                fallback: false,
+              });
+              return;
+            }
+            // Best-effort live gauge for everyone's bomb grid; a dropped pulse is harmless.
+            if (
+              now - progress.lastPulseAt >= 1400 &&
+              Math.abs(rounded - progress.lastPulseTension) >= 12
+            ) {
+              progress.lastPulseAt = now;
+              progress.lastPulseTension = rounded;
+              void latest.current.onAction({
+                action: "snap-tension",
+                runId,
+                round,
                 tension: rounded,
-                popped: shouldPop,
+                popped: false,
                 fallback: false,
               });
             }
             return;
           }
 
-          // face-copy sub-mode
-          if (submittedRoundRef.current === roundKey) return;
-          const targetExpr = mission.expressions[copyStep];
-          if (!targetExpr) return;
-          const matchScore = scoreExpressionMatch(telemetry, targetExpr);
-          if (matchScore >= 0.5) {
-            holdMs = Math.min(450, holdMs + dtSec * 1000);
-          } else {
-            holdMs = Math.max(0, holdMs - dtSec * 650);
-          }
-          setFaceStepProgress(Math.min(1, holdMs / 450));
+          // 표정 릴레이: hold each expression briefly, in order.
+          const target = current.expressions[progress.copyStep];
+          if (!target) return;
+          const match = scoreExpressionMatch(telemetry, target);
+          setFaceMatch(Math.round(match * 20) / 20);
+          progress.holdMs =
+            match >= FACE_MATCH_SCORE
+              ? Math.min(FACE_HOLD_MS, progress.holdMs + dtMs)
+              : Math.max(0, progress.holdMs - dtMs * 0.65);
+          setFaceStepProgress(Math.min(1, progress.holdMs / FACE_HOLD_MS));
+          if (progress.holdMs < FACE_HOLD_MS) return;
 
-          if (holdMs >= 450) {
-            holdMs = 0;
-            copyStep += 1;
-            setFaceStepIndex(copyStep);
-            setFaceStepProgress(0);
-            if (copyStep < mission.expressions.length) {
-              snapSfx.play("lockTick");
-            } else if (game.runId) {
-              submittedRoundRef.current = roundKey;
-              snapSfx.play("capture");
-              trigger3dBurst("capture", me?.color ?? "#0A84FE");
-              setSubmitting(true);
-              void sendDetection({
-                action: "snap-face-copy",
-                runId: game.runId,
-                round: game.round,
-                fallback: false,
-              })?.then((ok) => {
-                if (ok || !alive) return;
-                copyStep -= 1;
-                setFaceStepIndex(copyStep);
-                submittedRoundRef.current = "";
-                setSubmitting(false);
-              });
-            }
+          progress.holdMs = 0;
+          progress.copyStep += 1;
+          setFaceStepIndex(progress.copyStep);
+          setFaceStepProgress(0);
+          const passed = SNAP_EXPRESSION_LABELS[target];
+          const next = current.expressions[progress.copyStep];
+          if (next) {
+            snapSfx.play("lockTick");
+            const info = SNAP_EXPRESSION_LABELS[next];
+            showFlash({
+              tone: "success",
+              title: `통과! ${passed.emoji} ${passed.label}`,
+              detail: `다음 표정: ${info.emoji} ${info.label}`,
+            });
+            return;
           }
+          progress.done = true;
+          showFlash({
+            tone: "success",
+            title: "🎉 표정 릴레이 성공!",
+            detail: "모든 표정을 통과했어요.",
+          });
+          snapSfx.play("capture");
+          trigger3dBurst("capture", color);
+          setSubmitting(true);
+          deliverResult({ action: "snap-face-copy", runId, round, fallback: false });
         }, 90);
       })
       .catch(() => {
@@ -529,17 +746,17 @@ export function SnapPangStage({
     };
   }, [
     game.stage,
-    game.runId,
-    game.round,
-    hasSubmission,
+    missionId,
     missionKind,
+    faceSubMode,
     isAttacker,
     cameraReady,
     fallbackMode,
+    hasSubmitted,
     isPlayer,
-    roundKey,
-    me?.color,
+    deliverResult,
     trigger3dBurst,
+    showFlash,
   ]);
 
   // Fallback color roulette colors & spinner
@@ -578,6 +795,7 @@ export function SnapPangStage({
     setSubmitting(true);
     snapSfx.play("shutter");
     trigger3dBurst("paint", hex);
+    const accuracy = mission?.kind === "color" ? computeColorMatchScore(mission.targetHex, hex) : 0;
     const ok = await onAction({
       action: "snap-color",
       runId: game.runId,
@@ -585,7 +803,57 @@ export function SnapPangStage({
       hex,
       fallback: isFallback,
     });
-    if (ok === false) setSubmitting(false);
+    if (ok === false) {
+      setSubmitting(false);
+      showFlash({
+        tone: "fail",
+        title: "제출하지 못했어요",
+        detail: "셔터를 한 번 더 눌러주세요.",
+      });
+      return;
+    }
+    showFlash(
+      accuracy >= SNAP_COLOR_MIN_ACCURACY
+        ? {
+            tone: "success",
+            title: `찰칵! 일치도 ${accuracy}%`,
+            detail: accuracy >= 75 ? "아주 비슷해요!" : "점수를 받을 수 있어요.",
+          }
+        : {
+            tone: "fail",
+            title: `색이 너무 달라요 (${accuracy}%)`,
+            detail: `일치도 ${SNAP_COLOR_MIN_ACCURACY}% 이상이어야 점수를 받아요.`,
+          },
+    );
+  }
+
+  /** Object shutter: only counts when the target is in view right now. */
+  function captureObject() {
+    if (mission?.kind !== "object" || !game.runId || hasSubmitted) return;
+    const progress = progressRef.current;
+    if (progress.done) return;
+    if (performance.now() - progress.lastMatchAt > OBJECT_FRESH_MS) {
+      snapSfx.play("countdown");
+      showFlash({
+        tone: "fail",
+        title: "아직 안 보여요",
+        detail: `${mission.label}${mission.targetCount > 1 ? ` ${mission.targetCount}개` : ""}를 화면 안에 담고 다시 찍어요.`,
+      });
+      return;
+    }
+    progress.done = true;
+    progress.confidence = Number(Math.max(0.5, progress.lastMatchScore).toFixed(2));
+    snapSfx.play("capture");
+    trigger3dBurst("capture", me?.color ?? "#0A84FE");
+    setSubmitting(true);
+    showFlash({ tone: "success", title: "찰칵! 찾았어요", detail: mission.label });
+    deliverResult({
+      action: "snap-object",
+      runId: game.runId,
+      round: game.round,
+      confidence: progress.confidence,
+      fallback: false,
+    });
   }
 
   async function handleFallbackObjectTap(choiceId: string) {
@@ -661,7 +929,7 @@ export function SnapPangStage({
     liveRef.current.popped = true;
     snapSfx.play("pop");
     trigger3dBurst("pop", me?.color ?? "#EF4444");
-    await onAction({
+    const ok = await onAction({
       action: "snap-tension",
       runId: game.runId,
       round: game.round,
@@ -669,6 +937,11 @@ export function SnapPangStage({
       popped: true,
       fallback: true,
     });
+    // Not recorded (e.g. another send was in flight): let the player press it again.
+    if (ok === false) {
+      setMyPopped(false);
+      liveRef.current.popped = false;
+    }
   }
 
   function hostControl(command: "next" | "pause" | "resume") {
@@ -683,13 +956,8 @@ export function SnapPangStage({
     );
   }
 
-  const attackerName =
-    isSmileBomb && mission.attackerId
-      ? (game.roster.find((p) => p.id === mission.attackerId)?.nickname ?? "공격자")
-      : null;
-
   return (
-    <section className={styles.stage} aria-label="스냅 팡 3D 게임 무대" data-snap-step={game.stage}>
+    <section className={styles.stage} aria-label="스냅 팡 3D 게임 무대">
       {/* Top Status Bar */}
       <div className={styles.topBar}>
         <div className={styles.badges}>
@@ -700,10 +968,10 @@ export function SnapPangStage({
               : `ROUND ${game.round} / ${game.totalRounds}`}
           </span>
           {mission && game.stage !== "result" && (
-            <span className={styles.kindBadge}>{KIND_LABELS[mission.kind]}</span>
+            <span className={styles.kindBadge}>{missionLabel(mission)}</span>
           )}
           <span className={styles.kindBadge}>
-            {SNAP_PANG_PRESET_META[game.settings.preset].badge}
+            {SNAP_PANG_PRESET_META[game.settings.preset]?.title ?? "🎲 랜덤 모드"}
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -728,63 +996,51 @@ export function SnapPangStage({
         </div>
       </div>
 
-      {/* Main 3D Viewport + PIP Camera Viewfinder */}
-      <div className={styles.viewport}>
-        <SnapPang3dStage
-          stage={game.stage}
-          mission={mission}
-          roster={game.roster}
-          lastResult={game.lastResult}
-          avatarColor={me?.color ?? "#0A84FE"}
-          liveRef={liveRef}
-        />
+      {/* Round target toast: what to find right now */}
+      {toast && (
+        <div key={toast.id} className={styles.toast} role="status" aria-live="polite">
+          {toast.swatch && (
+            <span className={styles.toastSwatch} style={{ background: toast.swatch }} />
+          )}
+          <span className={styles.toastBody}>
+            <small>{toast.eyebrow}</small>
+            <strong>{toast.title}</strong>
+            <span>{toast.detail}</span>
+          </span>
+        </div>
+      )}
 
-        {/* HUD Top Overlay */}
-        {mission && game.stage !== "result" && (
-          <div className={styles.hudTop}>
-            <div className={styles.missionChip}>
-              {mission.kind === "color" && (
-                <>
-                  <span className={styles.swatchDot} style={{ background: mission.targetHex }} />
-                  <span>목표: {mission.colorName}</span>
-                </>
-              )}
-              {mission.kind === "object" && <span>포착: {mission.label}</span>}
-              {mission.kind === "face" && (
-                <span>
-                  {mission.subMode === "smile-bomb"
-                    ? "💣 웃음 참기 3D 폭탄"
-                    : "🎭 3D 아바타 표정 카피"}
-                </span>
-              )}
-            </div>
-            {mission.kind === "face" && !isAttacker && !fallbackMode && (
-              <button
-                type="button"
-                className={styles.privacyChip}
-                onClick={() => setShowRawFace((v) => !v)}
-              >
-                {showRawFace ? <EyeOff size={12} /> : <Eye size={12} />}
-                {showRawFace ? "얼굴 숨기기" : "아바타 마스크 ON"}
-              </button>
-            )}
+      {/* Main play area: during camera rounds the live camera IS the play area, with the target,
+          live feedback and the shutter drawn on top of it. Otherwise the 3D stage fills it. */}
+      <div className={styles.viewport} data-camera={needsCamera}>
+        {!cameraFront && (
+          <div className={styles.sceneLayer}>
+            <SnapPang3dStage
+              stage={game.stage}
+              mission={mission}
+              roster={game.roster}
+              lastResult={game.lastResult}
+              avatarColor={me?.color ?? "#0A84FE"}
+              liveRef={liveRef}
+            />
           </div>
         )}
 
-        {/* PIP Camera Viewfinder (Hidden by default on Face rounds for 100% 3D Avatar Mask!) */}
         {needsCamera && (
-          <div
-            className={styles.pipWrap}
-            data-hidden-face={mission?.kind === "face" && !showRawFace}
-          >
+          <div className={styles.cameraLayer} data-front={cameraFront}>
             <video
               ref={videoRef}
-              className={styles.pipVideo}
-              data-mirror={desiredFacing === "user"}
+              className={styles.cameraVideo}
+              data-mirror={mirrored}
               muted
               playsInline
               autoPlay
             />
+            {!cameraReady && (
+              <span className={styles.cameraLoading} role="status">
+                <Camera size={18} /> 카메라를 켜고 있어요…
+              </span>
+            )}
             {mission?.kind === "color" && (
               <div className={styles.reticle}>
                 <span className={styles.reticleRing} style={{ borderColor: sampleHex }} />
@@ -796,6 +1052,7 @@ export function SnapPangStage({
                   <span
                     key={`${box.label}-${idx}`}
                     className={styles.bbox}
+                    data-match={mission.cocoLabels.includes(box.label)}
                     style={{
                       left: `${box.x * 100}%`,
                       top: `${box.y * 100}%`,
@@ -813,21 +1070,315 @@ export function SnapPangStage({
           </div>
         )}
 
-        {/* Briefing Overlay */}
-        {game.stage === "briefing" && mission && (
+        {playHud && mission && (
+          <div className={styles.playHud}>
+            <div className={styles.hudTop}>
+              <button
+                type="button"
+                className={styles.hudTarget}
+                aria-label="이번 라운드 목표 다시 보기"
+                onClick={() => showToast(missionToast(mission, isAttacker, attackerName))}
+              >
+                {mission.kind === "color" && (
+                  <>
+                    <span className={styles.hudSwatch} style={{ background: mission.targetHex }} />
+                    <span className={styles.hudTargetText}>
+                      <small>찾을 색깔</small>
+                      <strong>{mission.colorName}</strong>
+                    </span>
+                  </>
+                )}
+                {mission.kind === "object" && (
+                  <>
+                    <span className={styles.hudEmoji} aria-hidden="true">
+                      📦
+                    </span>
+                    <span className={styles.hudTargetText}>
+                      <small>
+                        찾을 물건{mission.targetCount > 1 ? ` · ${mission.targetCount}개 함께` : ""}
+                      </small>
+                      <strong>{mission.label}</strong>
+                    </span>
+                  </>
+                )}
+                {isSmileBomb && (
+                  <>
+                    <span className={styles.hudEmoji} aria-hidden="true">
+                      💣
+                    </span>
+                    <span className={styles.hudTargetText}>
+                      <small>웃음 참기 · 공격자 {attackerName}</small>
+                      <strong>웃으면 폭탄이 터져요</strong>
+                    </span>
+                  </>
+                )}
+                {isFaceCopy && (
+                  <>
+                    <span className={styles.hudEmoji} aria-hidden="true">
+                      🎭
+                    </span>
+                    <span className={styles.hudTargetText}>
+                      <small>
+                        표정 릴레이 {Math.min(faceStepIndex + 1, mission.expressions.length)} /{" "}
+                        {mission.expressions.length}
+                      </small>
+                      <strong className={styles.hudSteps}>
+                        {mission.expressions.map((expr, idx) => (
+                          <span
+                            key={`${expr}-${idx}`}
+                            data-done={idx < faceStepIndex}
+                            data-active={idx === faceStepIndex}
+                          >
+                            {idx < faceStepIndex ? "✓" : SNAP_EXPRESSION_LABELS[expr].emoji}
+                          </span>
+                        ))}
+                      </strong>
+                    </span>
+                  </>
+                )}
+              </button>
+              {mission.kind === "face" && (
+                <button
+                  type="button"
+                  className={styles.hudRound}
+                  aria-pressed={faceMasked}
+                  aria-label={faceMasked ? "내 얼굴 다시 보기" : "내 얼굴을 3D 아바타로 가리기"}
+                  title={faceMasked ? "얼굴 보기" : "얼굴 가리기"}
+                  onClick={() => setFaceMasked((v) => !v)}
+                >
+                  {faceMasked ? <Eye size={18} /> : <EyeOff size={18} />}
+                </button>
+              )}
+            </div>
+
+            {game.stage === "briefing" && (
+              <div className={styles.hudCountdown} role="status">
+                <small>곧 시작해요</small>
+                <strong>{remainingSec ?? ""}</strong>
+              </div>
+            )}
+
+            {game.stage === "active" && mission.kind === "color" && (
+              <div className={styles.hudBottom}>
+                <div
+                  className={styles.hudReadout}
+                  data-state={
+                    colorAccuracy >= 75
+                      ? "good"
+                      : colorAccuracy >= SNAP_COLOR_MIN_ACCURACY
+                        ? "close"
+                        : "bad"
+                  }
+                >
+                  <span className={styles.hudSwatchSmall} style={{ background: sampleHex }} />
+                  <span>
+                    <strong>일치도 {colorAccuracy}%</strong>
+                    <small>
+                      {colorAccuracy >= 75
+                        ? "아주 비슷해요! 지금 찍으세요"
+                        : colorAccuracy >= SNAP_COLOR_MIN_ACCURACY
+                          ? "점수는 받아요 · 더 비슷한 색을 찾아도 좋아요"
+                          : "가운데 원에 같은 색 물건을 맞춰요"}
+                    </small>
+                  </span>
+                </div>
+                <div className={styles.hudControls}>
+                  <span />
+                  <button
+                    type="button"
+                    className={styles.hudShutter}
+                    data-ready={colorAccuracy >= SNAP_COLOR_MIN_ACCURACY}
+                    aria-label="이 색으로 찍어서 제출"
+                    disabled={!cameraReady || submitting || busy}
+                    onClick={() => void submitColorShot(sampleHex, false)}
+                  >
+                    <Camera size={28} />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.hudRound}
+                    aria-label="카메라 전환"
+                    onClick={() =>
+                      setFacingOverride((f) => (f === "user" ? "environment" : "user"))
+                    }
+                  >
+                    <RefreshCw size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {game.stage === "active" && mission.kind === "object" && (
+              <div className={styles.hudBottom}>
+                <div className={styles.hudReadout} data-state={objectReady ? "good" : "bad"}>
+                  <span className={styles.hudStateIcon} aria-hidden="true">
+                    {objectReady ? "✓" : "🔍"}
+                  </span>
+                  <span>
+                    <strong>
+                      {modelStatus === "loading"
+                        ? "물건 인식 준비 중…"
+                        : objectReady
+                          ? `${mission.label} 인식됐어요!`
+                          : "아직 안 보여요"}
+                    </strong>
+                    <small>
+                      {objectReady
+                        ? "지금 셔터를 누르면 찍혀요"
+                        : "물건을 화면 안에 담으면 초록 상자가 생겨요"}
+                    </small>
+                  </span>
+                </div>
+                <div className={styles.hudControls}>
+                  <span />
+                  <button
+                    type="button"
+                    className={styles.hudShutter}
+                    data-ready={objectReady}
+                    aria-label="이 물건 찍어서 제출"
+                    disabled={!cameraReady || submitting || modelStatus === "loading"}
+                    onClick={captureObject}
+                  >
+                    <Camera size={28} />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.hudRound}
+                    aria-label="카메라 전환"
+                    onClick={() =>
+                      setFacingOverride((f) => (f === "user" ? "environment" : "user"))
+                    }
+                  >
+                    <RefreshCw size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {game.stage === "active" && isSmileBomb && (
+              <div className={styles.hudBottom}>
+                <div
+                  className={styles.hudReadout}
+                  data-state={myPopped ? "bad" : !faceDetected ? "warn" : smiling ? "bad" : "good"}
+                >
+                  <span className={styles.hudStateIcon} aria-hidden="true">
+                    {myPopped ? "💥" : !faceDetected ? "👀" : smiling ? "😆" : "😐"}
+                  </span>
+                  <span>
+                    <strong>
+                      {myPopped
+                        ? "실패 · 폭탄이 터졌어요"
+                        : modelStatus === "loading"
+                          ? "표정 인식 준비 중…"
+                          : !faceDetected
+                            ? "얼굴이 안 보여요"
+                            : smiling
+                              ? "웃음 감지! 참으세요"
+                              : "잘 참고 있어요"}
+                    </strong>
+                    <small>폭탄 {myTension}%</small>
+                  </span>
+                </div>
+                <div className={styles.hudMeter} data-danger={myTension >= 50}>
+                  <span style={{ width: `${myTension}%` }} />
+                </div>
+              </div>
+            )}
+
+            {game.stage === "active" && isFaceCopy && mission.expressions[faceStepIndex] && (
+              <div className={styles.hudBottom}>
+                <div className={styles.hudExpression}>
+                  <span aria-hidden="true">
+                    {SNAP_EXPRESSION_LABELS[mission.expressions[faceStepIndex]!].emoji}
+                  </span>
+                  <span>
+                    <strong>
+                      {SNAP_EXPRESSION_LABELS[mission.expressions[faceStepIndex]!].label}
+                    </strong>
+                    <small>{SNAP_EXPRESSION_LABELS[mission.expressions[faceStepIndex]!].cue}</small>
+                  </span>
+                </div>
+                <div
+                  className={styles.hudReadout}
+                  data-state={
+                    !faceDetected ? "warn" : faceMatch >= FACE_MATCH_SCORE ? "good" : "bad"
+                  }
+                >
+                  <span className={styles.hudStateIcon} aria-hidden="true">
+                    {!faceDetected ? "👀" : faceMatch >= FACE_MATCH_SCORE ? "✓" : "✗"}
+                  </span>
+                  <span>
+                    <strong>
+                      {modelStatus === "loading"
+                        ? "표정 인식 준비 중…"
+                        : !faceDetected
+                          ? "얼굴이 안 보여요"
+                          : faceMatch >= FACE_MATCH_SCORE
+                            ? "인식됐어요! 그대로 유지"
+                            : "아직 아니에요"}
+                    </strong>
+                    <small>일치 {Math.round(faceMatch * 100)}%</small>
+                  </span>
+                </div>
+                <div className={styles.hudMeter} data-success={faceStepProgress > 0}>
+                  <span style={{ width: `${Math.round(faceStepProgress * 100)}%` }} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {flash && (
+          <div key={flash.id} className={styles.flash} data-tone={flash.tone} role="status">
+            <strong>{flash.title}</strong>
+            {flash.detail && <span>{flash.detail}</span>}
+          </div>
+        )}
+
+        {/* Spectators, attackers and fallback players keep the simple chip and briefing card. */}
+        {!playHud && mission && game.stage !== "result" && (
+          <div className={styles.hudChipRow}>
+            <button
+              type="button"
+              className={styles.missionChip}
+              aria-label="이번 라운드 목표 다시 보기"
+              onClick={() => showToast(missionToast(mission, isAttacker, attackerName))}
+            >
+              {mission.kind === "color" && (
+                <>
+                  <span className={styles.swatchDot} style={{ background: mission.targetHex }} />
+                  <span>색깔: {mission.colorName}</span>
+                </>
+              )}
+              {mission.kind === "object" && <span>📦 물건: {mission.label}</span>}
+              {mission.kind === "face" && <span>{missionLabel(mission)}</span>}
+            </button>
+          </div>
+        )}
+
+        {!playHud && game.stage === "briefing" && mission && (
           <div className={styles.briefOverlay}>
             <div className={styles.briefCard}>
               <span className={styles.roundBadge}>
-                ROUND {game.round} · {KIND_LABELS[mission.kind]}
+                ROUND {game.round} · {missionLabel(mission)}
               </span>
+              {mission.kind === "color" && (
+                <span
+                  className={styles.briefSwatch}
+                  style={{ background: mission.targetHex }}
+                  aria-hidden="true"
+                />
+              )}
               <h3>
                 {mission.kind === "color"
-                  ? `${mission.colorName} 찾기!`
+                  ? `${mission.colorName} 색깔을 찾아요`
                   : mission.kind === "object"
-                    ? `${mission.label} 포착!`
+                    ? `${mission.label} 찾기`
                     : mission.subMode === "smile-bomb"
-                      ? "웃으면 3D 폭탄 팡!"
-                      : "3D 아바타 표정 카피!"}
+                      ? isAttacker
+                        ? "내가 공격자! 웃겨보세요"
+                        : "웃으면 폭탄이 터져요"
+                      : "표정 릴레이"}
               </h3>
               <p>
                 {mission.kind === "color"
@@ -862,7 +1413,7 @@ export function SnapPangStage({
             <button
               type="button"
               className={styles.secondaryBtn}
-              style={{ minHeight: 32, fontSize: 12 }}
+              style={{ fontSize: 12 }}
               onClick={() => setFallbackMode((v) => !v)}
             >
               {fallbackMode ? <Camera size={13} /> : <CameraOff size={13} />}
@@ -893,7 +1444,7 @@ export function SnapPangStage({
           {mission.kind === "color" && (
             <>
               <div className={styles.missionHeader}>
-                <h3>🎨 목표 색: {mission.colorName}</h3>
+                <h3>🎨 찾을 색깔: {mission.colorName}</h3>
                 <span className={styles.kindBadge}>
                   제출 {game.submittedCount} / {game.expectedCount}명
                 </span>
@@ -916,54 +1467,10 @@ export function SnapPangStage({
                     기다려요
                   </span>
                 </div>
-              ) : !fallbackMode ? (
-                <>
-                  <div className={styles.meterWrap}>
-                    <div className={styles.meterLabels}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <span
-                          className={styles.swatchDot}
-                          style={{ background: sampleHex, width: 16, height: 16 }}
-                        />
-                        현재 조준 색 ({sampleHex})
-                      </span>
-                      <strong>일치도 {colorAccuracy}%</strong>
-                    </div>
-                    <div className={styles.meterTrack}>
-                      <div
-                        className={styles.meterFill}
-                        data-success={colorAccuracy >= 75}
-                        style={{ width: `${colorAccuracy}%` }}
-                      />
-                    </div>
-                  </div>
-                  <GameRoundActions>
-                    <div className={styles.controlsRow}>
-                      <button
-                        type="button"
-                        className={styles.shutterBtn}
-                        disabled={!cameraReady || submitting || busy}
-                        onClick={() => void submitColorShot(sampleHex, false)}
-                      >
-                        <Camera size={18} />
-                        {cameraReady ? "셔터 팡! 이 색으로 확정" : "카메라 준비 중…"}
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.secondaryBtn}
-                        onClick={() =>
-                          setFacingOverride((f) => (f === "user" ? "environment" : "user"))
-                        }
-                      >
-                        <RefreshCw size={14} /> 카메라 전환
-                      </button>
-                    </div>
-                  </GameRoundActions>
-                </>
-              ) : (
+              ) : !fallbackMode ? null : (
                 <div className={styles.fallbackBox}>
                   <p className={styles.fallbackNotice}>
-                    <strong>대체 모드 (컬러 룰렛)</strong> · 움직이는 커서가 목표 색(
+                    <strong>대체 모드 (색깔 룰렛)</strong> · 움직이는 커서가 찾을 색깔(
                     {mission.colorName})에 왔을 때 스톱 버튼을 눌러요!
                   </p>
                   <div className={styles.rouletteBar}>
@@ -976,18 +1483,16 @@ export function SnapPangStage({
                       />
                     ))}
                   </div>
-                  <GameRoundActions>
-                    <button
-                      type="button"
-                      className={styles.shutterBtn}
-                      disabled={submitting || busy}
-                      onClick={() =>
-                        void submitColorShot(rouletteColors[rouletteIndex] ?? "#0A84FE", true)
-                      }
-                    >
-                      <Camera size={18} /> 지금 스톱! 3D 구슬 발사
-                    </button>
-                  </GameRoundActions>
+                  <button
+                    type="button"
+                    className={styles.shutterBtn}
+                    disabled={submitting || busy}
+                    onClick={() =>
+                      void submitColorShot(rouletteColors[rouletteIndex] ?? "#0A84FE", true)
+                    }
+                  >
+                    <Camera size={18} /> 지금 스톱! 3D 구슬 발사
+                  </button>
                 </div>
               )}
             </>
@@ -997,7 +1502,7 @@ export function SnapPangStage({
           {mission.kind === "object" && (
             <>
               <div className={styles.missionHeader}>
-                <h3>📦 미션 사물: {mission.label}</h3>
+                <h3>📦 찾을 물건: {mission.label}</h3>
                 <span className={styles.kindBadge}>
                   포착 {game.submittedCount} / {game.expectedCount}명
                 </span>
@@ -1014,64 +1519,26 @@ export function SnapPangStage({
                     참가자를 기다려요
                   </span>
                 </div>
-              ) : !fallbackMode ? (
-                <>
-                  <div className={styles.meterWrap}>
-                    <div className={styles.meterLabels}>
-                      <span>
-                        {modelStatus === "loading"
-                          ? "온디바이스 사물 AI 로딩 중…"
-                          : detectedBoxes.length > 0
-                            ? `감지 중: ${detectedBoxes
-                                .slice(0, 2)
-                                .map((b) => OBJECT_LABEL_KO[b.label] ?? b.label)
-                                .join(", ")}`
-                            : "미션 사물을 카메라에 비춰보세요"}
-                      </span>
-                      <strong>락온 {Math.round(lockProgress * 100)}%</strong>
-                    </div>
-                    <div className={styles.meterTrack}>
-                      <div
-                        className={styles.meterFill}
-                        data-success={lockProgress >= 0.7}
-                        style={{ width: `${Math.round(lockProgress * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className={styles.controlsRow}>
-                    <button
-                      type="button"
-                      className={styles.secondaryBtn}
-                      onClick={() =>
-                        setFacingOverride((f) => (f === "user" ? "environment" : "user"))
-                      }
-                    >
-                      <RefreshCw size={14} /> 카메라 전환
-                    </button>
-                  </div>
-                </>
-              ) : (
+              ) : !fallbackMode ? null : (
                 <div className={styles.fallbackBox}>
                   <p className={styles.fallbackNotice}>
-                    <strong>대체 모드 (테이블 빠른 포착)</strong> · 미션 사물(
+                    <strong>대체 모드 (물건 버튼)</strong> · 찾을 물건(
                     <strong>{mission.label}</strong>)에 해당하는 아이콘을 {mission.targetCount + 1}
                     번 연속 탭해 락온하세요!
                   </p>
-                  <GameRoundActions>
-                    <div className={styles.controlsRow}>
-                      {FALLBACK_OBJECT_CHOICES.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className={styles.secondaryBtn}
-                          disabled={submitting || busy}
-                          onClick={() => void handleFallbackObjectTap(item.id)}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </GameRoundActions>
+                  <div className={styles.controlsRow}>
+                    {FALLBACK_OBJECT_CHOICES.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={styles.secondaryBtn}
+                        disabled={submitting || busy}
+                        onClick={() => void handleFallbackObjectTap(item.id)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
                   <div className={styles.meterTrack}>
                     <div
                       className={styles.meterFill}
@@ -1088,7 +1555,7 @@ export function SnapPangStage({
           {isSmileBomb && (
             <>
               <div className={styles.missionHeader}>
-                <h3>💣 웃음 참기 3D 폭탄</h3>
+                <h3>💣 웃음 참기</h3>
                 <span className={styles.kindBadge}>공격자: {attackerName}</span>
               </div>
 
@@ -1117,42 +1584,20 @@ export function SnapPangStage({
                     웃음 폭발! 내 3D 풍선 폭탄이 터졌어요! 이제 같이 다른 사람을 웃겨보세요!
                   </span>
                 </div>
-              ) : !fallbackMode ? (
-                <div className={styles.meterWrap}>
-                  <div className={styles.meterLabels}>
-                    <span>
-                      {modelStatus === "loading"
-                        ? "3D 아바타 표정 엔진 로딩 중…"
-                        : faceDetected
-                          ? "3D 아바타가 내 표정을 읽고 있어요 — 웃지 마세요!"
-                          : "얼굴이 프레임 안에 들어오게 폰을 살짝 들어주세요"}
-                    </span>
-                    <strong>폭탄 팽창 {myTension}%</strong>
-                  </div>
-                  <div className={styles.meterTrack}>
-                    <div
-                      className={styles.meterFill}
-                      data-danger={myTension >= 50}
-                      style={{ width: `${myTension}%` }}
-                    />
-                  </div>
-                </div>
-              ) : (
+              ) : !fallbackMode ? null : (
                 <div className={styles.fallbackBox}>
                   <p className={styles.fallbackNotice}>
                     <strong>대체 모드 (정직한 웃참)</strong> · 웃음을 참아보세요! 만약 웃음이
                     터졌다면 솔직하게 아래 폭탄 버튼을 눌러요.
                   </p>
-                  <GameRoundActions>
-                    <button
-                      type="button"
-                      className={styles.shutterBtn}
-                      style={{ background: "#ef4444" }}
-                      onClick={() => void handleFallbackSmilePop()}
-                    >
-                      <Flame size={18} /> 앗, 웃어버렸다! (내 3D 폭탄 터뜨리기)
-                    </button>
-                  </GameRoundActions>
+                  <button
+                    type="button"
+                    className={styles.shutterBtn}
+                    style={{ background: "#ef4444" }}
+                    onClick={() => void handleFallbackSmilePop()}
+                  >
+                    <Flame size={18} /> 앗, 웃어버렸다! (내 3D 폭탄 터뜨리기)
+                  </button>
                 </div>
               )}
 
@@ -1191,7 +1636,7 @@ export function SnapPangStage({
           {isFaceCopy && (
             <>
               <div className={styles.missionHeader}>
-                <h3>🎭 3D 아바타 표정 카피</h3>
+                <h3>🎭 표정 릴레이</h3>
                 <span className={styles.kindBadge}>
                   완료 {game.submittedCount} / {game.expectedCount}명
                 </span>
@@ -1220,55 +1665,32 @@ export function SnapPangStage({
               </div>
 
               {!isPlayer ? (
-                <p className={styles.missionHint}>
-                  참가자들이 3D 아바타로 표정을 따라 하고 있어요!
-                </p>
+                <p className={styles.missionHint}>참가자들이 표정 릴레이를 하고 있어요!</p>
               ) : game.mySubmission?.mode === "face-copy" ? (
                 <div className={styles.statusBanner} role="status">
                   <CheckCircle2 size={16} />
-                  <span>표정 콤보 완료! ({(game.mySubmission.elapsedMs / 1000).toFixed(1)}초)</span>
+                  <span>
+                    표정 릴레이 성공! ({(game.mySubmission.elapsedMs / 1000).toFixed(1)}초)
+                  </span>
                 </div>
-              ) : !fallbackMode ? (
-                <div className={styles.meterWrap}>
-                  <div className={styles.meterLabels}>
-                    <span>
-                      {modelStatus === "loading"
-                        ? "표정 AI 로딩 중…"
-                        : mission.expressions[faceStepIndex]
-                          ? SNAP_EXPRESSION_LABELS[mission.expressions[faceStepIndex]!].cue
-                          : "완료!"}
-                    </span>
-                    <strong>{Math.round(faceStepProgress * 100)}%</strong>
-                  </div>
-                  <div className={styles.meterTrack}>
-                    <div
-                      className={styles.meterFill}
-                      data-success={faceStepProgress >= 0.65}
-                      style={{ width: `${Math.round(faceStepProgress * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              ) : (
+              ) : !fallbackMode ? null : (
                 <div className={styles.fallbackBox}>
                   <p className={styles.fallbackNotice}>
-                    <strong>대체 모드 (표정 콤보 터치)</strong> · 위 순서대로 표정 버튼을 눌러 3D
-                    아바타를 연기시키세요!
+                    <strong>대체 모드 (표정 버튼)</strong> · 위 순서대로 표정 버튼을 눌러요!
                   </p>
-                  <GameRoundActions>
-                    <div className={styles.controlsRow}>
-                      {(Object.keys(SNAP_EXPRESSION_LABELS) as SnapExpressionId[]).map((expr) => (
-                        <button
-                          key={expr}
-                          type="button"
-                          className={styles.secondaryBtn}
-                          disabled={submitting || busy}
-                          onClick={() => void handleFallbackFaceTap(expr)}
-                        >
-                          {SNAP_EXPRESSION_LABELS[expr].emoji} {SNAP_EXPRESSION_LABELS[expr].label}
-                        </button>
-                      ))}
-                    </div>
-                  </GameRoundActions>
+                  <div className={styles.controlsRow}>
+                    {(Object.keys(SNAP_EXPRESSION_LABELS) as SnapExpressionId[]).map((expr) => (
+                      <button
+                        key={expr}
+                        type="button"
+                        className={styles.secondaryBtn}
+                        disabled={submitting || busy}
+                        onClick={() => void handleFallbackFaceTap(expr)}
+                      >
+                        {SNAP_EXPRESSION_LABELS[expr].emoji} {SNAP_EXPRESSION_LABELS[expr].label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </>

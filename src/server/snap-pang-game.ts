@@ -8,6 +8,8 @@ import {
   SNAP_OBJECT_BANK,
   SNAP_PANG_BRIEFING_MS,
   SNAP_PANG_REVEAL_MS,
+  SNAP_COLOR_MIN_ACCURACY,
+  normalizeSnapPangSettings,
   snapPangRoundPlan,
   type SnapFaceSubMode,
   type SnapMission,
@@ -42,7 +44,7 @@ function buildDeck(settings: SnapPangSettings, roster: SnapPangPlayer[]): SnapMi
   let comboIdx = 0;
   let attackerTurn = 0;
 
-  return snapPangRoundPlan(settings.preset, settings.rounds).map((slot, index) => {
+  return snapPangRoundPlan(settings.preset, settings.rounds, randomInt).map((slot, index) => {
     if (slot.kind === "color") {
       const picked = colors[colorIdx % colors.length]!;
       colorIdx++;
@@ -66,7 +68,7 @@ function buildDeck(settings: SnapPangSettings, roster: SnapPangPlayer[]): SnapMi
         attackerId,
         attackCard,
         expressions: [],
-        prompt: "원본 얼굴은 3D 아바타가 가려줘요. 공격자의 도발을 버티고 무표정을 지키세요!",
+        prompt: "공격자가 웃기는 동안 무표정을 지키세요. 웃으면 내 폭탄이 터져요!",
       };
     }
     const expressions = [...combos[comboIdx % combos.length]!];
@@ -78,7 +80,7 @@ function buildDeck(settings: SnapPangSettings, roster: SnapPangPlayer[]): SnapMi
       attackerId: null,
       attackCard: null,
       expressions,
-      prompt: "3D 아바타를 보며 제시된 표정 2개를 순서대로 따라 하면 콤보 클리어!",
+      prompt: "제시된 표정 2개를 순서대로 지어 보세요. 표정마다 잠깐 유지하면 다음으로 넘어가요!",
     };
   });
 }
@@ -147,6 +149,7 @@ export function startSnapPang(
     score: 0,
     color: SNAP_AVATAR_COLORS[index % SNAP_AVATAR_COLORS.length]!,
   }));
+  state.settings = normalizeSnapPangSettings(state.settings);
   state.runId = randomUUID();
   state.totalRounds = state.settings.rounds;
   state.deck = buildDeck(state.settings, state.roster);
@@ -183,7 +186,7 @@ function settleCurrentRound(state: SnapPangState, now: number) {
       };
     });
     const qualifying = scored
-      .filter((item) => item.submitted && item.accuracy >= 35)
+      .filter((item) => item.submitted && item.accuracy >= SNAP_COLOR_MIN_ACCURACY)
       .sort((a, b) => b.accuracy - a.accuracy || a.submittedAt - b.submittedAt);
 
     const rankMap = new Map<string, { rank: number; points: number }>();
@@ -393,7 +396,7 @@ export function actSnapPang(
 
   if (action.action === "snap-color") {
     if (mission.kind !== "color")
-      throw new AppError("CONFLICT", "지금은 컬러 스나이퍼 라운드가 아니에요.");
+      throw new AppError("CONFLICT", "지금은 색깔 찾기 라운드가 아니에요.");
     const hex = normalizeHex(action.hex);
     const accuracy = computeColorMatchScore(mission.targetHex, hex);
     const prev = state.submissions[playerId];
@@ -415,7 +418,7 @@ export function actSnapPang(
 
   if (action.action === "snap-object") {
     if (mission.kind !== "object")
-      throw new AppError("CONFLICT", "지금은 테이블 헌터 라운드가 아니에요.");
+      throw new AppError("CONFLICT", "지금은 물건 찾기 라운드가 아니에요.");
     if (state.submissions[playerId]) throw new AppError("CONFLICT", "이미 사물 포착을 완료했어요.");
     const elapsedMs = Math.max(250, now - (state.roundStartedAt ?? now));
     state.submissions[playerId] = {
@@ -434,7 +437,7 @@ export function actSnapPang(
 
   if (action.action === "snap-face-copy") {
     if (mission.kind !== "face" || mission.subMode !== "face-copy")
-      throw new AppError("CONFLICT", "지금은 표정 카피 라운드가 아니에요.");
+      throw new AppError("CONFLICT", "지금은 표정 릴레이 라운드가 아니에요.");
     if (state.submissions[playerId]) throw new AppError("CONFLICT", "이미 표정 콤보를 완료했어요.");
     const elapsedMs = Math.max(250, now - (state.roundStartedAt ?? now));
     state.submissions[playerId] = {
@@ -497,7 +500,7 @@ export function snapPangView(
     : Object.keys(state.submissions).length;
 
   return {
-    settings: state.settings,
+    settings: normalizeSnapPangSettings(state.settings),
     stage: state.stage,
     runId: state.runId,
     phaseId: state.phaseId,

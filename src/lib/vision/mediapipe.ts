@@ -68,15 +68,15 @@ export async function getObjectDetector(): Promise<ObjectDetector> {
         return await Detector.createFromOptions(fileset, {
           baseOptions: { modelAssetPath: OBJECT_MODEL_PATH, delegate: "GPU" },
           runningMode: "VIDEO",
-          scoreThreshold: 0.34,
-          maxResults: 6,
+          scoreThreshold: 0.3,
+          maxResults: 8,
         });
       } catch {
         return await Detector.createFromOptions(fileset, {
           baseOptions: { modelAssetPath: OBJECT_MODEL_PATH, delegate: "CPU" },
           runningMode: "VIDEO",
-          scoreThreshold: 0.34,
-          maxResults: 6,
+          scoreThreshold: 0.3,
+          maxResults: 8,
         });
       }
     })().catch((err) => {
@@ -123,11 +123,11 @@ export async function getFaceLandmarker(): Promise<FaceLandmarker> {
   return faceLandmarkerPromise;
 }
 
-/** Gently warms up MediaPipe WASM/models in the background so Round 2/3 start instantly. */
-export function preloadSnapVision(usesFace: boolean) {
+/** Warms up only the models a mode will use, so its first camera round starts quickly. */
+export function preloadSnapVision(models: { object: boolean; face: boolean }) {
   if (typeof window === "undefined") return;
-  void getObjectDetector().catch(() => {});
-  if (usesFace) void getFaceLandmarker().catch(() => {});
+  if (models.object) void getObjectDetector().catch(() => {});
+  if (models.face) void getFaceLandmarker().catch(() => {});
 }
 
 export function runObjectDetection(
@@ -179,7 +179,11 @@ export function runFaceTelemetry(
   const jawOpen = get("jawOpen");
   const winkLeft = get("eyeBlinkLeft");
   const winkRight = get("eyeBlinkRight");
-  const browDown = (get("browDownLeft") + get("browDownRight")) / 2;
+  // Frowns are often lopsided, so a strong brow on either side counts.
+  const browDown = Math.max(
+    (get("browDownLeft") + get("browDownRight")) / 2,
+    Math.max(get("browDownLeft"), get("browDownRight")) * 0.85,
+  );
   const pucker = Math.max(get("mouthPucker"), get("mouthFunnel") * 0.8);
 
   // Extract rough head orientation from 4x4 transformation matrix if available

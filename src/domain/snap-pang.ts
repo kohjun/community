@@ -1,7 +1,19 @@
 import { z } from "zod";
 
-export const SNAP_PANG_PRESETS = ["light", "mix", "pokerface"] as const;
+export const SNAP_PANG_PRESETS = ["color", "object", "face", "random"] as const;
 export type SnapPangPreset = (typeof SNAP_PANG_PRESETS)[number];
+
+/** Presets from before the four-mode split, still present in saved room state. */
+const LEGACY_SNAP_PANG_PRESETS: Record<string, SnapPangPreset> = {
+  light: "color",
+  mix: "random",
+  pokerface: "face",
+};
+export function normalizeSnapPangPreset(value: unknown): unknown {
+  return typeof value === "string" && Object.hasOwn(LEGACY_SNAP_PANG_PRESETS, value)
+    ? LEGACY_SNAP_PANG_PRESETS[value]
+    : value;
+}
 
 export const SNAP_PANG_ROUND_COUNTS = [3, 5, 7, 9] as const;
 export const SNAP_PANG_SECONDS = [15, 20, 30] as const;
@@ -9,6 +21,8 @@ export const SNAP_PANG_MIN_PLAYERS = 2;
 export const SNAP_PANG_MAX_PLAYERS = 12;
 export const SNAP_PANG_BRIEFING_MS = 4_000;
 export const SNAP_PANG_REVEAL_MS = 6_500;
+/** A color shot below this match earns no points. */
+export const SNAP_COLOR_MIN_ACCURACY = 35;
 
 export const SNAP_PANG_PRESET_META: Record<
   SnapPangPreset,
@@ -21,77 +35,89 @@ export const SNAP_PANG_PRESET_META: Record<
     usesFace: boolean;
   }
 > = {
-  light: {
-    title: "색깔·물건만 찾기",
-    subtitle: "테이블 위 색깔과 물건(컵·폰·가방 등)만 찍어 겨뤄요. 처음 만난 모임에 부담 없어요.",
+  color: {
+    title: "🎨 색깔 모드",
+    subtitle: "화면에 나온 색깔과 같은 물건을 주변에서 찾아 찍어요. 색이 비슷할수록 점수가 높아요.",
     badge: "얼굴 안 찍음 · 첫 만남 추천",
-    cameraNote: "후면 카메라만 사용",
-    games: ["🎨 색깔 찾기", "📦 물건 찾기"],
+    cameraNote: "후면 카메라로 물건만 찍어요",
+    games: ["🎨 색깔 찾기"],
     usesFace: false,
   },
-  mix: {
-    title: "색깔·물건·표정 골고루",
-    subtitle: "색깔 찾기, 물건 찾기, 웃음 참기·표정 카피를 골고루 섞어 진행해요.",
-    badge: "추천 · 3D 아바타 가리기",
-    cameraNote: "내 얼굴은 3D 캐릭터가 가려줌",
-    games: ["🎨 색깔 찾기", "📦 물건 찾기", "💣 웃음 참기", "🎭 표정 카피"],
+  object: {
+    title: "📦 물건 모드",
+    subtitle:
+      "컵·휴대폰·가방처럼 제시된 물건을 카메라가 인식하면 셔터를 눌러요. 빨리 제출할수록 점수가 높아요.",
+    badge: "얼굴 안 찍음",
+    cameraNote: "후면 카메라로 물건만 찍어요",
+    games: ["📦 물건 찾기"],
+    usesFace: false,
+  },
+  face: {
+    title: "😆 표정 모드",
+    subtitle:
+      "웃음 참기와 표정 릴레이를 번갈아 해요. 웃으면 폭탄이 터지고, 제시된 표정을 순서대로 지으면 성공이에요.",
+    badge: "친한 모임 추천",
+    cameraNote: "전면 카메라 · 얼굴은 내 기기에서만 분석해요",
+    games: ["💣 웃음 참기", "🎭 표정 릴레이"],
     usesFace: true,
   },
-  pokerface: {
-    title: "웃음 참기·표정 집중",
-    subtitle: "서로 웃겨서 3D 풍선 폭탄을 터뜨리는 웃음 참기와 표정 카피 위주로 진행해요.",
-    badge: "친한 모임 · 3D 폭탄",
-    cameraNote: "내 얼굴은 3D 캐릭터가 가려줌",
-    games: ["💣 웃음 참기", "🎭 표정 카피", "🎨 보너스 색깔·물건"],
+  random: {
+    title: "🎲 랜덤 모드",
+    subtitle: "색깔·물건·웃음 참기·표정 릴레이 중 하나가 라운드마다 무작위로 나와요.",
+    badge: "추천",
+    cameraNote: "라운드마다 후면·전면 카메라를 바꿔 써요",
+    games: ["🎨 색깔 찾기", "📦 물건 찾기", "💣 웃음 참기", "🎭 표정 릴레이"],
     usesFace: true,
   },
 };
 
 export type SnapRoundSlot = { kind: SnapRoundKind; face?: SnapFaceSubMode };
 
-export function snapPangRoundPlan(preset: SnapPangPreset, rounds: number): SnapRoundSlot[] {
+const RANDOM_SLOTS: readonly SnapRoundSlot[] = [
+  { kind: "color" },
+  { kind: "object" },
+  { kind: "face", face: "smile-bomb" },
+  { kind: "face", face: "face-copy" },
+];
+
+/**
+ * Round order for a mode. Random mode shuffles all four missions in blocks, so every mission
+ * shows up once before any repeats; `randomInt(n)` returns 0..n-1 and is injectable for tests.
+ */
+export function snapPangRoundPlan(
+  preset: SnapPangPreset,
+  rounds: number,
+  randomInt: (max: number) => number = (max) => Math.floor(Math.random() * max),
+): SnapRoundSlot[] {
   const plan: SnapRoundSlot[] = [];
-  if (preset === "light") {
-    for (let i = 0; i < rounds; i++) {
-      plan.push({ kind: i % 2 === 0 ? "color" : "object" });
+  if (preset === "color" || preset === "object") {
+    for (let i = 0; i < rounds; i++) plan.push({ kind: preset });
+    return plan;
+  }
+  if (preset === "face") {
+    for (let i = 0; i < rounds; i++)
+      plan.push({ kind: "face", face: i % 2 === 0 ? "smile-bomb" : "face-copy" });
+    return plan;
+  }
+  while (plan.length < rounds) {
+    const block = [...RANDOM_SLOTS];
+    for (let i = block.length - 1; i > 0; i--) {
+      const j = randomInt(i + 1);
+      [block[i], block[j]] = [block[j]!, block[i]!];
     }
-    return plan;
+    // Never repeat the same mission across a block boundary.
+    const last = plan.at(-1);
+    if (last && snapPangSlotLabel(last) === snapPangSlotLabel(block[0]!))
+      block.push(block.shift()!);
+    plan.push(...block);
   }
-  if (preset === "pokerface") {
-    const cycle: SnapRoundSlot[] = [
-      { kind: "face", face: "smile-bomb" },
-      { kind: "face", face: "face-copy" },
-      { kind: "face", face: "smile-bomb" },
-      { kind: "color" },
-      { kind: "face", face: "smile-bomb" },
-      { kind: "object" },
-      { kind: "face", face: "face-copy" },
-      { kind: "face", face: "smile-bomb" },
-      { kind: "color" },
-    ];
-    for (let i = 0; i < rounds; i++) plan.push(cycle[i % cycle.length]!);
-    return plan;
-  }
-  // Standard "mix": Round 1 is always Color Sniper (0MB instant start while AI preloads).
-  const cycle: SnapRoundSlot[] = [
-    { kind: "color" },
-    { kind: "object" },
-    { kind: "face", face: "smile-bomb" },
-    { kind: "color" },
-    { kind: "face", face: "face-copy" },
-    { kind: "object" },
-    { kind: "face", face: "smile-bomb" },
-    { kind: "color" },
-    { kind: "object" },
-  ];
-  for (let i = 0; i < rounds; i++) plan.push(cycle[i % cycle.length]!);
-  return plan;
+  return plan.slice(0, rounds);
 }
 
 export function snapPangSlotLabel(slot: SnapRoundSlot): string {
   if (slot.kind === "color") return "🎨 색깔 찾기";
   if (slot.kind === "object") return "📦 물건 찾기";
-  return slot.face === "face-copy" ? "🎭 표정 카피" : "💣 웃음 참기";
+  return slot.face === "face-copy" ? "🎭 표정 릴레이" : "💣 웃음 참기";
 }
 
 export type SnapPangSettings = {
@@ -101,13 +127,15 @@ export type SnapPangSettings = {
 };
 
 export const DEFAULT_SNAP_PANG_SETTINGS: SnapPangSettings = {
-  preset: "mix",
+  preset: "random",
   rounds: 5,
   seconds: 20,
 };
 
 export const snapPangSettingsFields = {
-  snapPreset: z.enum(SNAP_PANG_PRESETS).default(DEFAULT_SNAP_PANG_SETTINGS.preset),
+  snapPreset: z
+    .preprocess(normalizeSnapPangPreset, z.enum(SNAP_PANG_PRESETS))
+    .default(DEFAULT_SNAP_PANG_SETTINGS.preset),
   snapRounds: z
     .union([z.literal(3), z.literal(5), z.literal(7), z.literal(9)])
     .default(DEFAULT_SNAP_PANG_SETTINGS.rounds),
@@ -116,13 +144,20 @@ export const snapPangSettingsFields = {
     .default(DEFAULT_SNAP_PANG_SETTINGS.seconds),
 };
 
+/** Saved rooms may still carry a pre-split preset; read them as the closest current mode. */
+export function normalizeSnapPangSettings(settings: SnapPangSettings): SnapPangSettings {
+  const preset = normalizeSnapPangPreset(settings.preset) as SnapPangPreset;
+  const supportedPreset = SNAP_PANG_PRESETS.includes(preset) ? preset : "random";
+  return supportedPreset === settings.preset ? settings : { ...settings, preset: supportedPreset };
+}
+
 export function snapPangSettingsFrom(config: {
   snapPreset: SnapPangPreset;
   snapRounds: SnapPangSettings["rounds"];
   snapSeconds: SnapPangSettings["seconds"];
 }): SnapPangSettings {
   return {
-    preset: config.snapPreset,
+    preset: normalizeSnapPangPreset(config.snapPreset) as SnapPangPreset,
     rounds: config.snapRounds,
     seconds: config.snapSeconds,
   };

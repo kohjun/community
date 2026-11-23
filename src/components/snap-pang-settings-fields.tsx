@@ -24,7 +24,11 @@ export function SnapPangSettingsFields({
 }) {
   const uid = useId();
   const activeMeta = SNAP_PANG_PRESET_META[value.preset];
-  const plan = snapPangRoundPlan(value.preset, value.rounds);
+  // Random mode draws its order when the game starts, so the preview cannot name rounds yet.
+  const plan =
+    value.preset === "random"
+      ? Array.from({ length: value.rounds }, () => "🎲 랜덤")
+      : snapPangRoundPlan(value.preset, value.rounds).map(snapPangSlotLabel);
 
   return (
     <div className={styles.group}>
@@ -119,9 +123,9 @@ export function SnapPangSettingsFields({
           <span className={styles.previewCamera}>{activeMeta.cameraNote}</span>
         </div>
         <div className={styles.planFlow}>
-          {plan.map((slot, idx) => (
-            <span key={`${idx}-${slot.kind}-${slot.face ?? ""}`} className={styles.planPill}>
-              <b>{idx + 1}R</b> {snapPangSlotLabel(slot)}
+          {plan.map((label, idx) => (
+            <span key={`${idx}-${label}`} className={styles.planPill}>
+              <b>{idx + 1}R</b> {label}
             </span>
           ))}
         </div>

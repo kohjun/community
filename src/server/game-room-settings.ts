@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { createGameRoomSchema } from "../domain/game-room";
+import { normalizeSnapPangPreset } from "../domain/snap-pang";
 import type { gameRooms } from "../db/game-room-schema";
 type Room = typeof gameRooms.$inferSelect;
 export function roomSettings(room: Room) {
@@ -9,7 +10,7 @@ export function roomSettings(room: Room) {
     minPlayers: room.minPlayers,
     ...(room.snapPang
       ? {
-          snapPreset: room.snapPang.settings.preset,
+          snapPreset: normalizeSnapPangPreset(room.snapPang.settings.preset),
           snapRounds: room.snapPang.settings.rounds,
           snapSeconds: room.snapPang.settings.seconds,
         }

@@ -6,7 +6,14 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import type { Database } from "../src/db/connection";
 import { profiles } from "../src/db/schema";
-import { createGameRoomSchema } from "../src/domain/game-room";
+import { createGameRoomSchema, type GameRoomView } from "../src/domain/game-room";
+import {
+  DEFAULT_SNAP_PANG_SETTINGS,
+  SNAP_PANG_PRESETS,
+  snapPangRoundPlan,
+  snapPangSlotLabel,
+  type SnapPangPreset,
+} from "../src/domain/snap-pang";
 import { GAME_CATALOG } from "../src/domain/game-catalog";
 import { getGameTutorial } from "../src/domain/game-tutorial";
 import { computeColorMatchScore, rgbToHex, sampleCenterRgb } from "../src/lib/vision/color-lab";
@@ -152,28 +159,94 @@ test("catalog, tutorial and schema bounds register snap-pang cleanly", () => {
     }).success,
     false,
   );
+  for (const preset of SNAP_PANG_PRESETS) {
+    const parsed = createGameRoomSchema.parse({
+      gameType: "snap-pang",
+      title: "스냅 팡 테스트",
+      capacity: 12,
+      minPlayers: 2,
+      snapPreset: preset,
+      snapRounds: 3,
+      snapSeconds: 20,
+    });
+    assert.equal(parsed.snapPreset, preset);
+  }
+  // Rooms saved before the four-mode split keep working as the closest current mode.
+  for (const [legacy, current] of [
+    ["light", "color"],
+    ["mix", "random"],
+    ["pokerface", "face"],
+  ] as const) {
+    const parsed = createGameRoomSchema.parse({
+      gameType: "snap-pang",
+      title: "스냅 팡 테스트",
+      capacity: 12,
+      minPlayers: 2,
+      snapPreset: legacy,
+      snapRounds: 3,
+      snapSeconds: 20,
+    });
+    assert.equal(parsed.snapPreset, current);
+  }
   assert.equal(
     createGameRoomSchema.safeParse({
       gameType: "snap-pang",
       title: "스냅 팡 테스트",
       capacity: 12,
       minPlayers: 2,
-      snapPreset: "light",
-      snapRounds: 3,
-      snapSeconds: 20,
+      snapPreset: "unknown",
     }).success,
-    true,
+    false,
   );
+  assert.equal(DEFAULT_SNAP_PANG_SETTINGS.preset, "random");
 });
 
-test("snap-pang full 3-round mix game runs color, object, smile-bomb, 3D podium and 24h saved run", async () => {
+test("each mode plans only its own missions; random shuffles all four without back-to-back repeats", () => {
+  const labels = (preset: SnapPangPreset, rounds: number, rng?: (max: number) => number) =>
+    snapPangRoundPlan(preset, rounds, rng).map(snapPangSlotLabel);
+  assert.deepEqual(labels("color", 3), ["🎨 색깔 찾기", "🎨 색깔 찾기", "🎨 색깔 찾기"]);
+  assert.deepEqual(labels("object", 3), ["📦 물건 찾기", "📦 물건 찾기", "📦 물건 찾기"]);
+  assert.deepEqual(labels("face", 5), [
+    "💣 웃음 참기",
+    "🎭 표정 릴레이",
+    "💣 웃음 참기",
+    "🎭 표정 릴레이",
+    "💣 웃음 참기",
+  ]);
+
+  const all = ["🎨 색깔 찾기", "📦 물건 찾기", "💣 웃음 참기", "🎭 표정 릴레이"].sort();
+  // A fixed RNG must still give every block all four missions and no repeat at block edges.
+  for (const rng of [() => 0, (max: number) => max - 1, (max: number) => Math.floor(max / 2)]) {
+    const plan = labels("random", 9, rng);
+    assert.equal(plan.length, 9);
+    assert.deepEqual(plan.slice(0, 4).sort(), all);
+    assert.deepEqual(plan.slice(4, 8).sort(), all);
+    for (let i = 1; i < plan.length; i++) assert.notEqual(plan[i], plan[i - 1]);
+  }
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const plan = labels("random", 7);
+    assert.deepEqual(plan.slice(0, 4).sort(), all);
+    for (let i = 1; i < plan.length; i++) assert.notEqual(plan[i], plan[i - 1]);
+  }
+});
+
+async function hostNext(roomId: string, host: GamePrincipal, view: GameRoomView) {
+  return service.host(roomId, host, {
+    action: "snap-control",
+    revision: view.revision,
+    phaseId: view.snapPang!.phaseId,
+    command: "next",
+  });
+}
+
+test("snap-pang color mode runs color rounds, pause/resume, 3D podium and a 24h saved run", async () => {
   const host = person(owner);
   const { id: roomId } = await service.create(owner, {
     gameType: "snap-pang",
     title: "금요일 테이블 스냅 팡",
     capacity: 6,
     minPlayers: 2,
-    snapPreset: "mix",
+    snapPreset: "color",
     snapRounds: 3,
     snapSeconds: 20,
   });
@@ -195,8 +268,8 @@ test("snap-pang full 3-round mix game runs color, object, smile-bomb, 3D podium 
   });
   assert.equal(updated.readyCount, 3);
   assert.equal(updated.settings!.snapSeconds, 15);
+  assert.equal(updated.settings!.snapPreset, "color");
 
-  // Start game -> Round 1 briefing (always Color Sniper in mix preset)
   const started = await service.host(roomId, host, {
     action: "start",
     revision: updated.revision,
@@ -204,6 +277,7 @@ test("snap-pang full 3-round mix game runs color, object, smile-bomb, 3D podium 
   assert.equal(started.phase, "playing");
   assert.equal(started.snapPang!.stage, "briefing");
   assert.equal(started.snapPang!.round, 1);
+  assert.equal(started.snapPang!.settings.preset, "color");
   assert.equal(started.snapPang!.mission!.kind, "color");
   const runId = started.snapPang!.runId!;
   const targetHex = started.snapPang!.mission!.targetHex;
@@ -271,133 +345,39 @@ test("snap-pang full 3-round mix game runs color, object, smile-bomb, 3D podium 
   assert.equal(p1Entry.points, 3);
   assert.equal(p3Entry.points, 3); // Exact tie shares 1st place points
 
-  // Host skips reveal -> Round 2 briefing (Object Hunt)
-  const r2Brief = await service.host(roomId, host, {
-    action: "snap-control",
-    revision: r1Reveal.revision,
-    phaseId: r1Reveal.snapPang!.phaseId,
-    command: "next",
-  });
-  assert.equal(r2Brief.snapPang!.round, 2);
-  assert.equal(r2Brief.snapPang!.mission!.kind, "object");
+  // Rounds 2 and 3 stay color; the host skips them through briefing -> active -> reveal.
+  let state = r1Reveal;
+  for (const round of [2, 3]) {
+    state = await hostNext(roomId, host, state);
+    assert.equal(state.snapPang!.round, round);
+    assert.equal(state.snapPang!.mission!.kind, "color");
+    await assert.rejects(
+      service.player(roomId, p1, {
+        action: "snap-object",
+        runId,
+        round,
+        confidence: 0.9,
+        fallback: false,
+      }),
+      code("CONFLICT"),
+    );
+    state = await hostNext(roomId, host, state);
+    assert.equal(state.snapPang!.stage, "active");
+    await assert.rejects(
+      service.player(roomId, p1, {
+        action: "snap-object",
+        runId,
+        round,
+        confidence: 0.9,
+        fallback: false,
+      }),
+      code("CONFLICT"),
+    );
+    state = await hostNext(roomId, host, state);
+    assert.equal(state.snapPang!.stage, "reveal");
+  }
+  await hostNext(roomId, host, state);
 
-  // Host skips briefing -> Round 2 active
-  const r2Active = await service.host(roomId, host, {
-    action: "snap-control",
-    revision: r2Brief.revision,
-    phaseId: r2Brief.snapPang!.phaseId,
-    command: "next",
-  });
-  assert.equal(r2Active.snapPang!.stage, "active");
-
-  now = new Date(now.getTime() + 1_200);
-  await service.player(roomId, p2, {
-    action: "snap-object",
-    runId,
-    round: 2,
-    confidence: 0.88,
-    fallback: false,
-  });
-  now = new Date(now.getTime() + 1_500);
-  await service.player(roomId, p1, {
-    action: "snap-object",
-    runId,
-    round: 2,
-    confidence: 0.72,
-    fallback: false,
-  });
-  now = new Date(now.getTime() + 1_500);
-  const r2Reveal = await service.player(roomId, p3, {
-    action: "snap-object",
-    runId,
-    round: 2,
-    confidence: 0.85,
-    fallback: true,
-  });
-  assert.equal(r2Reveal.snapPang!.stage, "reveal");
-  assert.equal(
-    r2Reveal.snapPang!.lastResult!.entries.find((e) => e.playerId === v2.viewer.id)!.points,
-    3,
-  );
-  assert.equal(
-    r2Reveal.snapPang!.lastResult!.entries.find((e) => e.playerId === v1.viewer.id)!.points,
-    2,
-  );
-  assert.equal(
-    r2Reveal.snapPang!.lastResult!.entries.find((e) => e.playerId === v3.viewer.id)!.points,
-    1,
-  );
-
-  // Round 3: Smile Bomb
-  const r3Brief = await service.host(roomId, host, {
-    action: "snap-control",
-    revision: r2Reveal.revision,
-    phaseId: r2Reveal.snapPang!.phaseId,
-    command: "next",
-  });
-  assert.equal(r3Brief.snapPang!.round, 3);
-  assert.equal(r3Brief.snapPang!.mission!.kind, "face");
-  assert.equal(r3Brief.snapPang!.mission!.subMode, "smile-bomb");
-
-  const r3Active = await service.host(roomId, host, {
-    action: "snap-control",
-    revision: r3Brief.revision,
-    phaseId: r3Brief.snapPang!.phaseId,
-    command: "next",
-  });
-  const attackerId =
-    r3Active.snapPang!.mission!.kind === "face" ? r3Active.snapPang!.mission!.attackerId : null;
-  const playersById = new Map([
-    [v1.viewer.id!, p1],
-    [v2.viewer.id!, p2],
-    [v3.viewer.id!, p3],
-  ]);
-  const attacker = playersById.get(attackerId!)!;
-  const defenders = [...playersById.entries()]
-    .filter(([id]) => id !== attackerId)
-    .map(([, who]) => who);
-
-  // Attacker cannot submit tension
-  await assert.rejects(
-    service.player(roomId, attacker, {
-      action: "snap-tension",
-      runId,
-      round: 3,
-      tension: 50,
-      popped: false,
-    }),
-    code("FORBIDDEN"),
-  );
-
-  // Defender 0 raises tension then pops; Defender 1 stays stone-faced until timer ends
-  const mid = await service.player(roomId, defenders[0]!, {
-    action: "snap-tension",
-    runId,
-    round: 3,
-    tension: 65,
-    popped: false,
-  });
-  assert.equal(mid.snapPang!.stage, "active");
-  await service.player(roomId, defenders[0]!, {
-    action: "snap-tension",
-    runId,
-    round: 3,
-    tension: 100,
-    popped: true,
-  });
-  // Expire round 3 active timer -> settles smile-bomb
-  now = new Date(now.getTime() + 16_000);
-  const r3Reveal = await service.read(roomId, host);
-  assert.equal(r3Reveal.snapPang!.stage, "reveal");
-  const attackerResult = r3Reveal.snapPang!.lastResult!.entries.find((e) => e.isAttacker)!;
-  assert.equal(attackerResult.points, 1); // 1 defender popped
-  assert.equal(
-    r3Reveal.snapPang!.lastResult!.entries.filter((e) => !e.isAttacker && !e.popped)[0]!.points,
-    2,
-  );
-
-  // Advance past reveal -> final 3D podium & room phase "finished" + 24h saved gameRun
-  now = new Date(now.getTime() + 7_000);
   const finished = await service.read(roomId, p1);
   assert.equal(finished.phase, "finished");
   assert.equal(finished.snapPang!.stage, "result");
@@ -419,101 +399,239 @@ test("snap-pang full 3-round mix game runs color, object, smile-bomb, 3D podium 
   assert.equal(reset.round, 2);
 });
 
-test("light preset never schedules face rounds and pokerface preset runs face-copy cleanly", async () => {
+test("object mode only plans object rounds and scores captures by speed", async () => {
   const host = person(owner);
-  const { id: lightRoom } = await service.create(owner, {
+  const { id: roomId } = await service.create(owner, {
     gameType: "snap-pang",
-    title: "첫 만남 라이트",
-    capacity: 4,
+    title: "물건 찾기",
+    capacity: 6,
     minPlayers: 2,
-    snapPreset: "light",
-    snapRounds: 5,
-    snapSeconds: 15,
-  });
-  const a = person();
-  const b = person();
-  await joinReady(lightRoom, a, "하나");
-  await joinReady(lightRoom, b, "두리");
-  let state = await service.host(lightRoom, host, {
-    action: "start",
-    revision: (await service.read(lightRoom, host)).revision,
-  });
-  for (let round = 1; round <= 5; round++) {
-    assert.notEqual(state.snapPang!.mission!.kind, "face");
-    // Skip briefing -> active -> reveal -> next
-    state = await service.host(lightRoom, host, {
-      action: "snap-control",
-      revision: state.revision,
-      phaseId: state.snapPang!.phaseId,
-      command: "next",
-    });
-    state = await service.host(lightRoom, host, {
-      action: "snap-control",
-      revision: state.revision,
-      phaseId: state.snapPang!.phaseId,
-      command: "next",
-    });
-    state = await service.host(lightRoom, host, {
-      action: "snap-control",
-      revision: state.revision,
-      phaseId: state.snapPang!.phaseId,
-      command: "next",
-    });
-  }
-  assert.equal(state.phase, "finished");
-
-  // Pokerface preset: Round 2 is face-copy
-  const { id: pokerRoom } = await service.create(owner, {
-    gameType: "snap-pang",
-    title: "웃참 스페셜",
-    capacity: 4,
-    minPlayers: 2,
-    snapPreset: "pokerface",
+    snapPreset: "object",
     snapRounds: 3,
     snapSeconds: 20,
   });
-  const c = person();
-  const d = person();
-  await joinReady(pokerRoom, c, "세찌");
-  await joinReady(pokerRoom, d, "네찌");
-  let pState = await service.host(pokerRoom, host, {
+  const p1 = person();
+  const p2 = person();
+  const p3 = person();
+  const v1 = await joinReady(roomId, p1, "민수");
+  const v2 = await joinReady(roomId, p2, "지연");
+  const v3 = await joinReady(roomId, p3, "현우");
+  const started = await service.host(roomId, host, {
     action: "start",
-    revision: (await service.read(pokerRoom, host)).revision,
+    revision: (await service.read(roomId, host)).revision,
   });
-  assert.equal(pState.snapPang!.mission!.kind, "face");
-  assert.equal(pState.snapPang!.mission!.subMode, "smile-bomb");
-  // Skip R1 briefing -> active -> reveal -> R2 briefing (face-copy)
-  for (let i = 0; i < 3; i++) {
-    pState = await service.host(pokerRoom, host, {
-      action: "snap-control",
-      revision: pState.revision,
-      phaseId: pState.snapPang!.phaseId,
-      command: "next",
-    });
+  assert.equal(started.snapPang!.mission!.kind, "object");
+  const runId = started.snapPang!.runId!;
+  const active = await hostNext(roomId, host, started);
+  assert.equal(active.snapPang!.stage, "active");
+
+  now = new Date(now.getTime() + 1_200);
+  await service.player(roomId, p2, {
+    action: "snap-object",
+    runId,
+    round: 1,
+    confidence: 0.88,
+    fallback: false,
+  });
+  await assert.rejects(
+    service.player(roomId, p2, {
+      action: "snap-object",
+      runId,
+      round: 1,
+      confidence: 0.88,
+      fallback: false,
+    }),
+    code("CONFLICT"),
+  );
+  now = new Date(now.getTime() + 1_500);
+  await service.player(roomId, p1, {
+    action: "snap-object",
+    runId,
+    round: 1,
+    confidence: 0.72,
+    fallback: false,
+  });
+  now = new Date(now.getTime() + 1_500);
+  const reveal = await service.player(roomId, p3, {
+    action: "snap-object",
+    runId,
+    round: 1,
+    confidence: 0.85,
+    fallback: true,
+  });
+  assert.equal(reveal.snapPang!.stage, "reveal");
+  const points = (id: string | null) =>
+    reveal.snapPang!.lastResult!.entries.find((e) => e.playerId === id)!.points;
+  assert.equal(points(v2.viewer.id), 3);
+  assert.equal(points(v1.viewer.id), 2);
+  assert.equal(points(v3.viewer.id), 1);
+
+  let state = reveal;
+  for (const round of [2, 3]) {
+    state = await hostNext(roomId, host, state);
+    assert.equal(state.snapPang!.round, round);
+    assert.equal(state.snapPang!.mission!.kind, "object");
+    state = await hostNext(roomId, host, state);
+    state = await hostNext(roomId, host, state);
   }
-  assert.equal(pState.snapPang!.mission!.kind, "face");
-  assert.equal(pState.snapPang!.mission!.subMode, "face-copy");
-  pState = await service.host(pokerRoom, host, {
-    action: "snap-control",
-    revision: pState.revision,
-    phaseId: pState.snapPang!.phaseId,
-    command: "next",
+  state = await hostNext(roomId, host, state);
+  assert.equal(state.phase, "finished");
+});
+
+test("face mode alternates 웃음 참기 and 표정 릴레이 and scores both", async () => {
+  const host = person(owner);
+  const { id: roomId } = await service.create(owner, {
+    gameType: "snap-pang",
+    title: "웃참 스페셜",
+    capacity: 6,
+    minPlayers: 2,
+    snapPreset: "face",
+    snapRounds: 3,
+    snapSeconds: 20,
   });
+  const p1 = person();
+  const p2 = person();
+  const p3 = person();
+  const v1 = await joinReady(roomId, p1, "민수");
+  const v2 = await joinReady(roomId, p2, "지연");
+  const v3 = await joinReady(roomId, p3, "현우");
+  const started = await service.host(roomId, host, {
+    action: "start",
+    revision: (await service.read(roomId, host)).revision,
+  });
+  const runId = started.snapPang!.runId!;
+  const r1 = started.snapPang!.mission!;
+  assert.equal(r1.kind, "face");
+  assert.equal(r1.kind === "face" && r1.subMode, "smile-bomb");
+
+  // Round 1: 웃음 참기
+  const r1Active = await hostNext(roomId, host, started);
+  const attackerId = r1.kind === "face" ? r1.attackerId : null;
+  const playersById = new Map([
+    [v1.viewer.id!, p1],
+    [v2.viewer.id!, p2],
+    [v3.viewer.id!, p3],
+  ]);
+  const attacker = playersById.get(attackerId!)!;
+  const defenders = [...playersById.entries()]
+    .filter(([id]) => id !== attackerId)
+    .map(([, who]) => who);
+
+  // Attacker cannot submit tension
+  await assert.rejects(
+    service.player(roomId, attacker, {
+      action: "snap-tension",
+      runId,
+      round: 1,
+      tension: 50,
+      popped: false,
+    }),
+    code("FORBIDDEN"),
+  );
+  // Expression relay results are rejected during 웃음 참기
+  await assert.rejects(
+    service.player(roomId, defenders[0]!, {
+      action: "snap-face-copy",
+      runId,
+      round: 1,
+      fallback: false,
+    }),
+    code("CONFLICT"),
+  );
+
+  // Defender 0 raises tension then pops; a repeated pop (client retry) is harmless.
+  const mid = await service.player(roomId, defenders[0]!, {
+    action: "snap-tension",
+    runId,
+    round: 1,
+    tension: 65,
+    popped: false,
+  });
+  assert.equal(mid.snapPang!.stage, "active");
+  for (let i = 0; i < 2; i++) {
+    const popped = await service.player(roomId, defenders[0]!, {
+      action: "snap-tension",
+      runId,
+      round: 1,
+      tension: 100,
+      popped: true,
+    });
+    assert.equal(popped.snapPang!.stage, "active");
+    assert.equal(popped.snapPang!.submittedCount, 1);
+  }
+  // Expire round 1 active timer -> settles 웃음 참기
+  now = new Date(now.getTime() + 21_000);
+  const r1Reveal = await service.read(roomId, host);
+  assert.equal(r1Active.snapPang!.stage, "active");
+  assert.equal(r1Reveal.snapPang!.stage, "reveal");
+  const attackerResult = r1Reveal.snapPang!.lastResult!.entries.find((e) => e.isAttacker)!;
+  assert.equal(attackerResult.points, 1); // 1 defender popped
+  assert.equal(
+    r1Reveal.snapPang!.lastResult!.entries.filter((e) => !e.isAttacker && !e.popped)[0]!.points,
+    2,
+  );
+
+  // Round 2: 표정 릴레이
+  const r2Brief = await hostNext(roomId, host, r1Reveal);
+  const r2 = r2Brief.snapPang!.mission!;
+  assert.equal(r2.kind === "face" && r2.subMode, "face-copy");
+  assert.equal(r2.kind === "face" && r2.expressions.length, 2);
+  await hostNext(roomId, host, r2Brief);
   now = new Date(now.getTime() + 1_000);
-  await service.player(pokerRoom, c, {
+  await service.player(roomId, p3, { action: "snap-face-copy", runId, round: 2, fallback: false });
+  now = new Date(now.getTime() + 1_000);
+  await service.player(roomId, p1, { action: "snap-face-copy", runId, round: 2, fallback: true });
+  now = new Date(now.getTime() + 1_000);
+  const r2Reveal = await service.player(roomId, p2, {
     action: "snap-face-copy",
-    runId: pState.snapPang!.runId!,
+    runId,
     round: 2,
     fallback: false,
   });
-  now = new Date(now.getTime() + 1_000);
-  const done = await service.player(pokerRoom, d, {
-    action: "snap-face-copy",
-    runId: pState.snapPang!.runId!,
-    round: 2,
-    fallback: true,
+  assert.equal(r2Reveal.snapPang!.stage, "reveal");
+  const points = (id: string | null) =>
+    r2Reveal.snapPang!.lastResult!.entries.find((e) => e.playerId === id)!.points;
+  assert.equal(points(v3.viewer.id), 3);
+  assert.equal(points(v1.viewer.id), 2);
+  assert.equal(points(v2.viewer.id), 1);
+
+  // Round 3 goes back to 웃음 참기
+  const r3Brief = await hostNext(roomId, host, r2Reveal);
+  const r3 = r3Brief.snapPang!.mission!;
+  assert.equal(r3.kind === "face" && r3.subMode, "smile-bomb");
+});
+
+test("random mode deals all four missions within the first four rounds", async () => {
+  const host = person(owner);
+  const { id: roomId } = await service.create(owner, {
+    gameType: "snap-pang",
+    title: "랜덤 스냅 팡",
+    capacity: 6,
+    minPlayers: 2,
+    snapPreset: "random",
+    snapRounds: 5,
+    snapSeconds: 15,
   });
-  assert.equal(done.snapPang!.stage, "reveal");
-  assert.equal(done.snapPang!.lastResult!.entries[0]!.points, 3);
-  assert.equal(done.snapPang!.lastResult!.entries[1]!.points, 2);
+  await joinReady(roomId, person(), "하나");
+  await joinReady(roomId, person(), "두리");
+  let state = await service.host(roomId, host, {
+    action: "start",
+    revision: (await service.read(roomId, host)).revision,
+  });
+  const seen: string[] = [];
+  for (let round = 1; round <= 5; round++) {
+    const mission = state.snapPang!.mission!;
+    seen.push(
+      snapPangSlotLabel(
+        mission.kind === "face" ? { kind: "face", face: mission.subMode } : { kind: mission.kind },
+      ),
+    );
+    for (let step = 0; step < 3; step++) state = await hostNext(roomId, host, state);
+  }
+  assert.equal(state.phase, "finished");
+  assert.deepEqual(
+    seen.slice(0, 4).sort(),
+    ["🎨 색깔 찾기", "📦 물건 찾기", "💣 웃음 참기", "🎭 표정 릴레이"].sort(),
+  );
+  assert.notEqual(seen[4], seen[3]);
 });
