@@ -1730,33 +1730,6 @@ body {
   .mobile-app-nav > button[data-active="true"] svg {
     stroke-width: 2.4;
   }
-  .mobile-app-nav .mobile-app-create {
-    color: var(--sl-ink-2);
-    font-weight: 650;
-  }
-  .mobile-app-create__icon {
-    display: inline-grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 999px;
-    background: var(--sl-signature);
-    color: #ffffff;
-    box-shadow: 0 4px 10px -4px rgb(10 132 254 / 65%);
-    transition:
-      transform 0.15s ease,
-      background-color 0.15s ease;
-  }
-  .mobile-app-nav .mobile-app-create svg {
-    width: 15px;
-    height: 15px;
-    stroke-width: 2.75;
-  }
-  .mobile-app-nav .mobile-app-create[data-active="true"] .mobile-app-create__icon,
-  .mobile-app-nav .mobile-app-create:active .mobile-app-create__icon {
-    background: var(--sl-signature-hover);
-    transform: scale(0.95);
-  }
   .mobile-compose {
     height: 46px;
     background: var(--sl-signature);

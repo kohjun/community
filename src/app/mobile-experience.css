@@ -614,7 +614,6 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
-    align-items: start;
     left: 0;
     right: 0;
     bottom: 0;
@@ -626,7 +625,7 @@
     backdrop-filter: blur(18px);
     box-shadow: 0 -4px 18px #223b5b05;
   }
-  .mobile-app-nav > a,
+  .mobile-app-nav > :is(a, button),
   .mobile-app-nav .notification-mobile-trigger {
     position: relative;
     display: flex;
