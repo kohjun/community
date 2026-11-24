@@ -128,6 +128,7 @@ export function skipSessionRefresh(path: string, method: string): boolean {
   return (
     ["GET", "HEAD"].includes(method) &&
     (path === "/api/health" ||
+      path === "/api/search/suggestions" ||
       /^\/api\/games\/[a-f0-9-]{36}\/stream$/i.test(path) ||
       [
         "/robots.txt",

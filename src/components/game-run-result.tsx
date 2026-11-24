@@ -6,6 +6,7 @@ import { appRequest } from "@/lib/api-client";
 import { DrawingGameStage } from "./drawing-game-stage";
 import { ClueGameStage } from "./clue-game-stage";
 import { SnapPangStage } from "./snap-pang-stage";
+import { GamePostPlayHub } from "./game-post-play-hub";
 import styles from "./creative-games.module.css";
 export function GameRunResult({ roomId, runId }: { roomId: string; runId: string }) {
   const [room, setRoom] = useState<GameRoomView | null>(null),
@@ -62,6 +63,7 @@ export function GameRunResult({ roomId, runId }: { roomId: string; runId: string
       {room?.clue && (
         <ClueGameStage room={room} busy={false} onAction={async () => false} onRefresh={() => {}} />
       )}
+      {room && <GamePostPlayHub room={room} />}
       {!room && !error && <p className={styles.status}>게임 결과를 불러오고 있어요…</p>}
     </div>
   );

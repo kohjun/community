@@ -6,15 +6,22 @@ import {
   BookOpenCheck,
   ChevronLeft,
   ChevronRight,
+  Flame,
   Layers3,
   MessageCircle,
   Search,
+  Sparkles,
   Users,
 } from "lucide-react";
 import { ParticipationShell } from "./participation-shell";
 import { TopicCatalogue } from "./topic-catalogue";
+import { DynamicUnifiedSearchInput } from "./dynamic-search-box";
 import styles from "./workspace-navigation.module.css";
 import { CATEGORIES } from "@/domain/categories";
+import {
+  FALLBACK_SEARCH_SUGGESTIONS,
+  type SearchSuggestionsResponse,
+} from "@/domain/search-trends";
 import {
   SEARCH_LABELS,
   SEARCH_TYPES,
@@ -38,9 +45,11 @@ const date = new Intl.DateTimeFormat("ko-KR", {
 const count = (value: number) => new Intl.NumberFormat("ko-KR").format(value);
 export function UnifiedSearch({
   data,
+  suggestions = FALLBACK_SEARCH_SUGGESTIONS,
   invalidQuery = false,
 }: {
   data: SearchPage;
+  suggestions?: SearchSuggestionsResponse;
   invalidQuery?: boolean;
 }) {
   const { query } = data;
@@ -60,17 +69,7 @@ export function UnifiedSearch({
         </Link>
       </section>
       <form className="unified-search-form" action="/search" method="get" role="search">
-        <label className="unified-search-input">
-          <Search size={20} aria-hidden="true" />
-          <input
-            type="search"
-            name="q"
-            defaultValue={query.q}
-            maxLength={100}
-            placeholder="이야기, 모집, 룰북, 템플릿, 행사 기록 검색"
-            aria-label="통합 검색어"
-          />
-        </label>
+        <DynamicUnifiedSearchInput defaultValue={query.q} initialSuggestions={suggestions} />
         <select name="category" aria-label="검색 카테고리" defaultValue={query.category ?? ""}>
           <option value="">모든 카테고리</option>
           {CATEGORIES.map((category) => (
@@ -116,18 +115,51 @@ export function UnifiedSearch({
       </nav>
       {!query.q ? (
         <>
+          <div className="unified-search-trends">
+            <section className="unified-search-trends__card" aria-label="실시간 인기 검색어">
+              <div className="unified-search-trends__head">
+                <h2>
+                  <Flame size={16} aria-hidden="true" />
+                  실시간 인기 검색어
+                </h2>
+                <span>커뮤니티 활동 기반</span>
+              </div>
+              <ol className="unified-search-popular-grid">
+                {suggestions.popular.slice(0, 8).map((item, index) => (
+                  <li key={item.keyword}>
+                    <Link href={searchHref({ q: item.keyword, type: "all", page: 1 })}>
+                      <span className={index < 3 ? "sl-search-rank is-top" : "sl-search-rank"}>
+                        {index + 1}
+                      </span>
+                      <strong>{item.keyword}</strong>
+                      {item.badge && <em className="sl-search-badge">{item.badge}</em>}
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </section>
+            <section className="unified-search-trends__card" aria-label="추천 키워드">
+              <div className="unified-search-trends__head">
+                <h2>
+                  <Sparkles size={16} aria-hidden="true" />
+                  지금 많이 찾는 추천 키워드
+                </h2>
+                <span>원클릭 검색</span>
+              </div>
+              <div className="unified-search-suggestions">
+                {suggestions.recommended.map((item) => (
+                  <Link
+                    key={item.keyword}
+                    href={searchHref({ q: item.keyword, type: "all", page: 1 })}
+                  >
+                    #{item.keyword}
+                    <ArrowRight size={13} />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          </div>
           <TopicCatalogue />
-          <section className={styles.quickSearch} aria-label="추천 검색어">
-            <span>많이 찾는 키워드</span>
-            <div className="unified-search-suggestions">
-              {["추리", "파티", "여행", "소개팅"].map((q) => (
-                <Link key={q} href={searchHref({ q, type: "all", page: 1 })}>
-                  {q}
-                  <ArrowRight size={13} />
-                </Link>
-              ))}
-            </div>
-          </section>
         </>
       ) : (
         <>

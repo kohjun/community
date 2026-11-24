@@ -9,5 +9,7 @@ export const meetupTypeLabel = (type: MeetupType | null | undefined) =>
 
 /** Recruitment list narrowed to planned events, so it never mixes in lightning meetups. */
 export const EVENT_RECRUITMENTS_HREF = "/?kind=모집&meetupType=event";
+/** Opens the event recruitment form directly on the home community page. */
+export const EVENT_COMPOSE_HREF = "/?compose=event";
 /** Opens the lightning form directly on the lightning page. */
 export const LIGHTNING_COMPOSE_HREF = "/lightning?open=1";

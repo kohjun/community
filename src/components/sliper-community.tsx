@@ -15,10 +15,9 @@ import {
   BellRing,
   Bookmark,
   Check,
+  Grid2X2,
   Home,
-  ImageIcon,
   List,
-  MapPin,
   Pencil,
   Search,
   X,
@@ -37,13 +36,16 @@ import { HotStories } from "./home-stage";
 import { HomeHero } from "./home-hero";
 import { RecruitmentTypeDialog } from "./recruitment-type-dialog";
 import {
+  EVENT_COMPOSE_HREF,
   EVENT_RECRUITMENTS_HREF,
   LIGHTNING_COMPOSE_HREF,
   MEETUP_TYPE_LABELS,
   type MeetupType,
 } from "@/domain/meetup-types";
+import { OPEN_EVENT_COMPOSE_EVENT } from "@/lib/recruit-compose-events";
 import { SiteHeader } from "./site-header";
 import { SiteFooter } from "./site-footer";
+import { DynamicHeaderSearch } from "./dynamic-search-box";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { AdSlot } from "./ad-slot";
 import { CommunitySort } from "./community-sort";
@@ -67,7 +69,6 @@ import { DISCUSSION_TYPES, DISCUSSION_LABELS } from "@/domain/discussions";
 import { useCommunity } from "@/lib/use-community";
 import { cn } from "@/lib/utils";
 import {
-  DEFAULT_RECRUITMENT_LAYOUT,
   readRecruitmentLayout,
   writeRecruitmentLayout,
   type RecruitmentLayout,
@@ -89,11 +90,13 @@ export function SliperCommunity({
   initialView = "home",
   initialQuery = {},
   initialComposeTopic,
+  initialComposeKind,
 }: {
   initialState: CommunitySnapshot;
   initialView?: "home" | "stories";
   initialQuery?: FeedQuery;
   initialComposeTopic?: TopicSlug;
+  initialComposeKind?: "모집" | "투표";
 }) {
   const router = useRouter();
   const storyBoard = initialView === "stories";
@@ -114,9 +117,7 @@ export function SliperCommunity({
   const [kind, setKind] = useState<(typeof kinds)[number]>(
     initialQuery.kind === "후기" ? "이야기" : (initialQuery.kind ?? "전체"),
   );
-  const [recruitmentLayout, setRecruitmentLayout] = useState<RecruitmentLayout>(
-    DEFAULT_RECRUITMENT_LAYOUT,
-  );
+  const [recruitmentLayout, setRecruitmentLayout] = useState<RecruitmentLayout>("list");
   useEffect(() => {
     setRecruitmentLayout(readRecruitmentLayout());
   }, []);
@@ -142,8 +143,12 @@ export function SliperCommunity({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [composeTopic, setComposeTopic] = useState(initialComposeTopic ?? null);
-  const [writing, setWriting] = useState(!!initialComposeTopic && initialState.canWrite);
-  const [composeKind, setComposeKind] = useState<"모집" | "투표" | null>(null);
+  const [writing, setWriting] = useState(
+    (!!initialComposeTopic || !!initialComposeKind) && initialState.canWrite,
+  );
+  const [composeKind, setComposeKind] = useState<"모집" | "투표" | null>(
+    initialComposeKind ?? null,
+  );
   const [choosingRecruitment, setChoosingRecruitment] = useState(false);
   const [audience] = useAudience();
   const [searchOpen, setSearchOpen] = useState(!!initialQuery.search);
@@ -155,6 +160,25 @@ export function SliperCommunity({
     url.searchParams.delete("composeTopic");
     window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
   }, [initialComposeTopic]);
+  useEffect(() => {
+    if (!initialComposeKind) return;
+    if (initialState.canWrite) {
+      setComposeKind(initialComposeKind);
+      setWriting(true);
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete("compose");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  }, [initialComposeKind, initialState.canWrite]);
+  const openEventComposeRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const onOpenEventCompose = (event: Event) => {
+      event.preventDefault();
+      openEventComposeRef.current();
+    };
+    window.addEventListener(OPEN_EVENT_COMPOSE_EVENT, onOpenEventCompose);
+    return () => window.removeEventListener(OPEN_EVENT_COMPOSE_EVENT, onOpenEventCompose);
+  }, []);
   function changeWriting(open: boolean) {
     setWriting(open);
     if (!open) {
@@ -291,8 +315,7 @@ export function SliperCommunity({
     discoveryOpen ||
     filtered.length === 0;
   useAdSenseContentGuard(advertisingBlocked);
-  const recruitmentCards = kind === "모집";
-  const showRecruitmentImages = recruitmentLayout === "card";
+  const recruitmentCards = kind === "모집" && recruitmentLayout === "card";
   const questionTab = storyBoard && kind === "이야기" && discussionType === "question";
   function writeForBoard() {
     if (meetupBoard === "lightning") {
@@ -441,6 +464,15 @@ export function SliperCommunity({
   function browseRecruitments() {
     router.push(EVENT_RECRUITMENTS_HREF);
   }
+  openEventComposeRef.current = () => {
+    if (!store.canWrite) {
+      router.push(loginHref(EVENT_COMPOSE_HREF));
+      return;
+    }
+    setChoosingRecruitment(false);
+    setComposeKind("모집");
+    setWriting(true);
+  };
   function startHosting() {
     if (!store.canWrite) {
       startWriting();
@@ -466,7 +498,6 @@ export function SliperCommunity({
               ? "events"
               : "home"
         }
-        savedMeetupsActive={savedMeetups}
         search={
           <>
             <button
@@ -482,34 +513,27 @@ export function SliperCommunity({
             >
               {searchOpen ? <X size={20} /> : <Search size={20} />}
             </button>
-            <form
-              className={cn("sl-search", searchOpen && "is-open")}
-              role="search"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (window.matchMedia("(max-width:720px)").matches)
-                  event.currentTarget.querySelector("input")?.blur();
+            <DynamicHeaderSearch
+              inputRef={searchInput}
+              open={searchOpen}
+              value={query}
+              ariaLabel="커뮤니티 검색"
+              onChange={(next) => {
+                setQuery(next);
+                if (view !== "stories") setView("home");
+              }}
+              onSubmitQuery={() => {
                 feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
-            >
-              <Search size={17} aria-hidden="true" />
-              <input
-                ref={searchInput}
-                aria-label="커뮤니티 검색"
-                maxLength={100}
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  if (view !== "stories") setView("home");
-                }}
-                placeholder={view === "stories" ? "이야기 검색" : "모임·이야기 검색"}
-              />
-              {query && (
-                <button type="button" onClick={() => setQuery("")} aria-label="검색 지우기">
-                  <X size={15} />
-                </button>
-              )}
-            </form>
+              onSelectKeyword={(keyword) => {
+                setQuery(keyword);
+                if (view !== "stories") setView("home");
+                setSearchOpen(false);
+                requestAnimationFrame(() => {
+                  feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+              }}
+            />
           </>
         }
       />
@@ -543,9 +567,7 @@ export function SliperCommunity({
         <div className={cn("sl-layout", homeLanding && "sl-layout--home", showRail && "has-rail")}>
           <div className="sl-feed">
             <section ref={feedRef} className="sl-feed__section" aria-labelledby="feed-title">
-              <div
-                className={cn("sl-feed__head", meetupBoard === "event" && "sl-feed__head--events")}
-              >
+              <div className="sl-feed__head">
                 <h2 id="feed-title">
                   {feedTitle}
                   <span className="sl-count">
@@ -553,12 +575,6 @@ export function SliperCommunity({
                   </span>
                 </h2>
                 <div className="sl-feed__tools">
-                  {meetupBoard === "event" && (
-                    <Link className="sl-chip-link" href="/map">
-                      <MapPin size={15} aria-hidden="true" />
-                      이벤트 맵
-                    </Link>
-                  )}
                   {!storyBoard && (
                     <EventDiscoveryButton
                       active={discoveryActive}
@@ -626,19 +642,21 @@ export function SliperCommunity({
                   <div className="sl-layout-switch" role="group" aria-label="모집글 보기 방식">
                     <button
                       type="button"
-                      aria-pressed={showRecruitmentImages}
-                      onClick={() => changeRecruitmentLayout("card")}
+                      aria-pressed={recruitmentLayout === "list"}
+                      aria-label="목록형"
+                      title="목록형"
+                      onClick={() => changeRecruitmentLayout("list")}
                     >
-                      <ImageIcon size={15} aria-hidden="true" />
-                      사진형
+                      <List size={16} aria-hidden="true" />
                     </button>
                     <button
                       type="button"
-                      aria-pressed={!showRecruitmentImages}
-                      onClick={() => changeRecruitmentLayout("list")}
+                      aria-pressed={recruitmentLayout === "card"}
+                      aria-label="카드형"
+                      title="카드형"
+                      onClick={() => changeRecruitmentLayout("card")}
                     >
-                      <List size={15} aria-hidden="true" />
-                      간략형
+                      <Grid2X2 size={16} aria-hidden="true" />
                     </button>
                   </div>
                 )}
@@ -855,20 +873,18 @@ export function SliperCommunity({
               {filtered.length ? (
                 recruitmentCards ? (
                   <div className="recruitment-card-grid">
-                    {filtered.map((post, index) => (
-                      <Fragment key={post.id}>
-                        <CommunityRecruitmentCard
-                          post={post}
-                          showImage={showRecruitmentImages}
-                          busy={store.busy}
-                          canWrite={store.canWrite}
-                          onOpen={() => openPost(post)}
-                          onLike={() => store.toggleLike(post.id)}
-                          onSave={() => savePost(post.id)}
-                          onTag={setTag}
-                        />
-                        {!showRecruitmentImages && feedModule(index)}
-                      </Fragment>
+                    {filtered.map((post) => (
+                      <CommunityRecruitmentCard
+                        key={post.id}
+                        post={post}
+                        showImage
+                        busy={store.busy}
+                        canWrite={store.canWrite}
+                        onOpen={() => openPost(post)}
+                        onLike={() => store.toggleLike(post.id)}
+                        onSave={() => savePost(post.id)}
+                        onTag={setTag}
+                      />
                     ))}
                   </div>
                 ) : (

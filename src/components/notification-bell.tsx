@@ -248,6 +248,7 @@ export function NotificationBell({ mobile = false, label }: { mobile?: boolean; 
         aria-expanded={open}
         aria-controls={panelId}
         aria-haspopup="dialog"
+        data-active={pathname === "/notifications" ? "true" : undefined}
         onClick={() => {
           setItems([]);
           setNeedsLogin(false);
@@ -263,7 +264,9 @@ export function NotificationBell({ mobile = false, label }: { mobile?: boolean; 
               {unread > 99 ? "99+" : unread}
             </span>
           ) : (
-            <i aria-hidden="true" />
+            <span className="sl-header-notification-count" aria-hidden="true">
+              {unread > 99 ? "99+" : unread}
+            </span>
           ))}
       </button>
       {open && (

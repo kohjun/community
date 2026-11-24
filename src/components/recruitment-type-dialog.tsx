@@ -9,10 +9,12 @@ export function RecruitmentTypeDialog({
   open,
   onOpenChange,
   onEvent,
+  onLightning,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEvent: () => void;
+  onLightning?: () => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -32,16 +34,29 @@ export function RecruitmentTypeDialog({
             </span>
             <ChevronRight size={18} aria-hidden="true" />
           </button>
-          <Link href={LIGHTNING_COMPOSE_HREF} onClick={() => onOpenChange(false)}>
-            <span className="sl-recruit-type__icon" aria-hidden="true">
-              <Zap size={22} />
-            </span>
-            <span className="sl-recruit-type__copy">
-              <strong>{MEETUP_TYPE_LABELS.lightning}</strong>
-              <small>2–12명이 7일 안에 가볍게 모여요. 비용은 현장에서 함께 정산해요.</small>
-            </span>
-            <ChevronRight size={18} aria-hidden="true" />
-          </Link>
+          {onLightning ? (
+            <button type="button" onClick={onLightning}>
+              <span className="sl-recruit-type__icon" aria-hidden="true">
+                <Zap size={22} />
+              </span>
+              <span className="sl-recruit-type__copy">
+                <strong>{MEETUP_TYPE_LABELS.lightning}</strong>
+                <small>2–12명이 7일 안에 가볍게 모여요. 비용은 현장에서 함께 정산해요.</small>
+              </span>
+              <ChevronRight size={18} aria-hidden="true" />
+            </button>
+          ) : (
+            <Link href={LIGHTNING_COMPOSE_HREF} onClick={() => onOpenChange(false)}>
+              <span className="sl-recruit-type__icon" aria-hidden="true">
+                <Zap size={22} />
+              </span>
+              <span className="sl-recruit-type__copy">
+                <strong>{MEETUP_TYPE_LABELS.lightning}</strong>
+                <small>2–12명이 7일 안에 가볍게 모여요. 비용은 현장에서 함께 정산해요.</small>
+              </span>
+              <ChevronRight size={18} aria-hidden="true" />
+            </Link>
+          )}
         </div>
       </DialogContent>
     </Dialog>

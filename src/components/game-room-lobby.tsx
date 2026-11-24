@@ -36,6 +36,7 @@ import { AuctionGameStage } from "./auction-game-stage";
 import { MbtiGameStage } from "./mbti-game-stage";
 import { gameJoinUrl } from "@/domain/game-invite";
 import { GameRoundActionsTarget } from "./game-round-layout";
+import { GamePostPlayHub } from "./game-post-play-hub";
 const phases = {
   lobby: "함께 준비해요",
   playing: "게임 진행 중",
@@ -884,6 +885,7 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
                   이 게임 결과 다시 보기 · 24시간 보관
                 </Link>
               )}
+            {room.phase === "finished" && <GamePostPlayHub room={room} />}
             {room.phase === "playing" &&
               !room.mbti &&
               !room.mbtiIntro &&

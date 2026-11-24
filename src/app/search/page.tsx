@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getDatabase } from "@/db/client";
 import { currentActor } from "@/server/identity";
 import { searchService } from "@/server/search-service";
+import { searchTrendsService } from "@/server/search-trends-service";
+import { FALLBACK_SEARCH_SUGGESTIONS } from "@/domain/search-trends";
 import { searchInputSchema } from "@/domain/search";
 import { UnifiedSearch } from "@/components/unified-search";
 export const dynamic = "force-dynamic";
@@ -17,9 +19,14 @@ export default async function Page({
 }) {
   const params = await searchParams;
   const query = searchInputSchema.safeParse(params);
-  const result = await searchService(getDatabase()).search(
-    await currentActor(),
-    query.success ? query.data : {},
-  );
-  return <UnifiedSearch data={result} invalidQuery={!query.success} />;
+  const db = getDatabase();
+  const [result, suggestions] = await Promise.all([
+    currentActor().then((actor) =>
+      searchService(db).search(actor, query.success ? query.data : {}),
+    ),
+    searchTrendsService(db)
+      .suggestions()
+      .catch(() => FALLBACK_SEARCH_SUGGESTIONS),
+  ]);
+  return <UnifiedSearch data={result} suggestions={suggestions} invalidQuery={!query.success} />;
 }

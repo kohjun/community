@@ -1,5 +1,9 @@
 "use client";
 import { LoginLink } from "./login-link";
+import { loginHref } from "@/domain/login-return";
+import { LIGHTNING_COMPOSE_HREF } from "@/domain/meetup-types";
+import { OPEN_LIGHTNING_COMPOSE_EVENT } from "@/lib/recruit-compose-events";
+import { useRouter } from "next/navigation";
 import { ParticipantGuideEditor } from "./participant-guide";
 import type { ParticipantGuide } from "@/domain/participant-guide";
 import { useAdSenseContentGuard } from "./adsense-provider";
@@ -89,6 +93,7 @@ export function LightningCommunity({
   initialTag?: string;
   initialSearch?: string;
 }) {
+  const router = useRouter();
   const [feed, setFeed] = useState(initial),
     [category, setCategory] = useState<LightningCategorySlug | "">(initialCategory),
     [tag, setTag] = useState(initialTag),
@@ -133,11 +138,21 @@ export function LightningCommunity({
   const dialogHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (!initialOpen) return;
+    setOpen(true);
     // Opening is a one-time action: reloading or returning to this page should not reopen the form.
     const url = new URL(window.location.href);
     url.searchParams.delete("open");
     window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
   }, [initialOpen]);
+  const openLightningComposeRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const onOpenLightningCompose = (event: Event) => {
+      event.preventDefault();
+      openLightningComposeRef.current();
+    };
+    window.addEventListener(OPEN_LIGHTNING_COMPOSE_EVENT, onOpenLightningCompose);
+    return () => window.removeEventListener(OPEN_LIGHTNING_COMPOSE_EVENT, onOpenLightningCompose);
+  }, []);
   async function load(
     nextCategory: LightningCategorySlug | "",
     nextTag = tag,
@@ -195,6 +210,13 @@ export function LightningCommunity({
     setDuration(120);
     setOpen(true);
   }
+  openLightningComposeRef.current = () => {
+    if (!canWrite) {
+      router.push(loginHref(LIGHTNING_COMPOSE_HREF));
+      return;
+    }
+    begin();
+  };
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;

@@ -1,4 +1,5 @@
 import { publicPageMetadata } from "@/domain/search-visibility";
+import { EVENT_COMPOSE_HREF } from "@/domain/meetup-types";
 import { communityQueries } from "@/server/community-queries";
 import { redirect } from "next/navigation";
 import { communityLocation } from "@/domain/community-location";
@@ -21,7 +22,11 @@ export default async function Page({
     ),
     false,
   );
+  const composeEvent = params.compose === "event";
   const actor = await currentActor();
+  if (!actor && composeEvent) {
+    redirect("/login?returnTo=" + encodeURIComponent(EVENT_COMPOSE_HREF));
+  }
   if (!actor && (initialQuery.view === "mine" || initialQuery.view === "bookmarks")) {
     const query = new URLSearchParams(
       Object.entries(params).filter(([, value]) => typeof value === "string") as [string, string][],
@@ -37,6 +42,7 @@ export default async function Page({
     <SliperCommunity
       key={JSON.stringify(initialQuery)}
       initialQuery={initialQuery}
+      {...(composeEvent ? { initialComposeKind: "모집" as const } : {})}
       initialState={{
         ...feed,
         notifications: notifications.items,

@@ -12,6 +12,7 @@ export default async function Page({
     next?: string | string[];
     error?: string;
     withdrawn?: string;
+    from?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -26,7 +27,9 @@ export default async function Page({
           ? "탈퇴 처리를 완료했어요."
           : params.error
             ? "로그인 연결을 완료하지 못했어요. 다시 시도하거나 문의해주세요."
-            : ""
+            : params.from === "game-result"
+              ? "방금 웹게임에서 넘어오셨군요! 로그인하면 직접 QR 게임방을 열고 주말 번개 알림까지 받을 수 있어요."
+              : ""
       }
     />
   );
