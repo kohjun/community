@@ -4,7 +4,10 @@ import { SNAP_PANG_PRESET_META, snapPangSettingsFrom } from "@/domain/snap-pang"
 import { CreativeSettingsFields } from "./creative-settings-fields";
 import { DRAWING_MODES, CLUE_MODES } from "@/domain/creative-games";
 import { TemperatureSettingsFields } from "./temperature-settings-fields";
+import { ToastSettingsFields } from "./toast-settings-fields";
+import { AuctionSettingsFields } from "./auction-settings-fields";
 import { TEMPERATURE_MODE_LABELS, temperatureSettingsFrom } from "@/domain/temperature-game";
+import { TOAST_MODE_INFO } from "@/domain/toast-game";
 import { useState } from "react";
 import { Check, ChevronDown, RefreshCw, Settings2, X } from "lucide-react";
 import type { GameRoomSettings, GameRoomView } from "@/domain/game-room";
@@ -82,7 +85,7 @@ export function GameRoomSettingsPanel({
       : []),
     ...(config.gameType === "toast"
       ? [
-          config.toastMode === "basic" ? "기본 · 인원 예측" : "심화 · 목표 질문",
+          TOAST_MODE_INFO[config.toastMode].title,
           `${config.toastRounds}라운드`,
           `선택 ${config.toastAnswerSeconds}초`,
         ]
@@ -270,124 +273,61 @@ export function GameRoomSettingsPanel({
             />
           )}
           {config.gameType === "toast" && (
-            <>
-              <label>
-                게임 모드
-                <select
-                  aria-label="게임방 설정 건배 모드"
-                  disabled={busy}
-                  value={draft.toastMode}
-                  onChange={(e) =>
-                    patch({ toastMode: e.target.value as GameRoomSettings["toastMode"] })
-                  }
-                >
-                  <option value="basic">기본 · 건배 인원 맞히기</option>
-                  <option value="target">심화 · 목표 인원에 맞는 질문 만들기</option>
-                </select>
-              </label>
-              <div className={styles.grid}>
-                <label>
-                  라운드 수
-                  <select
-                    aria-label="게임방 설정 건배 라운드"
-                    disabled={busy}
-                    value={draft.toastRounds}
-                    onChange={(e) => patch({ toastRounds: Number(e.target.value) })}
-                  >
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                      <option key={n} value={n}>
-                        {n}라운드
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  선택 제한시간
-                  <select
-                    aria-label="게임방 설정 건배 제한시간"
-                    disabled={busy}
-                    value={draft.toastAnswerSeconds}
-                    onChange={(e) =>
-                      patch({
-                        toastAnswerSeconds: Number(
-                          e.target.value,
-                        ) as GameRoomSettings["toastAnswerSeconds"],
-                      })
-                    }
-                  >
-                    {[15, 30, 60, 90].map((n) => (
-                      <option key={n} value={n}>
-                        {n}초
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <p className={styles.note}>
-                모두 한 번씩 질문하면 1라운드예요. 정원 기준 총 {draft.capacity * draft.toastRounds}
-                차례예요.
-              </p>
-            </>
+            <ToastSettingsFields
+              value={{
+                mode: draft.toastMode,
+                rounds: draft.toastRounds,
+                answerSeconds: draft.toastAnswerSeconds,
+              }}
+              capacity={draft.capacity}
+              disabled={busy}
+              rowClassName={styles.grid}
+              roundsLabel="게임방 설정 건배 라운드"
+              secondsLabel="게임방 설정 건배 제한시간"
+              onChange={(next) =>
+                patch({
+                  ...(next.mode ? { toastMode: next.mode } : {}),
+                  ...(next.rounds !== undefined ? { toastRounds: next.rounds } : {}),
+                  ...(next.answerSeconds !== undefined
+                    ? {
+                        toastAnswerSeconds:
+                          next.answerSeconds as GameRoomSettings["toastAnswerSeconds"],
+                      }
+                    : {}),
+                })
+              }
+            />
           )}
           {config.gameType === "auction" && (
-            <>
-              <label>
-                총 경매 라운드
-                <input
-                  type="number"
-                  aria-label="게임방 설정 경매 라운드"
-                  disabled={busy}
-                  required
-                  min={Math.max(4, draft.minPlayers + 1, room.players.length + 1)}
-                  max={120}
-                  value={draft.auctionRounds}
-                  onChange={(e) => patch({ auctionRounds: Number(e.target.value) })}
-                />
-              </label>
-              <div className={styles.grid}>
-                <label>
-                  시작 게임 머니
-                  <select
-                    aria-label="게임방 설정 시작 머니"
-                    disabled={busy}
-                    value={draft.auctionInitialMoney}
-                    onChange={(e) => patch({ auctionInitialMoney: Number(e.target.value) })}
-                  >
-                    {[...new Set([500, 1000, 2000, 5000, 10000, config.auctionInitialMoney])]
-                      .sort((a, b) => a - b)
-                      .map((n) => (
-                        <option key={n} value={n}>
-                          {n.toLocaleString()}G
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <label>
-                  물건당 입찰 시간
-                  <select
-                    aria-label="게임방 설정 입찰 시간"
-                    disabled={busy}
-                    value={draft.auctionBidSeconds}
-                    onChange={(e) =>
-                      patch({
-                        auctionBidSeconds: Number(
-                          e.target.value,
-                        ) as GameRoomSettings["auctionBidSeconds"],
-                      })
-                    }
-                  >
-                    {[30, 60, 90, 120].map((n) => (
-                      <option key={n} value={n}>
-                        {n}초
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <p className={styles.note}>
-                라운드 수는 시작 최소 인원과 실제 참가자 수보다 많아야 해요.
-              </p>
-            </>
+            <AuctionSettingsFields
+              value={{
+                rounds: draft.auctionRounds,
+                initialMoney: draft.auctionInitialMoney,
+                bidSeconds: draft.auctionBidSeconds,
+              }}
+              capacity={draft.capacity}
+              minRounds={Math.max(4, draft.minPlayers + 1, room.players.length + 1)}
+              disabled={busy}
+              rowClassName={styles.grid}
+              labels={{
+                rounds: "게임방 설정 경매 라운드",
+                money: "게임방 설정 시작 머니",
+                seconds: "게임방 설정 입찰 시간",
+              }}
+              onChange={(next) =>
+                patch({
+                  ...(next.rounds !== undefined ? { auctionRounds: next.rounds } : {}),
+                  ...(next.initialMoney !== undefined
+                    ? { auctionInitialMoney: next.initialMoney }
+                    : {}),
+                  ...(next.bidSeconds !== undefined
+                    ? {
+                        auctionBidSeconds: next.bidSeconds as GameRoomSettings["auctionBidSeconds"],
+                      }
+                    : {}),
+                })
+              }
+            />
           )}
           {config.gameType === "word-liar" && (
             <div className={styles.grid}>

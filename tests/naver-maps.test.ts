@@ -55,7 +55,9 @@ test("the map SDK uses the official HTTPS endpoint, ncpKeyId and geocoder withou
   assert.equal(url.origin, "https://oapi.map.naver.com");
   assert.equal(url.pathname, "/openapi/v3/maps.js");
   assert.equal(url.searchParams.get("ncpKeyId"), "example&callback=evil");
-  assert.equal(url.searchParams.get("submodules"), "geocoder");
+  assert.equal(url.searchParams.get("submodules"), "geocoder,panorama");
+  // NAVER reads the raw value; an encoded comma loads a missing submodule file.
+  assert.match(url.search, /submodules=geocoder,panorama/);
   assert.equal(url.searchParams.has("callback"), false);
 });
 

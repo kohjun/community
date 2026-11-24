@@ -316,14 +316,16 @@ try {
   await join(3);
   assert.equal((await hostView()).readyCount, 3);
   await click(panel(hp).getByRole("button", { name: "설정 변경", exact: true }));
-  await panel(hp).getByLabel("게임방 설정 건배 모드", { exact: true }).selectOption("target");
+  await panel(hp)
+    .getByRole("radio", { name: /목표 인원 맞추기/ })
+    .check({ force: true });
   await panel(hp).getByLabel("게임방 설정 건배 라운드", { exact: true }).selectOption("3");
   await panel(hp).getByLabel("게임방 설정 건배 제한시간", { exact: true }).selectOption("60");
   await panel(hp).getByLabel("게임방 설정 참가 정원", { exact: true }).selectOption("4");
   await click(guests[0].getByRole("button", { name: "준비 완료 · 취소하기", exact: true }));
   await click(guests[0].getByRole("button", { name: "준비 완료", exact: true }));
   await click(panel(hp).getByRole("button", { name: "설정 저장", exact: true }));
-  await panel(guests[0]).getByText("심화 · 목표 질문", { exact: true }).waitFor();
+  await panel(guests[0]).getByText("목표 인원 맞추기", { exact: true }).waitFor();
   await guests[3].getByLabel("게임 닉네임", { exact: true }).waitFor();
   let v = await hostView();
   assert.equal(v.readyCount, 3);

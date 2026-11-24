@@ -22,12 +22,10 @@ import {
 } from "lucide-react";
 import type { GameRoomView } from "@/domain/game-room";
 import {
-  SNAP_COLOR_BANK,
   SNAP_COLOR_MIN_ACCURACY,
   SNAP_EXPRESSION_LABELS,
   SNAP_PANG_PRESET_META,
   snapPangSlotLabel,
-  type SnapExpressionId,
   type SnapMission,
   type SnapPangView,
 } from "@/domain/snap-pang";
@@ -39,6 +37,7 @@ import {
   type CameraFacing,
 } from "@/lib/vision/camera";
 import {
+  countDistinctBoxes,
   getFaceLandmarker,
   getObjectDetector,
   NEUTRAL_FACE_TELEMETRY,
@@ -61,8 +60,13 @@ const missionLabel = (mission: SnapMission) =>
   );
 
 // Detection tuning: how recent and confident a sighting must be, and how long a face must hold.
-const OBJECT_FRESH_MS = 700;
-const OBJECT_MATCH_SCORE = 0.32;
+// A weak sighting (>= MATCH) needs a second one within CONFIRM_MS; a strong one counts at once.
+const OBJECT_FRESH_MS = 900;
+const OBJECT_CONFIRM_MS = 1_400;
+const OBJECT_MATCH_SCORE = 0.25;
+const OBJECT_STRONG_SCORE = 0.45;
+const OBJECT_TICK_MS = 160;
+const OBJECT_CENTER_CROP = 0.6;
 const FACE_HOLD_MS = 420;
 const FACE_MATCH_SCORE = 0.45;
 const TOAST_MS = 3_600;
@@ -71,9 +75,14 @@ const SMILE_THRESHOLD = 0.28;
 
 /** Per-round detection progress. Lives in a ref so re-renders and room updates never reset it. */
 type RoundProgress = {
-  /** When the target object(s) were last in view, and the best detector score then. */
+  /** When the target object(s) were last in view, the best detector score then, recent sighting
+   * times, and whether the shutter would count right now. */
   lastMatchAt: number;
   lastMatchScore: number;
+  sightings: number[];
+  lastMatchBoxes: DetectedObjectBox[];
+  objectReady: boolean;
+  tick: number;
   confidence: number;
   tension: number;
   lastPulseAt: number;
@@ -90,6 +99,10 @@ type RoundProgress = {
 const freshProgress = (): RoundProgress => ({
   lastMatchAt: -Infinity,
   lastMatchScore: 0,
+  sightings: [],
+  lastMatchBoxes: [],
+  objectReady: false,
+  tick: 0,
   confidence: 0,
   tension: 0,
   lastPulseAt: 0,
@@ -147,8 +160,8 @@ function missionToast(
       title: mission.label,
       detail:
         mission.targetCount > 1
-          ? `${mission.targetCount}개를 한 화면에 담고 초록 상자가 보이면 셔터를 눌러요.`
-          : "물건을 비추고 초록 상자가 보이면 셔터를 눌러요.",
+          ? `${mission.targetCount}개를 한 화면에 함께 담고, 초록 상자가 생기면 셔터를 눌러요.`
+          : "화면에 담고 초록 상자가 생기면 셔터를 눌러요.",
     };
   if (mission.subMode === "smile-bomb")
     return isAttacker
@@ -184,17 +197,16 @@ const OBJECT_LABEL_KO: Record<string, string> = {
   bowl: "그릇",
   laptop: "노트북",
   person: "사람",
+  vase: "꽃병",
+  remote: "리모컨",
+  couch: "소파",
+  bench: "벤치",
+  "dining table": "테이블",
+  "potted plant": "화분",
+  tv: "TV",
+  keyboard: "키보드",
+  mouse: "마우스",
 };
-
-const FALLBACK_OBJECT_CHOICES = [
-  { id: "cup", label: "☕ 컵·잔" },
-  { id: "bottle", label: "🍾 병·음료" },
-  { id: "cell phone", label: "📱 휴대폰" },
-  { id: "handbag", label: "👜 가방" },
-  { id: "book", label: "📖 책·메뉴" },
-  { id: "chair", label: "🪑 의자" },
-  { id: "bowl", label: "🥣 그릇" },
-];
 
 export function SnapPangStage({
   room,
@@ -218,7 +230,9 @@ export function SnapPangStage({
   const isAttacker = isSmileBomb && mission?.attackerId === viewerId;
 
   const [muted, setMuted] = useState(false);
-  const [fallbackMode, setFallbackMode] = useState(false);
+  // Bumped by the retry buttons to start the camera / reload the recognition model again.
+  const [cameraAttempt, setCameraAttempt] = useState(0);
+  const [modelAttempt, setModelAttempt] = useState(0);
   const [cameraError, setCameraError] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
   const [facingOverride, setFacingOverride] = useState<CameraFacing | null>(null);
@@ -232,7 +246,6 @@ export function SnapPangStage({
   // Live HUD readouts
   const [sampleHex, setSampleHex] = useState("#94A3B8");
   const [colorAccuracy, setColorAccuracy] = useState(0);
-  const [lockProgress, setLockProgress] = useState(0);
   const [detectedBoxes, setDetectedBoxes] = useState<DetectedObjectBox[]>([]);
   const [myTension, setMyTension] = useState(0);
   const [myPopped, setMyPopped] = useState(false);
@@ -244,11 +257,6 @@ export function SnapPangStage({
   const [faceMatch, setFaceMatch] = useState(0);
   const [smiling, setSmiling] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // Fallback mini-game states
-  const [rouletteIndex, setRouletteIndex] = useState(0);
-  const [fallbackObjectClicks, setFallbackObjectClicks] = useState(0);
-  const [fallbackFaceClicks, setFallbackFaceClicks] = useState(0);
 
   // Server-synced countdown
   const clockOffset = useMemo(() => game.serverNow - Date.now(), [game.serverNow]);
@@ -292,7 +300,6 @@ export function SnapPangStage({
   const mirrored = desiredFacing === "user";
   const needsCamera =
     isPlayer &&
-    !fallbackMode &&
     !isAttacker &&
     (game.stage === "briefing" || game.stage === "active") &&
     !hasSubmitted;
@@ -300,6 +307,9 @@ export function SnapPangStage({
   const cameraFront = needsCamera && !(mission?.kind === "face" && faceMasked);
   // Players on camera get the target, live feedback and shutter drawn over the play area.
   const playHud = needsCamera && !!mission;
+  // Camera denied or model failed: the in-camera card asks for a retry, so hide the play controls.
+  const cameraBlocked = !!cameraError || (modelStatus === "error" && mission?.kind !== "color");
+  const playControls = game.stage === "active" && !cameraBlocked;
   const attackerName =
     isSmileBomb && mission.attackerId
       ? (game.roster.find((p) => p.id === mission.attackerId)?.nickname ?? "공격자")
@@ -349,14 +359,11 @@ export function SnapPangStage({
     setObjectReady(false);
     setFaceMatch(0);
     setSmiling(false);
-    setLockProgress(0);
     setDetectedBoxes([]);
     setMyTension(0);
     setMyPopped(false);
     setFaceStepIndex(0);
     setFaceStepProgress(0);
-    setFallbackObjectClicks(0);
-    setFallbackFaceClicks(0);
     setSubmitting(false);
     setFacingOverride(null);
     liveRef.current.lockProgress = 0;
@@ -426,7 +433,6 @@ export function SnapPangStage({
       }
       if (!res.ok) {
         setCameraError(res.message);
-        setFallbackMode(true);
         return;
       }
       stopCameraStream(streamRef.current);
@@ -441,7 +447,7 @@ export function SnapPangStage({
       stopCameraStream(streamRef.current);
       streamRef.current = null;
     };
-  }, [needsCamera, desiredFacing]);
+  }, [needsCamera, desiredFacing, cameraAttempt]);
 
   const trigger3dBurst = useCallback((kind: Snap3dLiveState["burstKind"], color: string) => {
     liveRef.current.burstKind = kind;
@@ -473,14 +479,7 @@ export function SnapPangStage({
 
   // Color round: live center sampler (pure Canvas + CIE Lab, no model download)
   useEffect(() => {
-    if (
-      game.stage !== "active" ||
-      missionKind !== "color" ||
-      !cameraReady ||
-      fallbackMode ||
-      hasSubmitted
-    )
-      return;
+    if (game.stage !== "active" || missionKind !== "color" || !cameraReady || hasSubmitted) return;
     if (!sampleCanvasRef.current) {
       const canvas = document.createElement("canvas");
       canvas.width = 96;
@@ -507,7 +506,7 @@ export function SnapPangStage({
       liveRef.current.colorAccuracy = accuracy;
     }, 120);
     return () => clearInterval(timer);
-  }, [game.stage, missionId, missionKind, cameraReady, fallbackMode, hasSubmitted]);
+  }, [game.stage, missionId, missionKind, cameraReady, hasSubmitted]);
 
   // Object round: on-device ObjectDetector loop (~9fps)
   useEffect(() => {
@@ -515,7 +514,6 @@ export function SnapPangStage({
       game.stage !== "active" ||
       missionKind !== "object" ||
       !cameraReady ||
-      fallbackMode ||
       hasSubmitted ||
       !isPlayer
     )
@@ -548,30 +546,40 @@ export function SnapPangStage({
           const video = videoRef.current;
           if (!video || video.readyState < 2) return;
           const now = performance.now();
-          const boxes = runObjectDetection(detector, video, now);
+          // Alternate the whole frame with a zoomed center so farther objects are found too.
+          const crop = progress.tick++ % 2 === 0 ? 1 : OBJECT_CENTER_CROP;
+          const boxes = runObjectDetection(detector, video, now, crop);
           const matching = boxes.filter(
             (b) => current.cocoLabels.includes(b.label) && b.score >= OBJECT_MATCH_SCORE,
           );
+          // Keep the last target box on screen while the sighting is fresh, so the box and the
+          // "인식됐어요" readout agree even on frames (e.g. the zoomed pass) that miss it.
+          if (matching.length > 0)
+            progress.lastMatchBoxes = matching.map((box) => toDisplayBox(box, video, mirrored));
           setDetectedBoxes(
-            (matching.length > 0 ? matching : boxes.slice(0, 2)).map((box) =>
-              toDisplayBox(box, video, mirrored),
-            ),
+            matching.length > 0 || now - progress.lastMatchAt <= OBJECT_FRESH_MS
+              ? progress.lastMatchBoxes
+              : boxes.slice(0, 2).map((box) => toDisplayBox(box, video, mirrored)),
           );
 
           // Capture is manual (the in-camera shutter); the loop only reports whether it would hit.
-          if (matching.length >= current.targetCount) {
+          progress.sightings = progress.sightings.filter((t) => now - t <= OBJECT_CONFIRM_MS);
+          if (countDistinctBoxes(matching) >= current.targetCount) {
+            progress.sightings.push(now);
             progress.lastMatchAt = now;
             progress.lastMatchScore = Math.max(...matching.map((m) => m.score));
           }
-          const ready = now - progress.lastMatchAt <= OBJECT_FRESH_MS;
+          const ready =
+            now - progress.lastMatchAt <= OBJECT_FRESH_MS &&
+            (progress.sightings.length >= 2 || progress.lastMatchScore >= OBJECT_STRONG_SCORE);
+          progress.objectReady = ready;
           setObjectReady(ready);
           liveRef.current.lockProgress = ready ? 1 : 0;
-        }, 110);
+        }, OBJECT_TICK_MS);
       })
       .catch(() => {
         if (!alive) return;
         setModelStatus("error");
-        setFallbackMode(true);
       });
 
     return () => {
@@ -583,8 +591,8 @@ export function SnapPangStage({
     missionId,
     missionKind,
     cameraReady,
-    fallbackMode,
     hasSubmitted,
+    modelAttempt,
     isPlayer,
     mirrored,
     deliverResult,
@@ -597,7 +605,6 @@ export function SnapPangStage({
       missionKind !== "face" ||
       isAttacker ||
       !cameraReady ||
-      fallbackMode ||
       hasSubmitted ||
       !isPlayer
     )
@@ -737,7 +744,6 @@ export function SnapPangStage({
       .catch(() => {
         if (!alive) return;
         setModelStatus("error");
-        setFallbackMode(true);
       });
 
     return () => {
@@ -751,46 +757,15 @@ export function SnapPangStage({
     faceSubMode,
     isAttacker,
     cameraReady,
-    fallbackMode,
     hasSubmitted,
+    modelAttempt,
     isPlayer,
     deliverResult,
     trigger3dBurst,
     showFlash,
   ]);
 
-  // Fallback color roulette colors & spinner
-  const rouletteColors = useMemo(() => {
-    if (mission?.kind !== "color") return [];
-    const distractors = SNAP_COLOR_BANK.filter((c) => c.targetHex !== mission.targetHex)
-      .slice(0, 5)
-      .map((c) => c.targetHex);
-    return [
-      distractors[0] ?? "#EF4444",
-      mission.targetHex,
-      distractors[1] ?? "#FACC15",
-      distractors[2] ?? "#14B8A6",
-      distractors[3] ?? "#8B5CF6",
-      distractors[4] ?? "#F97316",
-    ];
-  }, [mission]);
-
-  useEffect(() => {
-    if (!fallbackMode || game.stage !== "active" || mission?.kind !== "color" || game.mySubmission)
-      return;
-    const timer = setInterval(() => {
-      setRouletteIndex((idx) => {
-        const next = (idx + 1) % Math.max(1, rouletteColors.length);
-        const hex = rouletteColors[next] ?? "#0A84FE";
-        liveRef.current.sampleHex = hex;
-        liveRef.current.colorAccuracy = computeColorMatchScore(mission.targetHex, hex);
-        return next;
-      });
-    }, 170);
-    return () => clearInterval(timer);
-  }, [fallbackMode, game.stage, mission, game.mySubmission, rouletteColors]);
-
-  async function submitColorShot(hex: string, isFallback: boolean) {
+  async function submitColorShot(hex: string) {
     if (!game.runId || submitting || game.mySubmission) return;
     setSubmitting(true);
     snapSfx.play("shutter");
@@ -801,7 +776,7 @@ export function SnapPangStage({
       runId: game.runId,
       round: game.round,
       hex,
-      fallback: isFallback,
+      fallback: false,
     });
     if (ok === false) {
       setSubmitting(false);
@@ -832,7 +807,7 @@ export function SnapPangStage({
     if (mission?.kind !== "object" || !game.runId || hasSubmitted) return;
     const progress = progressRef.current;
     if (progress.done) return;
-    if (performance.now() - progress.lastMatchAt > OBJECT_FRESH_MS) {
+    if (!progress.objectReady || performance.now() - progress.lastMatchAt > OBJECT_FRESH_MS) {
       snapSfx.play("countdown");
       showFlash({
         tone: "fail",
@@ -854,94 +829,6 @@ export function SnapPangStage({
       confidence: progress.confidence,
       fallback: false,
     });
-  }
-
-  async function handleFallbackObjectTap(choiceId: string) {
-    if (!game.runId || mission?.kind !== "object" || submitting || game.mySubmission) return;
-    if (!mission.cocoLabels.includes(choiceId)) {
-      snapSfx.play("countdown");
-      return;
-    }
-    const nextClicks = fallbackObjectClicks + 1;
-    setFallbackObjectClicks(nextClicks);
-    const needed = mission.targetCount + 1;
-    const prog = Math.min(1, nextClicks / needed);
-    setLockProgress(prog);
-    liveRef.current.lockProgress = prog;
-    if (nextClicks < needed) {
-      snapSfx.play("lockTick");
-      return;
-    }
-    setSubmitting(true);
-    snapSfx.play("capture");
-    trigger3dBurst("capture", me?.color ?? "#0A84FE");
-    const ok = await onAction({
-      action: "snap-object",
-      runId: game.runId,
-      round: game.round,
-      confidence: 0.85,
-      fallback: true,
-    });
-    if (ok === false) setSubmitting(false);
-  }
-
-  async function handleFallbackFaceTap(expr: SnapExpressionId) {
-    if (!game.runId || !isFaceCopy || submitting || game.mySubmission) return;
-    const expected = mission.expressions[fallbackFaceClicks];
-    if (expr !== expected) {
-      snapSfx.play("countdown");
-      return;
-    }
-    const nextStep = fallbackFaceClicks + 1;
-    setFallbackFaceClicks(nextStep);
-    setFaceStepIndex(nextStep);
-    // Briefly show matching expression on the 3D avatar!
-    liveRef.current.face = {
-      ...NEUTRAL_FACE_TELEMETRY,
-      faceDetected: true,
-      jawOpen: expr === "surprise" ? 0.9 : 0,
-      smile: expr === "happy" ? 0.95 : 0,
-      winkLeft: expr === "wink" ? 0.95 : 0,
-      browDown: expr === "angry" ? 0.9 : 0,
-      pucker: expr === "pucker" ? 0.9 : 0,
-    };
-    if (nextStep < mission.expressions.length) {
-      snapSfx.play("lockTick");
-      return;
-    }
-    setSubmitting(true);
-    snapSfx.play("capture");
-    trigger3dBurst("capture", me?.color ?? "#0A84FE");
-    const ok = await onAction({
-      action: "snap-face-copy",
-      runId: game.runId,
-      round: game.round,
-      fallback: true,
-    });
-    if (ok === false) setSubmitting(false);
-  }
-
-  async function handleFallbackSmilePop() {
-    if (!game.runId || !isSmileBomb || myPopped) return;
-    setMyPopped(true);
-    setMyTension(100);
-    liveRef.current.tension = 100;
-    liveRef.current.popped = true;
-    snapSfx.play("pop");
-    trigger3dBurst("pop", me?.color ?? "#EF4444");
-    const ok = await onAction({
-      action: "snap-tension",
-      runId: game.runId,
-      round: game.round,
-      tension: 100,
-      popped: true,
-      fallback: true,
-    });
-    // Not recorded (e.g. another send was in flight): let the player press it again.
-    if (ok === false) {
-      setMyPopped(false);
-      liveRef.current.popped = false;
-    }
   }
 
   function hostControl(command: "next" | "pause" | "resume") {
@@ -1036,10 +923,42 @@ export function SnapPangStage({
               playsInline
               autoPlay
             />
-            {!cameraReady && (
-              <span className={styles.cameraLoading} role="status">
-                <Camera size={18} /> 카메라를 켜고 있어요…
-              </span>
+            {cameraError ? (
+              <div className={styles.cameraBlocked} role="alert">
+                <CameraOff size={28} />
+                <strong>카메라가 필요해요</strong>
+                <span>{cameraError}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCameraError("");
+                    setCameraAttempt((n) => n + 1);
+                  }}
+                >
+                  <RefreshCw size={15} /> 카메라 다시 켜기
+                </button>
+              </div>
+            ) : modelStatus === "error" && mission?.kind !== "color" ? (
+              <div className={styles.cameraBlocked} role="alert">
+                <RefreshCw size={28} />
+                <strong>인식 기능을 불러오지 못했어요</strong>
+                <span>네트워크를 확인하고 다시 불러와 주세요.</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModelStatus("idle");
+                    setModelAttempt((n) => n + 1);
+                  }}
+                >
+                  <RefreshCw size={15} /> 다시 불러오기
+                </button>
+              </div>
+            ) : (
+              !cameraReady && (
+                <span className={styles.cameraLoading} role="status">
+                  <Camera size={18} /> 카메라를 켜고 있어요…
+                </span>
+              )
             )}
             {mission?.kind === "color" && (
               <div className={styles.reticle}>
@@ -1158,7 +1077,7 @@ export function SnapPangStage({
               </div>
             )}
 
-            {game.stage === "active" && mission.kind === "color" && (
+            {playControls && mission.kind === "color" && (
               <div className={styles.hudBottom}>
                 <div
                   className={styles.hudReadout}
@@ -1190,7 +1109,7 @@ export function SnapPangStage({
                     data-ready={colorAccuracy >= SNAP_COLOR_MIN_ACCURACY}
                     aria-label="이 색으로 찍어서 제출"
                     disabled={!cameraReady || submitting || busy}
-                    onClick={() => void submitColorShot(sampleHex, false)}
+                    onClick={() => void submitColorShot(sampleHex)}
                   >
                     <Camera size={28} />
                   </button>
@@ -1208,7 +1127,7 @@ export function SnapPangStage({
               </div>
             )}
 
-            {game.stage === "active" && mission.kind === "object" && (
+            {playControls && mission.kind === "object" && (
               <div className={styles.hudBottom}>
                 <div className={styles.hudReadout} data-state={objectReady ? "good" : "bad"}>
                   <span className={styles.hudStateIcon} aria-hidden="true">
@@ -1255,7 +1174,7 @@ export function SnapPangStage({
               </div>
             )}
 
-            {game.stage === "active" && isSmileBomb && (
+            {playControls && isSmileBomb && (
               <div className={styles.hudBottom}>
                 <div
                   className={styles.hudReadout}
@@ -1285,7 +1204,7 @@ export function SnapPangStage({
               </div>
             )}
 
-            {game.stage === "active" && isFaceCopy && mission.expressions[faceStepIndex] && (
+            {playControls && isFaceCopy && mission.expressions[faceStepIndex] && (
               <div className={styles.hudBottom}>
                 <div className={styles.hudExpression}>
                   <span aria-hidden="true">
@@ -1409,28 +1328,10 @@ export function SnapPangStage({
             <ShieldCheck size={14} color="#0A84FE" />
             카메라 분석은 내 기기 안에서만 실행돼요 (서버 전송 없음)
           </span>
-          {!isAttacker && (
-            <button
-              type="button"
-              className={styles.secondaryBtn}
-              style={{ fontSize: 12 }}
-              onClick={() => setFallbackMode((v) => !v)}
-            >
-              {fallbackMode ? <Camera size={13} /> : <CameraOff size={13} />}
-              {fallbackMode ? "카메라 모드 켜기" : "카메라 없이 대체 모드"}
-            </button>
-          )}
         </div>
       )}
 
-      {cameraError && (
-        <div className={styles.lowLightWarn} role="status">
-          <CameraOff size={14} />
-          <span>{cameraError}</span>
-        </div>
-      )}
-
-      {lowLight && mission?.kind === "color" && game.stage === "active" && !fallbackMode && (
+      {lowLight && mission?.kind === "color" && game.stage === "active" && (
         <div className={styles.lowLightWarn} role="status">
           <Sun size={14} />
           <span>주변이 어두워 색 인식 정확도가 낮아질 수 있어요. 밝은 쪽으로 비춰보세요!</span>
@@ -1467,34 +1368,7 @@ export function SnapPangStage({
                     기다려요
                   </span>
                 </div>
-              ) : !fallbackMode ? null : (
-                <div className={styles.fallbackBox}>
-                  <p className={styles.fallbackNotice}>
-                    <strong>대체 모드 (색깔 룰렛)</strong> · 움직이는 커서가 찾을 색깔(
-                    {mission.colorName})에 왔을 때 스톱 버튼을 눌러요!
-                  </p>
-                  <div className={styles.rouletteBar}>
-                    {rouletteColors.map((hex, idx) => (
-                      <span
-                        key={`${hex}-${idx}`}
-                        className={styles.rouletteCell}
-                        data-cursor={idx === rouletteIndex}
-                        style={{ background: hex }}
-                      />
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    className={styles.shutterBtn}
-                    disabled={submitting || busy}
-                    onClick={() =>
-                      void submitColorShot(rouletteColors[rouletteIndex] ?? "#0A84FE", true)
-                    }
-                  >
-                    <Camera size={18} /> 지금 스톱! 3D 구슬 발사
-                  </button>
-                </div>
-              )}
+              ) : null}
             </>
           )}
 
@@ -1519,35 +1393,7 @@ export function SnapPangStage({
                     참가자를 기다려요
                   </span>
                 </div>
-              ) : !fallbackMode ? null : (
-                <div className={styles.fallbackBox}>
-                  <p className={styles.fallbackNotice}>
-                    <strong>대체 모드 (물건 버튼)</strong> · 찾을 물건(
-                    <strong>{mission.label}</strong>)에 해당하는 아이콘을 {mission.targetCount + 1}
-                    번 연속 탭해 락온하세요!
-                  </p>
-                  <div className={styles.controlsRow}>
-                    {FALLBACK_OBJECT_CHOICES.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={styles.secondaryBtn}
-                        disabled={submitting || busy}
-                        onClick={() => void handleFallbackObjectTap(item.id)}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className={styles.meterTrack}>
-                    <div
-                      className={styles.meterFill}
-                      data-success={lockProgress >= 0.7}
-                      style={{ width: `${Math.round(lockProgress * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              )}
+              ) : null}
             </>
           )}
 
@@ -1584,22 +1430,7 @@ export function SnapPangStage({
                     웃음 폭발! 내 3D 풍선 폭탄이 터졌어요! 이제 같이 다른 사람을 웃겨보세요!
                   </span>
                 </div>
-              ) : !fallbackMode ? null : (
-                <div className={styles.fallbackBox}>
-                  <p className={styles.fallbackNotice}>
-                    <strong>대체 모드 (정직한 웃참)</strong> · 웃음을 참아보세요! 만약 웃음이
-                    터졌다면 솔직하게 아래 폭탄 버튼을 눌러요.
-                  </p>
-                  <button
-                    type="button"
-                    className={styles.shutterBtn}
-                    style={{ background: "#ef4444" }}
-                    onClick={() => void handleFallbackSmilePop()}
-                  >
-                    <Flame size={18} /> 앗, 웃어버렸다! (내 3D 폭탄 터뜨리기)
-                  </button>
-                </div>
-              )}
+              ) : null}
 
               {/* Live All-Defenders Mini Bomb Grid */}
               <div className={styles.bombGrid}>
@@ -1673,26 +1504,7 @@ export function SnapPangStage({
                     표정 릴레이 성공! ({(game.mySubmission.elapsedMs / 1000).toFixed(1)}초)
                   </span>
                 </div>
-              ) : !fallbackMode ? null : (
-                <div className={styles.fallbackBox}>
-                  <p className={styles.fallbackNotice}>
-                    <strong>대체 모드 (표정 버튼)</strong> · 위 순서대로 표정 버튼을 눌러요!
-                  </p>
-                  <div className={styles.controlsRow}>
-                    {(Object.keys(SNAP_EXPRESSION_LABELS) as SnapExpressionId[]).map((expr) => (
-                      <button
-                        key={expr}
-                        type="button"
-                        className={styles.secondaryBtn}
-                        disabled={submitting || busy}
-                        onClick={() => void handleFallbackFaceTap(expr)}
-                      >
-                        {SNAP_EXPRESSION_LABELS[expr].emoji} {SNAP_EXPRESSION_LABELS[expr].label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              ) : null}
             </>
           )}
         </div>

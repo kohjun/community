@@ -309,6 +309,15 @@ export function GameRoomLobby({ roomId, host }: { roomId: string; host: boolean 
                   : "lobby")
       }
       wordMode={room.mbti?.words?.mode}
+      variant={
+        room.drawing?.settings.mode ??
+        room.clue?.settings.mode ??
+        (room.gameType === "temperature"
+          ? room.settings?.temperatureMode
+          : room.gameType === "toast"
+            ? room.settings?.toastMode
+            : undefined)
+      }
       revealLiar={room.mbti?.revealLiar}
       audience={room.isHost ? "host" : "player"}
       compact

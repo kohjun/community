@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { EventLocationField } from "./event-location-field";
 import type { VenuePoint } from "@/domain/discovery";
-import { meetupVenueLabel } from "@/domain/venue-meetup";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { ParticipationShell } from "./participation-shell";
@@ -117,7 +116,6 @@ export function TemplateHost({
             address={location}
             onAddressSelected={setLocation}
             onChange={setVenue}
-            onPlaceSelected={(place) => setLocation(meetupVenueLabel(place))}
             disabled={busy}
             purpose="venue"
           />

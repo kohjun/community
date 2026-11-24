@@ -26,14 +26,14 @@ export function cameraAvailable():
     return {
       ok: false,
       code: "insecure",
-      message: "HTTPS 연결에서만 카메라를 쓸 수 있어요. 대체 모드로 참여할 수 있어요.",
+      message: "HTTPS 연결에서만 카메라를 쓸 수 있어요. 보안 연결(https)로 다시 접속해주세요.",
     };
   }
   if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
     return {
       ok: false,
       code: "unsupported",
-      message: "이 기기나 브라우저에서는 카메라 기능을 지원하지 않아요. 대체 모드로 플레이해요!",
+      message: "이 브라우저에서는 카메라를 쓸 수 없어요. 크롬이나 사파리로 다시 접속해주세요.",
     };
   }
   return { ok: true };
@@ -68,27 +68,27 @@ export async function startCameraStream(facing: CameraFacing): Promise<CameraSta
           ok: false,
           code: "denied",
           message:
-            "카메라 권한이 거부됐어요. 브라우저 설정에서 허용하거나 대체 모드로 즐길 수 있어요.",
+            "카메라 권한이 거부됐어요. 주소창의 자물쇠 아이콘에서 카메라를 허용한 뒤 다시 켜주세요.",
         };
       }
       if (name === "NotFoundError" || name === "DevicesNotFoundError") {
         return {
           ok: false,
           code: "not-found",
-          message: "연결된 카메라를 찾지 못했어요. 대체 모드로 바로 참여해보세요!",
+          message: "연결된 카메라를 찾지 못했어요. 카메라가 있는 기기로 참여해주세요.",
         };
       }
       if (name === "NotReadableError" || name === "TrackStartError") {
         return {
           ok: false,
           code: "busy",
-          message: "다른 앱에서 카메라를 사용 중이에요. 닫고 다시 시도하거나 대체 모드를 써보세요.",
+          message: "다른 앱에서 카메라를 사용 중이에요. 그 앱을 닫고 다시 켜주세요.",
         };
       }
       return {
         ok: false,
         code: "unknown",
-        message: "카메라를 열지 못했어요. 아래 대체 모드로 바로 이어서 플레이할 수 있어요.",
+        message: "카메라를 열지 못했어요. 잠시 후 다시 켜주세요.",
       };
     }
   }

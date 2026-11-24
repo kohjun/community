@@ -14,8 +14,145 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import { getGameTutorial, type TutorialAudience, type TutorialGame } from "@/domain/game-tutorial";
 import type { WordMode } from "@/domain/word-liar";
+import type { ClueMode, DrawingMode } from "@/domain/creative-games";
+import type { TemperatureMode } from "@/domain/temperature-game";
+import type { ToastMode } from "@/domain/toast-game";
 import styles from "./game-tutorial.module.css";
-function PracticeExample({ game }: { game: TutorialGame }) {
+
+/** A worked 낙서톡 example per mode, drawn as the chain players will actually see. */
+const DRAWING_EXAMPLES: Record<
+  DrawingMode,
+  { items: { tag: string; text: string }[]; note: string }
+> = {
+  live: {
+    items: [
+      { tag: "제시어", text: "우산 쓴 고양이" },
+      { tag: "그리는 중", text: "🎨 고양이 + 우산" },
+      { tag: "지연의 답", text: "고양이? (아직)" },
+      { tag: "현우의 답", text: "우산 쓴 고양이 ✅" },
+    ],
+    note: "현우가 먼저 맞혀서 2점, 그린 사람도 1점을 받아요.",
+  },
+  mix: {
+    items: [
+      { tag: "처음 문장", text: "떡볶이를 먹는 펭귄" },
+      { tag: "그림", text: "🎨 빨간 음식을 든 새" },
+      { tag: "그림 보고 쓴 문장", text: "치킨을 들고 있는 오리" },
+      { tag: "다 같이 맞히기", text: "정답: 치킨을 들고 있는 오리" },
+    ],
+    note: "정답은 처음 문장이 아니라 바뀐 마지막 문장 ‘치킨을 들고 있는 오리’예요.",
+  },
+  relay: {
+    items: [
+      { tag: "처음 문장", text: "떡볶이를 먹는 펭귄" },
+      { tag: "그림", text: "🎨 빨간 음식을 든 새" },
+      { tag: "그림 보고 쓴 문장", text: "치킨을 들고 있는 오리" },
+      { tag: "재미 투표", text: "🗳️ 가장 웃긴 이야기에 한 표" },
+    ],
+    note: "맞히기와 점수 없이, 이야기가 바뀌는 과정을 함께 보며 웃어요.",
+  },
+};
+
+/** A worked 단서각 round per mode. */
+const CLUE_EXAMPLES: Record<ClueMode, { items: { tag: string; text: string }[]; note: string }> = {
+  quiz: {
+    items: [
+      { tag: "거리뷰", text: "🏙️ 큰 성문과 넓은 도로" },
+      { tag: "보기", text: "A 숭례문 · B 광화문 · C 장안문 · D 첨성대" },
+      { tag: "내 선택", text: "B 광화문" },
+      { tag: "정답 공개", text: "B 광화문 ✅ +1점" },
+    ],
+    note: "맞힌 사람은 모두 1점이에요. 간판·표지판·건물 모양을 잘 살펴보세요.",
+  },
+  photo: {
+    items: [
+      { tag: "거리뷰", text: "🌊 바다와 긴 모래사장" },
+      { tag: "내 핀", text: "📍 부산 해운대 근처" },
+      { tag: "정답 공개", text: "해운대 해수욕장 · 내 핀까지 1.2km" },
+      { tag: "점수", text: "가장 가까운 사람 +1점" },
+    ],
+    note: "정확히 몰라도 괜찮아요. 다른 사람보다 가까우면 1점이에요.",
+  },
+  zoom: {
+    items: [
+      { tag: "처음", text: "🔍 간판 일부만 크게" },
+      { tag: "조금 뒤", text: "🔎 건물이 보이기 시작" },
+      { tag: "마지막", text: "🏙️ 거리 전체가 보여요" },
+      { tag: "정답 공개", text: "가장 가까운 핀 +1점" },
+    ],
+    note: "빨리 내도 추가 점수는 없어요. 충분히 넓어지면 내도 괜찮아요.",
+  },
+  member: {
+    items: [
+      { tag: "대기실", text: "📸 각자 사진 1장 + 찍은 곳 등록" },
+      { tag: "문제", text: "누군가의 카페 사진" },
+      { tag: "내 답", text: "📍 성수동 · 사진 주인: 지연님" },
+      { tag: "정답 공개", text: "위치 1점 + 주인 1점" },
+    ],
+    note: "내 사진이 나오면 쉬어요. 결과가 나오면 사진에 얽힌 이야기를 나눠봐요.",
+  },
+};
+
+/** A worked 마음의 온도 turn per mode. */
+const TEMPERATURE_EXAMPLES: Record<TemperatureMode, FlowExample> = {
+  basic: {
+    items: [
+      { tag: "주제", text: "얼마나 당황스러운 상황인가요? (0 전혀 ↔ 100 매우)" },
+      { tag: "비밀 숫자", text: "🔒 80 · 설명하는 지연님만 봐요" },
+      { tag: "지연님의 설명", text: "🗣️ “발표 중에 노트북이 꺼졌어요”" },
+      { tag: "모두의 답", text: "현우 75 · 민지 50" },
+      { tag: "결과", text: "정답 80 → 가장 가까운 현우님 +1점" },
+    ],
+    note: "설명하는 사람은 숫자를 직접 말하면 안 돼요. 상황으로만 설명해요.",
+  },
+  deduction: {
+    items: [
+      { tag: "주제", text: "얼마나 당황스러운 상황인가요? (0 전혀 ↔ 100 매우)" },
+      { tag: "몰래 쓴 상황", text: "지연: 엘리베이터에 갇힘(85) · 현우: 단톡방 오타(20)" },
+      { tag: "내가 세운 줄", text: "단톡방 오타 → 엘리베이터에 갇힘" },
+      { tag: "결과", text: "실제 순서와 같아요 ✅ +1점" },
+    ],
+    note: "줄을 세울 때는 이름과 상황만 보여요. 숫자는 결과에서 공개돼요.",
+  },
+};
+
+/** A worked 건배의 눈치 question per mode (4 players). */
+const TOAST_EXAMPLES: Record<ToastMode, FlowExample> = {
+  basic: {
+    items: [
+      { tag: "지연님의 질문", text: "💬 “나는 아침형 인간이다”" },
+      { tag: "지연님의 예상", text: "🤔 나 포함 2명이 건배할 것 같아" },
+      { tag: "모두 몰래 선택", text: "🥂 건배 2명 · 🙅 패스 2명" },
+      { tag: "결과", text: "예상 2명 = 실제 2명 → 지연님 +1점" },
+    ],
+    note: "누가 건배했는지는 공개하지 않아요. 인원만 보고 서로 추측해봐요.",
+  },
+  target: {
+    items: [
+      { tag: "비밀 목표", text: "🎯 건배 3명 · 질문자 지연님만 봐요" },
+      { tag: "지연님의 질문", text: "💬 “나는 매운 음식을 잘 먹는다”" },
+      { tag: "모두 몰래 선택", text: "🥂 건배 3명 · 🙅 패스 1명" },
+      { tag: "결과", text: "목표 3명 = 실제 3명 → 지연님 +1점" },
+    ],
+    note: "목표에 맞게 너무 쉽지도, 어렵지도 않은 질문을 만드는 게 핵심이에요.",
+  },
+};
+
+type FlowExample = { items: { tag: string; text: string }[]; note: string };
+function flowExample(game: TutorialGame, variant?: string): FlowExample | null {
+  if (game === "drawing")
+    return DRAWING_EXAMPLES[
+      variant && variant in DRAWING_EXAMPLES ? (variant as DrawingMode) : "mix"
+    ];
+  if (game === "clue")
+    return CLUE_EXAMPLES[variant && variant in CLUE_EXAMPLES ? (variant as ClueMode) : "photo"];
+  if (game === "temperature")
+    return TEMPERATURE_EXAMPLES[variant === "deduction" ? "deduction" : "basic"];
+  if (game === "toast") return TOAST_EXAMPLES[variant === "target" ? "target" : "basic"];
+  return null;
+}
+
+function PracticeExample({ game, variant }: { game: TutorialGame; variant?: string | undefined }) {
   const [showCounts, setShowCounts] = useState(false),
     [votes, setVotes] = useState(3),
     [sale, setSale] = useState<number | null>(140);
@@ -25,23 +162,24 @@ function PracticeExample({ game }: { game: TutorialGame }) {
         <strong>🎨 색깔 · 📦 물건 · 😆 표정 · 🎲 랜덤 모드</strong>
         <p>
           카메라 인식은 모두 내 스마트폰 안에서만 처리돼요. 표정 라운드에서는 원하면 내 얼굴 대신 3D
-          아바타만 보이게 가릴 수 있고, 카메라 없이도 대체 모드로 함께 즐길 수 있어요.
+          아바타만 보이게 가릴 수 있어요. 모든 라운드는 카메라로 진행해요.
         </p>
       </div>
     );
-  if (game === "drawing" || game === "clue")
+  const example = flowExample(game, variant);
+  if (example)
     return (
       <div className={styles.practice}>
-        <strong>
-          {game === "drawing"
-            ? "떡볶이 펭귄 → 그림 → 치킨 오리 → 실시간 맞히기"
-            : "사진을 보고 지도 선택 → 정답과 거리 비교"}
-        </strong>
-        <p>
-          {game === "drawing"
-            ? "믹스의 정답은 마지막 해석인 ‘치킨 오리’예요. 다른 모드를 고르면 전달이나 맞히기 단계를 단순하게 즐겨요."
-            : "사진은 가장 가까운 사람 모두 1점. 소리·영상은 맞힌 사람 모두 1점. 우리 사진은 사진 주인 추리도 1점이에요."}
-        </p>
+        <strong>예시로 보면 이렇게 흘러가요</strong>
+        <ol className={styles.flowChain}>
+          {example.items.map((item) => (
+            <li key={item.tag}>
+              <small>{item.tag}</small>
+              <span>{item.text}</span>
+            </li>
+          ))}
+        </ol>
+        <p>{example.note}</p>
       </div>
     );
   if (game === "lobby")
@@ -58,33 +196,7 @@ function PracticeExample({ game }: { game: TutorialGame }) {
         <Play size={14} /> 예시로 이해하기 <small>실제 게임과 무관한 연습</small>
       </summary>
       <div>
-        {game === "toast" ? (
-          <>
-            <p>
-              6명 중 질문자 자신도 건배했어요. 자신을 포함해 건배한 사람은 총 3명이에요. 예상 또는
-              목표 인원을 골라보세요.
-            </p>
-            <div className={styles.choices} role="group" aria-label="건배 인원 연습">
-              {[2, 3, 4].map((count) => (
-                <button
-                  type="button"
-                  key={count}
-                  aria-pressed={votes === count}
-                  onClick={() => setVotes(count)}
-                >
-                  {count}명
-                </button>
-              ))}
-            </div>
-            <div className={styles.feedback} role="status">
-              <strong>{votes === 3 ? "3명 적중 · 질문자 +1점" : "예측 실패 · 0점"}</strong>
-              <p>
-                누가 건배했는지는 공개하지 않아요. 심화 모드는 예상 대신 미리 받은 목표 3명과
-                비교해요.
-              </p>
-            </div>
-          </>
-        ) : game === "mbti-intro" ? (
+        {game === "mbti-intro" ? (
           <>
             <p>다른 세 사람의 MBTI를 추리해 제출했다고 가정해볼게요.</p>
             <div className={styles.sampleGuesses}>
@@ -179,6 +291,7 @@ function PracticeExample({ game }: { game: TutorialGame }) {
 export function GameTutorial({
   game,
   wordMode,
+  variant,
   revealLiar,
   audience = "player",
   compact = false,
@@ -186,6 +299,8 @@ export function GameTutorial({
 }: {
   game: TutorialGame;
   wordMode?: WordMode | undefined;
+  /** The chosen game mode (낙서톡·단서각·마음의온도·눈치게임): explain just this mode. */
+  variant?: string | undefined;
   revealLiar?: boolean | undefined;
   audience?: TutorialAudience;
   compact?: boolean;
@@ -195,7 +310,7 @@ export function GameTutorial({
     [role, setRole] = useState(audience),
     [step, setStep] = useState(0);
   const id = useId(),
-    copy = getGameTutorial(game, wordMode, revealLiar);
+    copy = getGameTutorial(game, wordMode, revealLiar, variant);
   const steps = copy[role],
     current = steps[Math.min(step, steps.length - 1)]!;
   function changeOpen(value: boolean) {
@@ -324,7 +439,7 @@ export function GameTutorial({
               </button>
             )}
           </div>
-          <PracticeExample key={game} game={game} />
+          <PracticeExample key={`${game}-${variant ?? ""}`} game={game} variant={variant} />
           <section className={styles.finish}>
             <ShieldCheck size={17} />
             <div>

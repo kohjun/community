@@ -17,7 +17,6 @@ import { readGameRun } from "../src/server/game-run-service";
 import { issueInkTicket } from "../src/server/game-ink-core";
 import { createInkRedis } from "../src/server/game-ink-redis";
 import { createInkGateway } from "../src/server/game-ink-gateway";
-import { CLUE_PHOTO_BANK } from "../src/server/clue-bank";
 const origin = new URL(process.env.SLIPER_GAME_QA_ORIGIN ?? "http://127.0.0.1:3107").origin;
 const redisUrl = process.env.SLIPER_GAME_QA_REDIS ?? "redis://127.0.0.1:6380";
 for (const value of [origin, redisUrl])
@@ -579,7 +578,9 @@ try {
         assert.equal(await button("게임 시작").isDisabled(), true);
         await page
           .getByLabel("사진 10MB 이하", { exact: true })
-          .setInputFiles(path.join(process.cwd(), "public", CLUE_PHOTO_BANK[0]!.basicAsset!));
+          .setInputFiles(
+            path.join(process.cwd(), "public/games/clue/b5abeead-a337-42ca-b9d4-9740c538093c.webp"),
+          );
         await page.getByLabel("정답 장소 이름", { exact: true }).fill("내 사진 속 장소");
         await button("테스트 지도에서 위치 선택").click();
         await button("내 사진·정답 등록").click();

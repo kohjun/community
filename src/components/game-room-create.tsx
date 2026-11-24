@@ -10,6 +10,8 @@ import type { GameRoomSettings } from "@/domain/game-room";
 import { DRAWING_MODES } from "@/domain/creative-games";
 import { DEFAULT_TEMPERATURE_SETTINGS } from "@/domain/temperature-game";
 import { TemperatureSettingsFields } from "./temperature-settings-fields";
+import { ToastSettingsFields } from "./toast-settings-fields";
+import { AuctionSettingsFields } from "./auction-settings-fields";
 import type { ToastMode } from "@/domain/toast-game";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -379,7 +381,22 @@ export function GameRoomCreate() {
                     </li>
                   ))}
                 </ol>
-                <GameTutorial game={gameType} wordMode={wordMode} audience="host" />
+                <GameTutorial
+                  game={gameType}
+                  wordMode={wordMode}
+                  variant={
+                    gameType === "drawing"
+                      ? creative.drawingMode
+                      : gameType === "clue"
+                        ? creative.clueMode
+                        : gameType === "temperature"
+                          ? temperature.mode
+                          : gameType === "toast"
+                            ? toastMode
+                            : undefined
+                  }
+                  audience="host"
+                />
               </div>
             </div>
             <section
@@ -432,104 +449,48 @@ export function GameRoomCreate() {
                   />
                 )}
                 {gameType === "toast" && (
-                  <>
-                    <label>
-                      게임 모드
-                      <select
-                        aria-label="건배 게임 모드"
-                        value={toastMode}
-                        onChange={(e) => setToastMode(e.target.value as ToastMode)}
-                      >
-                        <option value="basic">기본 · 건배 인원 맞히기</option>
-                        <option value="target">심화 · 목표 인원에 맞는 질문 만들기</option>
-                      </select>
-                    </label>
-                    <div className={styles.fields}>
-                      <label>
-                        라운드 수
-                        <select
-                          aria-label="건배 라운드 수"
-                          value={toastRounds}
-                          onChange={(e) => setToastRounds(Number(e.target.value))}
-                        >
-                          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                            <option key={n} value={n}>
-                              {n}라운드
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        선택 제한시간
-                        <select
-                          aria-label="건배 선택 제한시간"
-                          value={toastAnswerSeconds}
-                          onChange={(e) => setToastAnswerSeconds(Number(e.target.value))}
-                        >
-                          {[15, 30, 60, 90].map((n) => (
-                            <option key={n} value={n}>
-                              {n}초
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <small className={styles.muted}>
-                      모두 한 번씩 질문하면 1라운드예요. 정원 기준 총 {toastRounds * capacity}차례,
-                      한 사람당 {toastRounds}번 질문해요. 미응답은 패스, 개인 선택은 끝까지
-                      비공개예요.
-                    </small>
-                  </>
+                  <ToastSettingsFields
+                    value={{
+                      mode: toastMode,
+                      rounds: toastRounds,
+                      answerSeconds: toastAnswerSeconds,
+                    }}
+                    capacity={capacity}
+                    disabled={busy}
+                    rowClassName={styles.fields}
+                    roundsLabel="건배 라운드 수"
+                    secondsLabel="건배 선택 제한시간"
+                    onChange={(next) => {
+                      if (next.mode) setToastMode(next.mode);
+                      if (next.rounds !== undefined) setToastRounds(next.rounds);
+                      if (next.answerSeconds !== undefined)
+                        setToastAnswerSeconds(next.answerSeconds);
+                    }}
+                  />
                 )}
                 {gameType === "auction" && (
-                  <>
-                    <label>
-                      총 경매 라운드
-                      <input
-                        aria-label="총 경매 라운드"
-                        type="number"
-                        min={capacity + 1}
-                        max={120}
-                        required
-                        value={auctionRounds}
-                        onChange={(e) => setAuctionRounds(Number(e.target.value))}
-                      />
-                    </label>
-                    <div className={styles.fields}>
-                      <label>
-                        시작 게임 머니
-                        <select
-                          aria-label="시작 게임 머니"
-                          value={auctionInitialMoney}
-                          onChange={(e) => setAuctionInitialMoney(Number(e.target.value))}
-                        >
-                          {[500, 1000, 2000, 5000, 10000].map((v) => (
-                            <option key={v} value={v}>
-                              {v.toLocaleString()}G
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        물건당 입찰 시간
-                        <select
-                          aria-label="물건당 입찰 시간"
-                          value={auctionBidSeconds}
-                          onChange={(e) => setAuctionBidSeconds(Number(e.target.value))}
-                        >
-                          {[30, 60, 90, 120].map((v) => (
-                            <option key={v} value={v}>
-                              {v}초
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <small className={styles.muted}>
-                      라운드는 실제 참가자 수보다 많아야 해요. 순서대로 판매하고, 현금 + 구입한
-                      물건의 감정가로 순위를 정해요. 실제 결제는 없어요.
-                    </small>
-                  </>
+                  <AuctionSettingsFields
+                    value={{
+                      rounds: auctionRounds,
+                      initialMoney: auctionInitialMoney,
+                      bidSeconds: auctionBidSeconds,
+                    }}
+                    capacity={capacity}
+                    minRounds={capacity + 1}
+                    disabled={busy}
+                    rowClassName={styles.fields}
+                    labels={{
+                      rounds: "총 경매 라운드",
+                      money: "시작 게임 머니",
+                      seconds: "물건당 입찰 시간",
+                    }}
+                    onChange={(next) => {
+                      if (next.rounds !== undefined) setAuctionRounds(next.rounds);
+                      if (next.initialMoney !== undefined)
+                        setAuctionInitialMoney(next.initialMoney);
+                      if (next.bidSeconds !== undefined) setAuctionBidSeconds(next.bidSeconds);
+                    }}
+                  />
                 )}
                 {gameType === "word-liar" && (
                   <>
@@ -702,7 +663,7 @@ export function GameRoomCreate() {
           </p>
           <p className={styles.templateNote}>
             {gameType === "snap-pang"
-              ? "카메라 영상은 내 기기 안에서만 분석하며 서버로 전송하거나 저장하지 않아요. 카메라를 쓸 수 없어도 대체 모드로 끝까지 함께할 수 있어요."
+              ? "모든 라운드는 카메라로 진행해요. 카메라 영상은 내 기기 안에서만 분석하며 서버로 전송하거나 저장하지 않아요."
               : gameType === "drawing"
                 ? "그림은 게임 참가자끼리만 공유해요. 완료된 결과와 개인 자료는 종료 후 24시간 동안 볼 수 있어요."
                 : gameType === "clue"

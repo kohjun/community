@@ -1,9 +1,21 @@
+"use client";
 import {
-  TEMPERATURE_MODE_LABELS,
+  TEMPERATURE_CLUE_SECONDS,
+  TEMPERATURE_MODE_INFO,
   TEMPERATURE_MODES,
   TEMPERATURE_SECONDS,
   type TemperatureSettings,
 } from "@/domain/temperature-game";
+import { GameModePicker } from "./game-mode-picker";
+
+/** Rough upper bound: every step runs to its time limit plus ~20s of talking over the result. */
+function playMinutes(value: TemperatureSettings, capacity: number) {
+  const seconds =
+    value.mode === "basic"
+      ? capacity * value.rounds * (TEMPERATURE_CLUE_SECONDS + value.answerSeconds + 20)
+      : value.rounds * (value.answerSeconds * 2 + 30);
+  return Math.max(1, Math.ceil(seconds / 60));
+}
 
 export function TemperatureSettingsFields({
   value,
@@ -18,28 +30,20 @@ export function TemperatureSettingsFields({
   rowClassName: string | undefined;
   onChange: (value: TemperatureSettings) => void;
 }) {
+  const basic = value.mode === "basic";
   return (
     <>
-      <label>
-        마음의 온도 모드
-        <select
-          aria-label="마음의 온도 모드"
-          value={value.mode}
-          disabled={disabled}
-          onChange={(event) =>
-            onChange({ ...value, mode: event.target.value as TemperatureSettings["mode"] })
-          }
-        >
-          {TEMPERATURE_MODES.map((mode) => (
-            <option key={mode} value={mode}>
-              {TEMPERATURE_MODE_LABELS[mode]}
-            </option>
-          ))}
-        </select>
-      </label>
+      <GameModePicker
+        legend="어떤 방식으로 놀까요?"
+        modes={TEMPERATURE_MODES.map((id) => ({ id, ...TEMPERATURE_MODE_INFO[id] }))}
+        value={value.mode}
+        note={TEMPERATURE_MODE_INFO[value.mode].rules}
+        disabled={disabled}
+        onChange={(mode) => onChange({ ...value, mode })}
+      />
       <div className={rowClassName}>
         <label>
-          라운드 수
+          몇 라운드 할까요?
           <select
             aria-label="라운드 수"
             value={value.rounds}
@@ -48,15 +52,18 @@ export function TemperatureSettingsFields({
           >
             {Array.from({ length: 10 }, (_, index) => index + 1).map((rounds) => (
               <option key={rounds} value={rounds}>
-                {rounds}라운드
+                {rounds}라운드{rounds === 2 ? " (추천)" : ""}
               </option>
             ))}
           </select>
+          <small>
+            {basic ? "1라운드 = 모두 한 번씩 설명해요" : "1라운드 = 상황 쓰기 + 줄 세우기"}
+          </small>
         </label>
         <label>
-          단계별 제출 시간
+          {basic ? "숫자 고르는 시간" : "단계별 제한시간"}
           <select
-            aria-label="단계별 제출 시간"
+            aria-label={basic ? "숫자 고르는 시간" : "단계별 제한시간"}
             value={value.answerSeconds}
             disabled={disabled}
             onChange={(event) =>
@@ -68,16 +75,20 @@ export function TemperatureSettingsFields({
           >
             {TEMPERATURE_SECONDS.map((seconds) => (
               <option key={seconds} value={seconds}>
-                {seconds}초
+                {seconds}초{seconds === 60 ? " (추천)" : ""}
               </option>
             ))}
           </select>
+          <small>
+            {basic
+              ? `설명 시간은 ${TEMPERATURE_CLUE_SECONDS}초로 정해져 있어요`
+              : "쓰기·줄 세우기 각각"}
+          </small>
         </label>
       </div>
       <small>
-        {value.mode === "basic"
-          ? `한 사람씩 30초 동안 설명해요. 모두 한 번 설명하면 1라운드이며, 정원이 다 차면 총 ${capacity * value.rounds}차례예요.`
-          : "모두 상황을 한 번씩 제출하고 순서를 맞히면 1라운드예요."}
+        ⏱️ {capacity}명이 모두 참여하면 길어야 약 {playMinutes(value, capacity)}분이에요. 모두 빨리
+        제출하면 더 일찍 끝나요.
       </small>
     </>
   );

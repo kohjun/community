@@ -4,19 +4,17 @@ import { ParticipantGuideEditor } from "./participant-guide";
 import type { ParticipantGuide } from "@/domain/participant-guide";
 import { useAdSenseContentGuard } from "./adsense-provider";
 import Link from "next/link";
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   AlertCircle,
   ArrowUpRight,
   CalendarDays,
   Check,
-  Clock3,
   LoaderCircle,
   MapPin,
   Minus,
   Plus,
   Search,
-  SlidersHorizontal,
   X,
   Users,
   UserRound,
@@ -30,9 +28,17 @@ import {
   type LightningCategorySlug,
 } from "@/domain/lightning-categories";
 import { LightningCategoryPicker, LightningCategoryIcon } from "./lightning-category-picker";
-import { koreanDateTimeInput, koreanDateTimeISO } from "@/domain/refund";
+import { koreanDateTimeISO } from "@/domain/refund";
+import {
+  addMinutes,
+  koreanClock,
+  roundedStart,
+  scheduleText,
+  upcomingDays,
+} from "@/domain/recruit-schedule";
 import { meetupVenueLabel, type MeetupVenuePreset } from "@/domain/venue-meetup";
 import { postPath } from "@/domain/post-sharing";
+import { isJanuaryRecruitmentSample } from "@/demo/january-recruitments";
 import { useReadPosts } from "@/lib/use-read-posts";
 import { appRequest } from "@/lib/api-client";
 import type { VenuePoint } from "@/domain/discovery";
@@ -40,10 +46,24 @@ import { EventLocationField } from "./event-location-field";
 import { ParticipationShell } from "./participation-shell";
 import { PostAuthorName } from "./post-author-name";
 import { ExampleGallery } from "./example-gallery";
-import { isJanuaryRecruitmentSample } from "@/demo/january-recruitments";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
+import rf from "./recruit-form.module.css";
 
 const topics = CATEGORIES.filter((category) => category.sortOrder < 9);
+const QUICK_TIMES = [
+  { time: "12:00", label: "점심 12시" },
+  { time: "19:00", label: "저녁 7시" },
+  { time: "20:00", label: "저녁 8시" },
+] as const;
+const DURATIONS = [
+  { minutes: 30, label: "30분" },
+  { minutes: 60, label: "1시간" },
+  { minutes: 90, label: "1.5시간" },
+  { minutes: 120, label: "2시간" },
+  { minutes: 180, label: "3시간" },
+] as const;
+const LIGHTNING_INTRO_TEMPLATE =
+  "🙌 이런 분 환영해요: 처음 오셔도 괜찮아요\n📍 만나는 방법: \n🎒 준비물: 없어요\n💸 비용: 각자 계산 (현장 정산)";
 interface CreatedMeetup {
   postId: string;
   externalUrl: string | null;
@@ -98,17 +118,14 @@ export function LightningCommunity({
         : null,
     ),
     [location, setLocation] = useState(initialVenue ? meetupVenueLabel(initialVenue) : ""),
-    [startsAt, setStartsAt] = useState(
-      initialOpen ? koreanDateTimeInput(new Date(Date.now() + 3600000).toISOString()) : "",
-    ),
+    [startsAt, setStartsAt] = useState(initialOpen ? roundedStart(Date.now()) : ""),
+    [duration, setDuration] = useState(120),
+    [formNow, setFormNow] = useState(() => Date.now()),
     [title, setTitle] = useState(""),
     [description, setDescription] = useState(""),
     [capacity, setCapacity] = useState("6"),
     [created, setCreated] = useState<CreatedMeetup | null>(null);
   const [participantGuide, setParticipantGuide] = useState<ParticipantGuide | null>(null);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const filtersId = useId();
-  const hasActivityFilter = Boolean(category || tag);
   const advertisingBlocked = open || feed.posts.length === 0;
   useAdSenseContentGuard(advertisingBlocked);
   const readPosts = useReadPosts();
@@ -173,7 +190,9 @@ export function LightningCommunity({
     setDraftTags([]);
     setCustomTag("");
     setTagError("");
-    setStartsAt(koreanDateTimeInput(new Date(Date.now() + 3600000).toISOString()));
+    setFormNow(Date.now());
+    setStartsAt(roundedStart(Date.now()));
+    setDuration(120);
     setOpen(true);
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -201,9 +220,7 @@ export function LightningCommunity({
       setFormError("시작 시간은 지금 이후부터 7일 이내로 설정해주세요.");
       return;
     }
-    const endsAt = new Date(
-      Date.parse(start) + Number(values.get("duration")) * 60000,
-    ).toISOString();
+    const endsAt = new Date(Date.parse(start) + duration * 60000).toISOString();
     setSubmitting(true);
     setFormError("");
     try {
@@ -264,6 +281,25 @@ export function LightningCommunity({
   const suggestions = category ? lightningCategory(category).examples : POPULAR_LIGHTNING_TAGS;
   const browseTags = [...new Set([...suggestions, ...(tag ? [tag] : [])])];
   const selectedActivity = draftActivity ? lightningCategory(draftActivity) : null;
+  const days = upcomingDays(formNow, 7);
+  const startDay = startsAt.slice(0, 10),
+    startTime = startsAt.slice(11, 16);
+  const finish = startTime ? addMinutes(startTime, duration) : null;
+  const whenText =
+    startDay && startTime && finish
+      ? `${scheduleText(startDay, "")} ${koreanClock(startTime)} ~ ${finish.nextDay ? "다음 날 " : ""}${koreanClock(finish.time)}`
+      : "";
+  // Checked while choosing, so a past time is flagged before submitting.
+  const startPassed = !!startDay && !!startTime && Date.parse(`${startsAt}:00+09:00`) <= Date.now();
+  const dayWord =
+    startDay === days[0]!.date ? "오늘" : startDay === days[1]!.date ? "내일" : "이번 주";
+  const checklist = [
+    { label: "활동", done: !!draftActivity },
+    { label: "제목", done: title.trim().length >= 2 },
+    { label: "소개", done: description.trim().length >= 10 },
+    { label: "시간", done: !!startDay && !!startTime && !startPassed },
+    { label: "장소", done: !!venue },
+  ];
   return (
     <ParticipationShell wide advertising={!advertisingBlocked}>
       <section className="lightning-hero">
@@ -275,7 +311,7 @@ export function LightningCommunity({
           <p>복잡한 준비 없이 취향 맞는 사람들과 작은 모임을 열어보세요.</p>
           <div className="maturity-actions">
             <Link href="/discover/saved">조건 저장·모집 알림</Link>
-            <Link href="/ideas">모임 제안하기</Link>
+            <Link href="/ideas">원하는 모임 제안</Link>
           </div>
         </div>
         {canWrite ? (
@@ -296,6 +332,9 @@ export function LightningCommunity({
         <span>
           <Zap size={17} /> 담당자 승인 후 참가 확정
         </span>
+        <Link href="/map">
+          이벤트 맵에서 장소 찾기 <ArrowUpRight size={15} />
+        </Link>
       </div>
       {venueUnavailable && (
         <p className="participation-error" role="status">
@@ -327,39 +366,46 @@ export function LightningCommunity({
         <small>최신 등록순</small>
       </div>
       <section className="lightning-discovery-panel" aria-label="번개 활동 검색">
-        <div className="lightning-search-bar">
-          <form
-            className="lightning-search-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void load(category, tag, searchDraft);
-            }}
-          >
-            <Search size={18} aria-hidden="true" />
-            <input
-              aria-label="번개 제목·소개·활동 태그 검색"
-              placeholder="활동이나 모임 검색"
-              maxLength={100}
-              value={searchDraft}
-              onChange={(event) => setSearchDraft(event.target.value)}
+        <LightningCategoryPicker
+          value={category}
+          onChange={(value) => void load(value, "", search)}
+          disabled={loading}
+        />
+        <div className="lightning-browse-tags" aria-label="세부 활동 필터">
+          <span>{category ? "이런 활동은 어때요?" : "많이 찾는 활동"}</span>
+          {browseTags.map((item) => (
+            <button
+              key={item}
+              type="button"
+              aria-pressed={tag === item}
+              className={tag === item ? "is-selected" : ""}
               disabled={loading}
-            />
-            <button type="submit" disabled={loading}>
-              검색
+              onClick={() => void load(category, tag === item ? "" : item, search)}
+            >
+              #{item}
             </button>
-          </form>
-          <button
-            className="lightning-filter-toggle"
-            type="button"
-            aria-label="활동 필터"
-            aria-expanded={filtersOpen}
-            aria-controls={filtersId}
-            data-filtered={hasActivityFilter}
-            onClick={() => setFiltersOpen((current) => !current)}
-          >
-            <SlidersHorizontal size={19} aria-hidden="true" />
-          </button>
+          ))}
         </div>
+        <form
+          className="lightning-search-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void load(category, tag, searchDraft);
+          }}
+        >
+          <Search size={18} aria-hidden="true" />
+          <input
+            aria-label="번개 제목·소개·활동 태그 검색"
+            placeholder="활동 이름이나 번개 제목으로 검색해보세요"
+            maxLength={100}
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
+            disabled={loading}
+          />
+          <button type="submit" disabled={loading}>
+            검색
+          </button>
+        </form>
         {(category || tag || search) && (
           <div className="lightning-active-filters" aria-label="적용된 검색 조건">
             <span>
@@ -379,28 +425,6 @@ export function LightningCommunity({
             </button>
           </div>
         )}
-        <div id={filtersId} className="lightning-activity-filters" data-open={filtersOpen}>
-          <LightningCategoryPicker
-            value={category}
-            onChange={(value) => void load(value, "", search)}
-            disabled={loading}
-          />
-          <div className="lightning-browse-tags" role="group" aria-label="세부 활동 필터">
-            <span>{category ? "이런 활동은 어때요?" : "많이 찾는 활동"}</span>
-            {browseTags.map((item) => (
-              <button
-                key={item}
-                type="button"
-                aria-pressed={tag === item}
-                className={tag === item ? "is-selected" : ""}
-                disabled={loading}
-                onClick={() => void load(category, tag === item ? "" : item, search)}
-              >
-                #{item}
-              </button>
-            ))}
-          </div>
-        </div>
       </section>
       {loadError && (
         <p className="participation-error" role="alert">
@@ -570,17 +594,91 @@ export function LightningCommunity({
           </header>
           <form className="lightning-form" onSubmit={submit} aria-busy={submitting}>
             <div className="lightning-form-body">
-              <fieldset className="lightning-form-fields" disabled={submitting}>
-                <section
-                  className="lightning-form-section"
-                  aria-labelledby="lightning-about-heading"
-                >
-                  <div className="lightning-section-heading">
-                    <span className="lightning-section-number" aria-hidden="true">
-                      01
-                    </span>
-                    <h3 id="lightning-about-heading">함께할 활동을 소개해주세요</h3>
-                  </div>
+              <fieldset className={`lightning-form-fields ${rf.fields}`} disabled={submitting}>
+                <section className={rf.step} aria-labelledby="lightning-activity-heading">
+                  <h3 id="lightning-activity-heading" className={rf.stepHead}>
+                    <b>1</b>무엇을 하며 놀까요?
+                  </h3>
+                  <LightningCategoryPicker
+                    value={draftActivity}
+                    onChange={selectActivity}
+                    variant="form"
+                    disabled={submitting}
+                  />
+                  {selectedActivity && (
+                    <div className={rf.group}>
+                      <span className={rf.groupLabel}>
+                        세부 활동 <small>선택 · {draftTags.length}/5</small>
+                      </span>
+                      <div className={rf.chips} aria-label="추천 세부 활동">
+                        {selectedActivity.examples.map((item) => (
+                          <button
+                            key={item}
+                            type="button"
+                            className={rf.chip}
+                            aria-pressed={draftTags.includes(item)}
+                            onClick={() => toggleTag(item)}
+                            disabled={
+                              submitting || (!draftTags.includes(item) && draftTags.length >= 5)
+                            }
+                          >
+                            #{item}
+                            {draftTags.includes(item) && <Check size={12} aria-hidden="true" />}
+                          </button>
+                        ))}
+                        {draftTags
+                          .filter((item) => !selectedActivity.examples.includes(item))
+                          .map((item) => (
+                            <button
+                              key={item}
+                              type="button"
+                              className={rf.chip}
+                              aria-pressed
+                              aria-label={`${item} 태그 삭제`}
+                              onClick={() => toggleTag(item)}
+                              disabled={submitting}
+                            >
+                              #{item}
+                              <X size={12} aria-hidden="true" />
+                            </button>
+                          ))}
+                      </div>
+                      <div className="lightning-custom-tag">
+                        <input
+                          aria-label="직접 입력할 활동 태그"
+                          maxLength={24}
+                          placeholder="찾는 활동이 없으면 직접 입력 (예: 공포 방탈출)"
+                          value={customTag}
+                          onChange={(event) => setCustomTag(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                              event.preventDefault();
+                              addCustomTag();
+                            }
+                          }}
+                          disabled={submitting}
+                        />
+                        <button
+                          type="button"
+                          onClick={addCustomTag}
+                          disabled={submitting || !customTag.trim()}
+                        >
+                          추가
+                        </button>
+                      </div>
+                      {tagError && (
+                        <p className="lightning-tag-error" role="alert">
+                          {tagError}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </section>
+
+                <section className={rf.step} aria-labelledby="lightning-about-heading">
+                  <h3 id="lightning-about-heading" className={rf.stepHead}>
+                    <b>2</b>어떤 모임인지 알려주세요
+                  </h3>
                   <label className="lightning-field">
                     <span className="lightning-field-heading">
                       <span>
@@ -598,108 +696,13 @@ export function LightningCommunity({
                       maxLength={80}
                       value={title}
                       onChange={(event) => setTitle(event.target.value)}
-                      placeholder="예: 오늘 저녁, 신서유기 게임 같이해요"
+                      placeholder={
+                        selectedActivity
+                          ? `예: ${dayWord} 저녁 ${selectedActivity.examples[0]} 같이해요`
+                          : "예: 오늘 저녁, 신서유기 게임 같이해요"
+                      }
                     />
                   </label>
-                  <LightningCategoryPicker
-                    value={draftActivity}
-                    onChange={selectActivity}
-                    variant="form"
-                    disabled={submitting}
-                  />
-                  <div className="lightning-activity-tags">
-                    <div className="lightning-field-heading">
-                      <span>
-                        세부 활동 태그 <small>선택</small>
-                      </span>
-                      <small>{draftTags.length}/5</small>
-                    </div>
-                    <p>활동 이름을 붙이면 같은 취향의 사람들이 더 쉽게 찾아요.</p>
-                    {selectedActivity && (
-                      <div className="lightning-tag-suggestions" aria-label="추천 세부 활동">
-                        {selectedActivity.examples.map((item) => (
-                          <button
-                            key={item}
-                            type="button"
-                            aria-pressed={draftTags.includes(item)}
-                            onClick={() => toggleTag(item)}
-                            disabled={
-                              submitting || (!draftTags.includes(item) && draftTags.length >= 5)
-                            }
-                          >
-                            #{item}
-                            {draftTags.includes(item) && <Check size={12} />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <div className="lightning-custom-tag">
-                      <input
-                        aria-label="직접 입력할 활동 태그"
-                        maxLength={24}
-                        placeholder="예: 공포 방탈출"
-                        value={customTag}
-                        onChange={(event) => setCustomTag(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" && !event.nativeEvent.isComposing) {
-                            event.preventDefault();
-                            addCustomTag();
-                          }
-                        }}
-                        disabled={submitting}
-                      />
-                      <button
-                        type="button"
-                        onClick={addCustomTag}
-                        disabled={submitting || !customTag.trim()}
-                      >
-                        추가
-                      </button>
-                    </div>
-                    {!!draftTags.length && (
-                      <div className="lightning-selected-tags" aria-label="선택한 활동 태그">
-                        {draftTags.map((item) => (
-                          <button
-                            key={item}
-                            type="button"
-                            onClick={() => toggleTag(item)}
-                            aria-label={`${item} 태그 삭제`}
-                            disabled={submitting}
-                          >
-                            #{item}
-                            <X size={12} />
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {tagError && (
-                      <p className="lightning-tag-error" role="alert">
-                        {tagError}
-                      </p>
-                    )}
-                  </div>
-                  <details className="lightning-theme-details">
-                    <summary>
-                      커뮤니티 주제 · {topics.find((item) => item.slug === draftTheme)?.name}
-                    </summary>
-                    <label className="lightning-field">
-                      <span>홈에서도 어떤 주제로 보여줄까요?</span>
-                      <select
-                        name="categorySlug"
-                        value={draftTheme}
-                        onChange={(event) => setDraftTheme(event.target.value as CategorySlug)}
-                      >
-                        {topics.map((topic) => (
-                          <option key={topic.slug} value={topic.slug}>
-                            {topic.name}
-                          </option>
-                        ))}
-                      </select>
-                      <small>
-                        활동 카테고리에 맞춰 기본 설정했어요. 모임 성격에 맞게 바꿀 수 있어요.
-                      </small>
-                    </label>
-                  </details>
                   <label className="lightning-field">
                     <span className="lightning-field-heading">
                       <span>
@@ -717,85 +720,132 @@ export function LightningCommunity({
                       required
                       minLength={10}
                       maxLength={3000}
-                      rows={3}
+                      rows={4}
                       value={description}
                       onChange={(event) => setDescription(event.target.value)}
-                      placeholder="함께할 활동, 만나는 방법, 준비물을 편하게 적어주세요."
+                      placeholder="무엇을 하는지, 어떤 분과 함께하고 싶은지 편하게 적어주세요."
                       aria-describedby="lightning-description-hint"
                     />
                     <small id="lightning-description-hint">
                       10자 이상이면 충분해요. 처음 오는 사람도 알 수 있게 소개해주세요.
                     </small>
                   </label>
+                  <button
+                    type="button"
+                    className={rf.inlineAction}
+                    disabled={submitting || !!description.trim()}
+                    onClick={() => setDescription(LIGHTNING_INTRO_TEMPLATE)}
+                  >
+                    ✍️ 소개 양식 채우기
+                  </button>
                 </section>
-                <section
-                  className="lightning-form-section"
-                  aria-labelledby="lightning-schedule-heading"
-                >
-                  <div className="lightning-section-heading">
-                    <span className="lightning-section-number" aria-hidden="true">
-                      02
-                    </span>
-                    <h3 id="lightning-schedule-heading">언제, 몇 명이 모일까요?</h3>
-                  </div>
-                  <div className="lightning-form-row lightning-schedule-row">
-                    <label className="lightning-field">
-                      <span className="lightning-field-heading">
-                        <span>
-                          시작 일시{" "}
-                          <span className="lightning-required" aria-hidden="true">
-                            *
-                          </span>
+
+                <section className={rf.step} aria-labelledby="lightning-schedule-heading">
+                  <h3 id="lightning-schedule-heading" className={rf.stepHead}>
+                    <b>3</b>언제, 몇 명이 만날까요?
+                  </h3>
+                  <div className={rf.group}>
+                    <span className={rf.groupLabel} id="lightning-day-label">
+                      <span>
+                        날짜{" "}
+                        <span className={rf.required} aria-hidden="true">
+                          *
                         </span>
-                        <small>한국시간</small>
                       </span>
+                      <small>7일 이내</small>
+                    </span>
+                    <div className={rf.days} role="group" aria-labelledby="lightning-day-label">
+                      {days.map((day) => (
+                        <button
+                          key={day.date}
+                          type="button"
+                          className={rf.day}
+                          data-weekend={day.weekend}
+                          aria-pressed={startDay === day.date}
+                          aria-label={`${scheduleText(day.date, "")}${day.label === "오늘" || day.label === "내일" ? ` · ${day.label}` : ""}`}
+                          onClick={() => setStartsAt(`${day.date}T${startTime || "19:00"}`)}
+                        >
+                          <small>{day.weekday}</small>
+                          <strong>{day.label}</strong>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className={rf.group}>
+                    <span className={rf.groupLabel}>
+                      <span>
+                        시작 시간{" "}
+                        <span className={rf.required} aria-hidden="true">
+                          *
+                        </span>
+                      </span>
+                      <small>한국시간</small>
+                    </span>
+                    <div className={rf.timeRow}>
                       <input
-                        name="startsAt"
-                        type="datetime-local"
+                        type="time"
+                        step={600}
                         required
-                        step={60}
-                        value={startsAt}
-                        onChange={(event) => setStartsAt(event.target.value)}
-                        aria-describedby="lightning-time-hint"
+                        className={rf.input}
+                        aria-label="시작 시간"
+                        value={startTime}
+                        onChange={(event) =>
+                          setStartsAt(`${startDay || days[0]!.date}T${event.target.value}`)
+                        }
                       />
-                    </label>
-                    <label className="lightning-field">
-                      <span className="lightning-field-heading">
-                        <span>진행 시간</span>
-                        <Clock3 size={14} aria-hidden="true" />
-                      </span>
-                      <select name="duration" defaultValue="120">
-                        <option value="30">30분</option>
-                        <option value="60">1시간</option>
-                        <option value="90">1시간 30분</option>
-                        <option value="120">2시간</option>
-                        <option value="180">3시간</option>
-                      </select>
-                    </label>
+                      {QUICK_TIMES.map(({ time, label }) => (
+                        <button
+                          key={time}
+                          type="button"
+                          className={rf.chip}
+                          aria-pressed={startTime === time}
+                          onClick={() => setStartsAt(`${startDay || days[0]!.date}T${time}`)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className={rf.chip}
+                        onClick={() => setStartsAt(roundedStart(Date.now(), 60, 10))}
+                      >
+                        1시간 뒤
+                      </button>
+                    </div>
                   </div>
-                  <div className="lightning-quick-time">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setStartsAt(
-                          koreanDateTimeInput(new Date(Date.now() + 3600000).toISOString()),
-                        )
-                      }
+                  <div className={rf.group}>
+                    <span className={rf.groupLabel} id="lightning-duration-label">
+                      얼마나 놀까요?
+                    </span>
+                    <div
+                      className={rf.segment}
+                      role="group"
+                      aria-labelledby="lightning-duration-label"
                     >
-                      1시간 뒤
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setStartsAt(
-                          koreanDateTimeInput(new Date(Date.now() + 86400000).toISOString()),
-                        )
-                      }
-                    >
-                      내일 이 시간
-                    </button>
-                    <small id="lightning-time-hint">지금부터 7일 이내로 정해주세요.</small>
+                      {DURATIONS.map((option) => (
+                        <button
+                          key={option.minutes}
+                          type="button"
+                          aria-pressed={duration === option.minutes}
+                          onClick={() => setDuration(option.minutes)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                  <p
+                    className={rf.when}
+                    data-empty={!whenText}
+                    data-warn={startPassed}
+                    id="lightning-time-hint"
+                    role={startPassed ? "alert" : undefined}
+                  >
+                    <CalendarDays size={16} aria-hidden="true" />
+                    {startPassed
+                      ? "이미 지난 시간이에요. 다른 날짜나 시간을 골라주세요."
+                      : whenText || "날짜와 시간을 골라주세요 · 지금부터 7일 이내"}
+                  </p>
                   <div className="lightning-capacity-row">
                     <div>
                       <label htmlFor="lightning-capacity">
@@ -804,7 +854,7 @@ export function LightningCommunity({
                           *
                         </span>
                       </label>
-                      <p id="lightning-capacity-hint">주최자를 제외한 참가자 자리 수예요.</p>
+                      <p id="lightning-capacity-hint">나를 빼고 함께할 사람 수예요 (2–12명).</p>
                     </div>
                     <div className="lightning-capacity-control">
                       <button
@@ -844,16 +894,12 @@ export function LightningCommunity({
                     </div>
                   </div>
                 </section>
-                <section
-                  className="lightning-form-section"
-                  aria-labelledby="lightning-place-heading"
-                >
-                  <div className="lightning-section-heading">
-                    <span className="lightning-section-number" aria-hidden="true">
-                      03
-                    </span>
-                    <h3 id="lightning-place-heading">만날 장소를 알려주세요</h3>
-                  </div>
+
+                <section className={rf.step} aria-labelledby="lightning-place-heading">
+                  <h3 id="lightning-place-heading" className={rf.stepHead}>
+                    <b>4</b>어디서 만날까요?
+                    <small>{venue ? "✓ 설정 완료" : "필수"}</small>
+                  </h3>
                   {initialVenue &&
                     venue?.communityVenueId === initialVenue.id &&
                     venue.communityVenueVersion === initialVenue.version && (
@@ -867,59 +913,45 @@ export function LightningCommunity({
                       </p>
                     )}
                   <input type="hidden" name="location" value={location} />
-                  <div className="lightning-venue-card">
-                    <div className="lightning-venue-heading">
-                      <span>
-                        <MapPin size={16} /> 모임 장소의 지도 위치
-                      </span>
-                      <span
-                        className={
-                          venue ? "lightning-venue-status is-set" : "lightning-venue-status"
-                        }
+                  <EventLocationField
+                    value={venue}
+                    address={location}
+                    onAddressSelected={setLocation}
+                    onChange={setVenue}
+                    disabled={submitting}
+                    purpose="venue"
+                    idPrefix="lightning-venue"
+                  />
+                </section>
+
+                <details className={rf.more}>
+                  <summary>
+                    더 자세히 설정하기 <small>선택</small>
+                  </summary>
+                  <div className={rf.moreBody}>
+                    <label className="lightning-field">
+                      <span>커뮤니티 주제 · 홈에서 어떤 주제로 보여줄까요?</span>
+                      <select
+                        name="categorySlug"
+                        value={draftTheme}
+                        onChange={(event) => setDraftTheme(event.target.value as CategorySlug)}
                       >
-                        {venue ? (
-                          <>
-                            <Check size={12} /> 설정 완료
-                          </>
-                        ) : (
-                          "필수 설정"
-                        )}
-                      </span>
-                    </div>
-                    <EventLocationField
-                      value={venue}
-                      address={location}
-                      onAddressSelected={setLocation}
-                      onChange={setVenue}
-                      onPlaceSelected={(place) => setLocation(meetupVenueLabel(place))}
-                      disabled={submitting}
-                      purpose="venue"
-                      idPrefix="lightning-venue"
+                        {topics.map((topic) => (
+                          <option key={topic.slug} value={topic.slug}>
+                            {topic.name}
+                          </option>
+                        ))}
+                      </select>
+                      <small>
+                        활동에 맞춰 자동으로 골라뒀어요. 모임 성격에 맞게 바꿀 수 있어요.
+                      </small>
+                    </label>
+                    <ParticipantGuideEditor
+                      value={participantGuide}
+                      onChange={setParticipantGuide}
                     />
                   </div>
-                </section>
-                <section
-                  className="lightning-form-section"
-                  aria-labelledby="lightning-application-heading"
-                >
-                  <div className="lightning-section-heading">
-                    <span className="lightning-section-number" aria-hidden="true">
-                      04
-                    </span>
-                    <h3 id="lightning-application-heading">신청을 확인하고 함께 만나요</h3>
-                  </div>
-                  <div className="lightning-approval-guide">
-                    <strong>참가 요청 → 담당자 승인 → 전용 공지방</strong>
-                    <p>
-                      신청 내용을 확인한 뒤 참가자를 승인해주세요. 승인된 참가자는 읽기 전용
-                      공지방에서 모임 안내를 받을 수 있어요.
-                    </p>
-                    <small>
-                      슬리퍼에서는 미리 결제하지 않아요. 비용은 모임 현장에서 함께 정산해요.
-                    </small>
-                  </div>
-                </section>
-                <ParticipantGuideEditor value={participantGuide} onChange={setParticipantGuide} />
+                </details>
               </fieldset>
             </div>
             <footer className="lightning-dialog-footer">
@@ -928,11 +960,14 @@ export function LightningCommunity({
                   <AlertCircle size={16} aria-hidden="true" /> {formError}
                 </p>
               )}
+              <ul className={rf.checklist} aria-label="번개 준비 상태">
+                {checklist.map((item) => (
+                  <li key={item.label} data-done={item.done}>
+                    {item.done ? "✓" : "○"} {item.label}
+                  </li>
+                ))}
+              </ul>
               <div className="lightning-footer-row">
-                <div className="lightning-footer-note">
-                  <strong>담당자 승인 후 참가 확정</strong>
-                  <p>비용은 모임 현장에서 함께 정산해요.</p>
-                </div>
                 <div className="lightning-footer-actions">
                   <button
                     type="button"

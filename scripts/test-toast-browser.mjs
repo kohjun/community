@@ -262,7 +262,9 @@ try {
   async function setup(mode) {
     await hp.goto(origin + "/games");
     await click(hp.getByRole("button", { name: "건배의 눈치 선택", exact: true }));
-    await hp.getByLabel("건배 게임 모드", { exact: true }).selectOption(mode);
+    await hp
+      .getByRole("radio", { name: mode === "target" ? /목표 인원 맞추기/ : /인원 맞히기/ })
+      .check({ force: true });
     await hp.getByLabel("건배 라운드 수", { exact: true }).selectOption("1");
     await hp.getByLabel("건배 선택 제한시간", { exact: true }).selectOption("15");
     await hp.getByLabel("참가 정원", { exact: true }).selectOption("3");
@@ -303,7 +305,11 @@ try {
       .getByRole("group", { name: "나의 건배 선택", exact: true })
       .getByRole("button", { name: /건배/ }),
   );
-  await players[0].getByLabel("예상 건배 인원", { exact: true }).selectOption("1");
+  await click(
+    players[0]
+      .getByRole("group", { name: "예상 건배 인원", exact: true })
+      .getByRole("button", { name: "1명", exact: true }),
+  );
   await click(players[0].getByRole("button", { name: "선택 제출하기", exact: true }));
   const hostRaw = await hp.evaluate(
     async (id) => (await (await fetch("/api/games/" + id + "?host=1")).json()).data.toast,

@@ -1,0 +1,468 @@
+/* Shared building blocks for the 이벤트·행사 and 번개·모임 forms. */
+
+.fields {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.step {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 18px 16px;
+  border: 1px solid #e5ebf2;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.stepHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #0f172a;
+  font-size: 16.5px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.stepHead > b {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #0a84fe;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.stepHead > small {
+  margin-left: auto;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.stepHint {
+  margin: -6px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.groupLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #334155;
+  font-size: 13.5px;
+  font-weight: 750;
+}
+
+.groupLabel small {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.required {
+  color: #e11d48;
+}
+
+/* ---------- chips ---------- */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 38px;
+  padding: 7px 13px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.chip:hover:not(:disabled) {
+  border-color: #93c5fd;
+}
+
+.chip[aria-pressed="true"] {
+  border-color: #0a84fe;
+  background: #0a84fe;
+  color: #ffffff;
+}
+
+.chip:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+@media (pointer: coarse) {
+  .chip {
+    min-height: 48px;
+  }
+
+  .mini > .input {
+    min-height: 48px;
+    font-size: 1rem;
+  }
+}
+
+.chip:focus-visible,
+.day:focus-visible,
+.segment button:focus-visible {
+  outline: 3px solid #0a67d2;
+  outline-offset: 2px;
+}
+
+/* ---------- date & time ---------- */
+.days {
+  display: grid;
+  grid-auto-columns: minmax(64px, 1fr);
+  grid-auto-flow: column;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.days::-webkit-scrollbar {
+  display: none;
+}
+
+.day {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  min-height: 58px;
+  padding: 8px 4px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  cursor: pointer;
+}
+
+.day small {
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.day strong {
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.day[aria-pressed="true"] {
+  border-color: #0a84fe;
+  background: #0a84fe;
+  color: #ffffff;
+}
+
+.day[aria-pressed="true"] small {
+  color: #dbeafe;
+}
+
+.day[data-weekend="true"]:not([aria-pressed="true"]) small {
+  color: #e11d48;
+}
+
+.timeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Date on its own row, then start ~ end. */
+.dateTime {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 8px 6px;
+}
+
+.dateTime > :first-child {
+  grid-column: 1 / -1;
+}
+
+.dateTime > span {
+  padding-bottom: 12px;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+/* A small caption over an input; immune to page-level `label` rules. */
+.mini {
+  display: grid !important;
+  gap: 4px;
+  min-width: 0;
+  margin: 0 !important;
+}
+
+.mini > small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mini > .input {
+  width: 100%;
+  min-width: 0;
+}
+
+.input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.input:focus {
+  border-color: #0a84fe;
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(10 132 254 / 15%);
+}
+
+.segment {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #f1f5f9;
+}
+
+.segment button {
+  min-height: 40px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #475569;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.segment button[aria-pressed="true"] {
+  background: #ffffff;
+  color: #0a67d2;
+  box-shadow: 0 1px 4px rgb(15 23 42 / 12%);
+}
+
+.when {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.when[data-empty="true"] {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.when[data-warn="true"] {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+/* ---------- helpers ---------- */
+.inlineAction {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px dashed #93c5fd;
+  border-radius: 999px;
+  background: #f5f9ff;
+  color: #0a67d2;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.inlineAction:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.info {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.info strong {
+  color: #0f172a;
+  font-size: 13.5px;
+}
+
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow li {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1e40af;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.flow li:not(:last-child)::after {
+  content: " →";
+  color: #94a3b8;
+}
+
+.more {
+  border: 1px solid #e5ebf2;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.more > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 50px;
+  padding: 12px 16px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  list-style: none;
+}
+
+.more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.more > summary::after {
+  content: "+";
+  color: #94a3b8;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.more[open] > summary::after {
+  content: "−";
+}
+
+.more > summary small {
+  margin-left: auto;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.moreBody {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+/* ---------- checklist ---------- */
+.checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.checklist li {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.checklist li[data-done="true"] {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.checklist li[data-optional="true"]:not([data-done="true"]) {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px #e2e8f0;
+}
+
+@media (max-width: 480px) {
+  .step {
+    padding: 16px 14px;
+  }
+
+  .stepHead {
+    font-size: 15.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    transition: none;
+  }
+}

@@ -273,26 +273,21 @@ test("great-circle distance handles identical, nearby, and antipodal points", ()
   );
 });
 
-test("basic clue room limits match the available bank, while host-authored quizzes can contain twenty questions", async () => {
+test("basic clue room limits match the street-view bank, while host-authored quizzes can contain twenty questions", async () => {
   const { createGameRoomSchema, gameHostActionSchema } = await import("../src/domain/game-room");
-  const { CLUE_PHOTO_BANK, CLUE_AUDIO_BANK } = await import("../src/server/clue-bank");
+  const { CLUE_STREET_BANK } = await import("../src/server/clue-bank");
+  assert.ok(CLUE_STREET_BANK.length >= 20);
+  assert.ok(CLUE_STREET_BANK.every((q) => q.media === "street" && q.street?.panoId && q.point));
   const base = {
     gameType: "clue",
     title: "문제 개수 검사",
     clueMode: "quiz",
-    clueRounds: CLUE_AUDIO_BANK.length + 1,
+    clueRounds: 21,
   };
   assert.equal(createGameRoomSchema.safeParse(base).success, false);
+  assert.equal(createGameRoomSchema.safeParse({ ...base, clueRounds: 20 }).success, true);
   assert.equal(
-    createGameRoomSchema.safeParse({ ...base, clueRounds: CLUE_AUDIO_BANK.length }).success,
-    true,
-  );
-  assert.equal(
-    createGameRoomSchema.safeParse({
-      ...base,
-      clueMode: "photo",
-      clueRounds: CLUE_PHOTO_BANK.length,
-    }).success,
+    createGameRoomSchema.safeParse({ ...base, clueMode: "photo", clueRounds: 20 }).success,
     true,
   );
   assert.equal(

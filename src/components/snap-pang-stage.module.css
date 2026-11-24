@@ -417,13 +417,6 @@
   cursor: not-allowed;
 }
 
-@media (pointer: coarse) {
-  .secondaryBtn {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
-
 .attackCard {
   border-radius: 14px;
   background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
@@ -506,42 +499,6 @@
   border-color: #22c55e;
   background: #ecfdf5;
   color: #15803d;
-}
-
-.fallbackBox {
-  border-radius: 14px;
-  border: 1px dashed #94a3b8;
-  background: #ffffff;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.fallbackNotice {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #475569;
-}
-
-.rouletteBar {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.rouletteCell {
-  height: 36px;
-  border-radius: 10px;
-  border: 2px solid transparent;
-  transition: transform 0.1s ease;
-}
-
-.rouletteCell[data-cursor="true"] {
-  border-color: #0f172a;
-  transform: scale(1.08);
-  box-shadow: 0 0 0 2px #ffffff inset;
 }
 
 .resultList {
@@ -1115,4 +1072,48 @@
   .flash {
     animation: none;
   }
+}
+
+/* Camera denied or recognition model failed: the round needs the camera, so offer a retry. */
+.cameraBlocked {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  background: rgb(15 23 42 / 92%);
+  color: #ffffff;
+  text-align: center;
+}
+
+.cameraBlocked strong {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.cameraBlocked span {
+  max-width: 300px;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.cameraBlocked button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #0a84fe;
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
 }

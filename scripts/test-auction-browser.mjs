@@ -298,7 +298,7 @@ try {
   await participants[1]
     .getByRole("button", { name: `${(value + 40).toLocaleString("ko-KR")}G 입찰하기`, exact: true })
     .click();
-  await hp.getByText("경매친구2 님이 앞서고 있어요", { exact: true }).waitFor();
+  await hp.getByText("경매친구2님이 앞서고 있어요", { exact: true }).waitFor();
   const stale = await participants[2].evaluate(
     async ({ id, amount }) => {
       const r = await fetch("/api/games/" + id, {
@@ -315,7 +315,7 @@ try {
   await participants[2]
     .getByRole("button", { name: `${(value + 60).toLocaleString("ko-KR")}G 입찰하기`, exact: true })
     .click();
-  await hp.getByText("경매친구3 님이 앞서고 있어요", { exact: true }).waitFor();
+  await hp.getByText("경매친구3님이 앞서고 있어요", { exact: true }).waitFor();
   for (const width of [320, 393, 720, 721, 1440]) {
     await participants[1].setViewportSize({ width, height: 950 });
     assert.equal(

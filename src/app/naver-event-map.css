@@ -6,7 +6,7 @@
   min-height: 380px;
   overflow: hidden;
   border-radius: inherit;
-  background: var(--sl-paper);
+  background: #f6f8fb;
 }
 .naver-event-map-canvas {
   width: 100%;
@@ -22,7 +22,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 28px;
-  background: var(--sl-paper);
+  background: #f6f8fb;
   text-align: center;
 }
 .naver-event-map-status-icon {
@@ -142,5 +142,50 @@
 @media (max-width: 720px) {
   .naver-event-map {
     min-height: 360px;
+  }
+}
+
+/* 단서각: real NAVER street view used as the question. */
+.naver-street-view {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 56vh;
+  border: 1px solid #dbe3ec;
+  border-radius: 16px;
+  background: #0f172a;
+}
+/* NAVER's viewer writes inline position/size onto this element; keep it filling the frame. */
+.naver-street-view__canvas {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+.naver-street-view__status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 650;
+  text-align: center;
+}
+.naver-street-view__spin {
+  animation: naver-street-view-spin 1s linear infinite;
+}
+@keyframes naver-street-view-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .naver-street-view__spin {
+    animation: none;
   }
 }

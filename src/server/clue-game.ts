@@ -7,7 +7,7 @@ import {
   type ClueState,
   type ClueView,
 } from "../domain/creative-games";
-import { CLUE_PHOTO_BANK, CLUE_AUDIO_BANK } from "./clue-bank";
+import { CLUE_STREET_BANK } from "./clue-bank";
 import { shuffle } from "./drawing-game";
 import { AppError } from "./errors";
 export function newClue(settings: ClueSettings): ClueState {
@@ -65,7 +65,7 @@ export function clueReady(s: ClueState, ids: string[]) {
   if (s.settings.mode === "member")
     return ids.length >= 2 && ids.every((id) => s.prepared.some((q) => q.authorId === id));
   return s.settings.source === "basic"
-    ? (s.settings.mode === "quiz" ? CLUE_AUDIO_BANK : CLUE_PHOTO_BANK).length >= s.settings.rounds
+    ? CLUE_STREET_BANK.length >= s.settings.rounds
     : s.prepared.length >= s.settings.rounds;
 }
 function open(s: ClueState, now: number) {
@@ -96,9 +96,7 @@ export function startClue(s: ClueState, players: { id: string; nickname: string 
     s.settings.mode === "member"
       ? s.prepared.filter((q) => players.some((p) => p.id === q.authorId))
       : s.settings.source === "basic"
-        ? s.settings.mode === "quiz"
-          ? CLUE_AUDIO_BANK
-          : CLUE_PHOTO_BANK
+        ? CLUE_STREET_BANK
         : s.prepared;
   s.deck = shuffle(source)
     .slice(0, s.settings.mode === "member" ? players.length : s.settings.rounds)
@@ -106,7 +104,15 @@ export function startClue(s: ClueState, players: { id: string; nickname: string 
       ...q,
       choices: q.choices ? [...q.choices] : null,
       point: q.point ? { ...q.point } : null,
+      street: q.street ? { ...q.street } : null,
     }));
+  // Street-view quiz: the place name plus three other places as choices.
+  if (s.settings.mode === "quiz" && s.settings.source === "basic")
+    for (const q of s.deck) {
+      const others = shuffle(CLUE_STREET_BANK.filter((o) => o.label !== q.label)).slice(0, 3);
+      q.choices = [q.label, ...others.map((o) => o.label)];
+      q.correctChoice = 0;
+    }
   for (const q of s.deck) {
     if (q.choices && q.correctChoice !== null) {
       const right = q.choices[q.correctChoice]!;
@@ -242,6 +248,7 @@ export function clueView(
           assetId: q.assetId,
           basicAsset: q.basicAsset,
           media: q.media,
+          street: q.street ?? null,
           choices: q.choices,
           credit: q.credit,
         }

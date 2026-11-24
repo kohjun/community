@@ -96,7 +96,7 @@ export const createGameRoomSchema = z
       v.clueSource !== "basic" ||
       v.clueMode === "member" ||
       v.clueRounds <= CLUE_BASIC_LIMITS[v.clueMode],
-    "기본 문제는 사진 20개·소리 10개까지예요. 더 많은 문제는 직접 출제로 준비해주세요.",
+    "기본 거리뷰 문제는 한 게임에 20문제까지예요. 더 많은 문제는 직접 출제로 준비해주세요.",
   )
   .refine(
     (v) => v.gameType !== "auction" || v.auctionRounds > v.minPlayers,

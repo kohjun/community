@@ -1,8 +1,14 @@
 "use client";
-import { useId } from "react";
-import { Check } from "lucide-react";
-import { DRAWING_MODES, CLUE_MODES, CLUE_BASIC_LIMITS } from "@/domain/creative-games";
+import {
+  DRAWING_MODES,
+  DRAWING_MODE_ORDER,
+  CLUE_MODES,
+  CLUE_BASIC_LIMITS,
+  CLUE_MODE_ORDER,
+  drawingPlayMinutes,
+} from "@/domain/creative-games";
 import type { GameRoomSettings } from "@/domain/game-room";
+import { GameModePicker } from "./game-mode-picker";
 import styles from "./creative-games.module.css";
 export const DEFAULT_CREATIVE_OPTIONS = {
   drawingMode: "mix",
@@ -29,133 +35,122 @@ export function CreativeSettingsFields({
   onChange: (next: Partial<CreativeOptions>) => void;
   disabled?: boolean;
 }) {
-  const uid = useId();
-  const drawing = kind === "drawing",
-    modes = drawing ? DRAWING_MODES : CLUE_MODES;
+  const drawing = kind === "drawing";
   const clueLimit =
     value.clueSource === "basic" && value.clueMode !== "member"
       ? CLUE_BASIC_LIMITS[value.clueMode]
       : 20;
-  return (
-    <div className={`${styles.form} ${styles.settingsGroup}`}>
-      <fieldset className={styles.modeFieldset} disabled={disabled}>
-        <legend>플레이 모드</legend>
-        <div className={styles.modes}>
-          {Object.entries(modes).map(([id, m]) => (
-            <label
-              className={styles.mode}
-              key={id}
-              htmlFor={`${uid}-${id}`}
-              data-mode={id}
-              data-selected={(drawing ? value.drawingMode : value.clueMode) === id}
-              data-disabled={disabled}
-            >
-              <input
-                id={`${uid}-${id}`}
-                name={`${uid}-mode`}
-                type="radio"
-                value={id}
-                checked={(drawing ? value.drawingMode : value.clueMode) === id}
-                className={styles.hiddenLabel}
-                onChange={() => {
-                  if (drawing) {
-                    const mode = id as keyof typeof DRAWING_MODES;
-                    onChange({
-                      drawingMode: mode,
-                      minPlayers: Math.max(value.minPlayers, DRAWING_MODES[mode].minimum),
-                    });
-                  } else {
-                    const mode = id as keyof typeof CLUE_MODES;
-                    onChange({
-                      clueMode: mode,
-                      clueRounds: Math.min(
-                        value.clueRounds,
-                        value.clueSource === "basic" && mode !== "member"
-                          ? CLUE_BASIC_LIMITS[mode]
-                          : 20,
-                      ),
-                    });
-                  }
-                }}
-              />
-              <Check className={styles.modeCheck} size={16} aria-hidden="true" />
-              <strong>{m.title}</strong>
-              <small>{m.description}</small>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <p className={styles.instruction}>
-        {drawing ? DRAWING_MODES[value.drawingMode].rules : CLUE_MODES[value.clueMode].rules}
-      </p>
-      <div className={styles.fields}>
-        <label>
-          {drawing ? "진행 바퀴" : "문제 수"}
-          {!drawing && value.clueMode === "member" ? (
-            <span className={styles.instruction}>참가자마다 한 문제씩</span>
-          ) : (
+  if (drawing) {
+    const mode = DRAWING_MODES[value.drawingMode];
+    return (
+      <div className={`${styles.form} ${styles.settingsGroup}`}>
+        <GameModePicker
+          legend="어떤 방식으로 놀까요?"
+          modes={DRAWING_MODE_ORDER.map((id) => ({ id, ...DRAWING_MODES[id] }))}
+          value={value.drawingMode}
+          note={mode.scoring}
+          disabled={disabled}
+          onChange={(id) =>
+            onChange({
+              drawingMode: id,
+              minPlayers: Math.max(value.minPlayers, DRAWING_MODES[id].minimum),
+            })
+          }
+        />
+        <div className={styles.fields}>
+          <label>
+            몇 바퀴 할까요?
             <select
               name="rounds"
-              aria-label={drawing ? "진행 바퀴" : "문제 수"}
-              disabled={disabled || (!drawing && value.clueMode === "member")}
-              value={drawing ? value.drawingSets : value.clueRounds}
+              aria-label="진행 바퀴"
+              disabled={disabled}
+              value={value.drawingSets}
+              onChange={(e) => onChange({ drawingSets: Number(e.target.value) })}
+            >
+              {[1, 2, 3].map((n) => (
+                <option key={n} value={n}>
+                  {n}바퀴
+                </option>
+              ))}
+            </select>
+            <small className={styles.muted}>1바퀴 = 모두가 한 번씩 그려요</small>
+          </label>
+          <label>
+            그리는 시간
+            <select
+              name="answerSeconds"
+              aria-label="그리기 시간"
+              disabled={disabled}
+              value={value.drawingSeconds}
               onChange={(e) =>
-                onChange(
-                  drawing
-                    ? { drawingSets: Number(e.target.value) }
-                    : { clueRounds: Number(e.target.value) },
-                )
+                onChange({
+                  drawingSeconds: Number(e.target.value) as CreativeOptions["drawingSeconds"],
+                })
               }
             >
-              {(drawing ? [1, 2, 3] : [1, 3, 5, 8, 10, 15, 20].filter((n) => n <= clueLimit)).map(
-                (n) => (
-                  <option key={n} value={n}>
-                    {n}
-                    {drawing ? "바퀴" : "문제"}
-                  </option>
-                ),
-              )}
+              {[30, 45, 60, 90].map((n) => (
+                <option key={n} value={n}>
+                  {n}초{n === 45 ? " (추천)" : ""}
+                </option>
+              ))}
             </select>
-          )}
-        </label>
-        <label>
-          {drawing ? "그리기 시간" : "문제 제한시간"}
-          <select
-            name="answerSeconds"
-            aria-label={drawing ? "그리기 시간" : "문제 제한시간"}
-            disabled={disabled}
-            value={drawing ? value.drawingSeconds : value.clueSeconds}
-            onChange={(e) =>
-              onChange(
-                drawing
-                  ? { drawingSeconds: Number(e.target.value) as CreativeOptions["drawingSeconds"] }
-                  : { clueSeconds: Number(e.target.value) as CreativeOptions["clueSeconds"] },
-              )
-            }
-          >
-            {(drawing ? [30, 45, 60, 90] : [30, 60, 90]).map((n) => (
-              <option key={n} value={n}>
-                {n}초
-              </option>
-            ))}
-          </select>
-        </label>
+          </label>
+        </div>
+        {value.drawingMode !== "relay" && (
+          <label className={styles.toggle}>
+            <input
+              type="checkbox"
+              checked={value.drawingScored}
+              disabled={disabled}
+              onChange={(e) => onChange({ drawingScored: e.target.checked })}
+            />
+            점수를 매기고 우승자를 정해요
+          </label>
+        )}
+        <p className={styles.drawEstimate}>
+          ⏱️ {value.capacity}명이 모두 참여하면 길어야 약{" "}
+          <strong>
+            {drawingPlayMinutes(
+              value.drawingMode,
+              value.capacity,
+              value.drawingSeconds,
+              value.drawingSets,
+            )}
+            분
+          </strong>
+          이에요. 모두 빨리 제출하면 더 일찍 끝나요.
+        </p>
       </div>
-      {drawing && value.drawingMode !== "relay" && (
-        <label className={styles.toggle}>
-          <input
-            type="checkbox"
-            checked={value.drawingScored}
-            disabled={disabled}
-            onChange={(e) => onChange({ drawingScored: e.target.checked })}
-          />
-          점수와 우승자 표시
-        </label>
-      )}
-      {!drawing && value.clueMode !== "member" && (
+    );
+  }
+  const mode = CLUE_MODES[value.clueMode];
+  const member = value.clueMode === "member";
+  const questions = member ? value.capacity : value.clueRounds;
+  const clueMinutes = Math.max(1, Math.ceil((questions * (value.clueSeconds + 15)) / 60));
+  const changeClueMode = (id: (typeof CLUE_MODE_ORDER)[number]) =>
+    onChange({
+      clueMode: id,
+      clueRounds: Math.min(
+        value.clueRounds,
+        value.clueSource === "basic" && id !== "member" ? CLUE_BASIC_LIMITS[id] : 20,
+      ),
+    });
+  return (
+    <div className={`${styles.form} ${styles.settingsGroup}`}>
+      <GameModePicker
+        legend="어떤 방식으로 맞혀볼까요?"
+        modes={CLUE_MODE_ORDER.map((id) => ({ id, ...CLUE_MODES[id] }))}
+        value={value.clueMode}
+        note={mode.rules}
+        disabled={disabled}
+        onChange={changeClueMode}
+      />
+      {!member && (
         <label>
-          문제 준비
+          문제는 누가 낼까요?
           <select
+            name="clueSource"
+            aria-label="문제 준비 방법"
             value={value.clueSource}
             disabled={disabled}
             onChange={(e) => {
@@ -171,22 +166,66 @@ export function CreativeSettingsFields({
               });
             }}
           >
-            <option value="basic">바로 시작 · Sliper 기본 문제</option>
+            <option value="basic">바로 시작 · 실제 거리뷰 문제 (추천)</option>
             <option value="host">호스트가 직접 출제</option>
           </select>
           <small className={styles.muted}>
             {value.clueSource === "host"
-              ? "방을 만든 뒤 자료·정답을 등록해요. 출제자는 해당 문제 채점에서 제외돼요."
-              : "장소 사진 20개·직접 제작한 합성 소리 10개. 사진은 장소 대표 지점 기준이에요."}
+              ? value.clueMode === "quiz"
+                ? "방을 만든 뒤 소리·영상과 보기 4개를 등록해요. 출제자는 그 문제에서 쉬어요."
+                : "방을 만든 뒤 사진과 정답 위치를 등록해요. 출제자는 그 문제에서 쉬어요."
+              : "전국 명소의 실제 네이버 거리뷰 중에서 무작위로 나와요."}
           </small>
         </label>
       )}
-      <p className={styles.muted}>
-        {drawing
-          ? `1바퀴는 모두 각 역할을 한 번씩 맡는 구성 · 정원 기준 ${value.capacity}개 ${value.drawingMode === "live" ? "그림 문제" : "릴레이"}`
-          : value.clueMode === "member"
-            ? "모두 사진 한 장씩 준비해요. 실제 참가 인원만큼 문제를 진행해요."
-            : "모두 제출하거나 시간이 끝나면 공개해요. 제출을 확정한 답은 변경할 수 없어요."}
+      <div className={styles.fields}>
+        <label>
+          문제 수
+          {member ? (
+            <>
+              <span className={styles.instruction}>한 사람당 한 문제</span>
+              <small className={styles.muted}>사진을 낸 사람 수만큼 진행해요</small>
+            </>
+          ) : (
+            <select
+              name="rounds"
+              aria-label="문제 수"
+              disabled={disabled}
+              value={value.clueRounds}
+              onChange={(e) => onChange({ clueRounds: Number(e.target.value) })}
+            >
+              {[1, 3, 5, 8, 10, 15, 20]
+                .filter((n) => n <= clueLimit)
+                .map((n) => (
+                  <option key={n} value={n}>
+                    {n}문제{n === 5 ? " (추천)" : ""}
+                  </option>
+                ))}
+            </select>
+          )}
+        </label>
+        <label>
+          한 문제 제한시간
+          <select
+            name="answerSeconds"
+            aria-label="문제 제한시간"
+            disabled={disabled}
+            value={value.clueSeconds}
+            onChange={(e) =>
+              onChange({ clueSeconds: Number(e.target.value) as CreativeOptions["clueSeconds"] })
+            }
+          >
+            {[30, 60, 90].map((n) => (
+              <option key={n} value={n}>
+                {n}초{n === 60 ? " (추천)" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <p className={styles.drawEstimate}>
+        ⏱️ {member ? `${value.capacity}명이 모두 사진을 내면 ` : ""}길어야 약{" "}
+        <strong>{clueMinutes}분</strong>이에요. 모두 빨리 제출하면 더 일찍 끝나요.
       </p>
     </div>
   );

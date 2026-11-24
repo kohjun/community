@@ -1,66 +1,108 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
-import {
-  ArrowDown,
-  ArrowUp,
-  GripVertical,
-  LockKeyhole,
-  Thermometer,
-  Timer,
-  Trophy,
-} from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
+import { ArrowDown, ArrowUp, Clock3, GripVertical, Send, SkipForward } from "lucide-react";
 import type { GameRoomView } from "@/domain/game-room";
-import { TEMPERATURE_MODE_LABELS, type TemperatureView } from "@/domain/temperature-game";
+import { TEMPERATURE_MODE_INFO, type TemperatureView } from "@/domain/temperature-game";
+import { CreativeScores, CreativeWinners } from "./creative-game-common";
+import cg from "./creative-games.module.css";
 import styles from "./temperature-game-stage.module.css";
-import { GameRoundActions } from "./game-round-layout";
-
-const stageLabels = {
-  lobby: "준비 중",
-  clue: "말로 설명",
-  guess: "숫자 제출",
-  situations: "상황 제출",
-  ordering: "순서 제출",
-  review: "결과와 대화",
-  result: "최종 순위",
-  aborted: "게임 중단",
-} as const;
 
 type Send = (action: Record<string, unknown>, host?: boolean) => void;
+type Task = { emoji: string; title: string; detail: string; tone: "act" | "wait" | "watch" };
 
-function NumberChoice({
+/** Cool blue at 0 → purple → warm red at 100, so a number reads as a temperature at a glance. */
+const heat = (value: number) => `hsl(${Math.round(220 + value * 1.4)} 78% 52%)`;
+const heatStyle = (value: number) => ({ "--heat": heat(value) }) as CSSProperties;
+
+function Scale({
+  low,
+  high,
+  markers = [],
+}: {
+  low: string;
+  high: string;
+  markers?: { value: number; label: string; main?: boolean }[];
+}) {
+  return (
+    <div className={styles.scale}>
+      <div className={styles.scaleBar} aria-hidden={markers.length === 0}>
+        {markers.map((marker, index) => (
+          <span
+            key={`${marker.label}-${index}`}
+            className={marker.main ? styles.markerMain : styles.marker}
+            style={{ left: `${marker.value}%`, ...heatStyle(marker.value) }}
+            title={`${marker.label} ${marker.value}`}
+          >
+            {marker.main ? marker.value : marker.label.slice(0, 1)}
+          </span>
+        ))}
+      </div>
+      <div className={styles.scaleLabels}>
+        <span>
+          <b>0</b> {low}
+        </span>
+        <span>
+          {high} <b>100</b>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function NumberPicker({
   value,
   onChange,
   disabled,
+  low,
+  high,
 }: {
-  value: string;
-  onChange: (value: string) => void;
+  value: number;
+  onChange: (value: number) => void;
   disabled: boolean;
+  low: string;
+  high: string;
 }) {
+  const set = (next: number) => onChange(Math.max(0, Math.min(100, next)));
   return (
-    <div className={styles.numberChoice}>
+    <div className={styles.picker} style={heatStyle(value)}>
+      <output className={styles.pickerValue} aria-live="polite">
+        {value}
+        <small>도</small>
+      </output>
       <input
+        className={styles.range}
         type="range"
         min={0}
         max={100}
         step={1}
-        value={value === "" ? 50 : value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-label="숫자 선택"
-        disabled={disabled}
-      />
-      <input
-        type="number"
-        min={0}
-        max={100}
-        step={1}
-        inputMode="numeric"
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-label="숫자 직접 입력"
         disabled={disabled}
-        required
+        aria-label="숫자 고르기"
+        aria-valuetext={`${value}도`}
+        onChange={(event) => set(Number(event.target.value))}
       />
+      <div className={styles.scaleLabels}>
+        <span>
+          <b>0</b> {low}
+        </span>
+        <span>
+          {high} <b>100</b>
+        </span>
+      </div>
+      <div className={styles.steppers} role="group" aria-label="숫자 미세 조정">
+        {[-10, -1, 1, 10].map((step) => (
+          <button
+            key={step}
+            type="button"
+            disabled={disabled}
+            aria-label={`${step > 0 ? "+" : ""}${step}`}
+            onClick={() => set(value + step)}
+          >
+            {step > 0 ? `+${step}` : step}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -76,7 +118,6 @@ function OrderCards({
   disabled: boolean;
   onSubmit: (order: string[]) => void;
 }) {
-  const orderForm = useId();
   const [draft, setDraft] = useState(() => game.situations.map((item) => item.id));
   const [announcement, setAnnouncement] = useState("");
   const drag = useRef<{ id: string; lastTarget: string | null } | null>(null);
@@ -96,13 +137,8 @@ function OrderCards({
   }
   function handleDrag(event: PointerEvent<HTMLSpanElement>) {
     if (!drag.current || locked) return;
-    const playArea = event.currentTarget.closest<HTMLElement>("[data-game-phase]");
-    const scroller = playArea && getComputedStyle(playArea).overflowY === "auto" ? playArea : null;
-    const bounds = scroller?.getBoundingClientRect();
-    const top = bounds?.top ?? 0;
-    const bottom = bounds?.bottom ?? window.innerHeight;
-    if (event.clientY < top + 44) (scroller ?? window).scrollBy(0, -24);
-    else if (event.clientY > bottom - 44) (scroller ?? window).scrollBy(0, 24);
+    if (event.clientY < 64) window.scrollBy(0, -24);
+    else if (event.clientY > window.innerHeight - 64) window.scrollBy(0, 24);
     const target = document
       .elementFromPoint(event.clientX, event.clientY)
       ?.closest<HTMLElement>("[data-temperature-card]")?.dataset.temperatureCard;
@@ -113,24 +149,30 @@ function OrderCards({
 
   return (
     <form
-      id={orderForm}
+      className={styles.orderForm}
       onSubmit={(event) => {
         event.preventDefault();
         if (!locked) onSubmit(draft);
       }}
     >
-      <p className={styles.help}>
-        낮은 숫자부터 순서대로 놓으세요. 손잡이를 끌거나 위·아래 버튼을 눌러 옮길 수 있어요.
+      <p className={styles.axis} data-end="low">
+        ⬆ 낮은 숫자 (0에 가까움)
       </p>
       <ol className={styles.orderCards} aria-label="숫자가 낮은 순서부터 배치">
         {order.map((id, index) => (
-          <li key={id} data-temperature-card={id} className={styles.orderCard}>
+          <li
+            key={id}
+            data-temperature-card={id}
+            className={styles.orderCard}
+            data-mine={id === viewerId}
+          >
             <span className={styles.position} aria-label={`${index + 1}번째`}>
               {index + 1}
             </span>
             <div>
               <strong>
-                {names.get(id)} {id === viewerId && <small>내 상황</small>}
+                {names.get(id)}
+                {id === viewerId && <small>내 상황</small>}
               </strong>
               <p>{situations.get(id)}</p>
             </div>
@@ -172,85 +214,117 @@ function OrderCards({
           </li>
         ))}
       </ol>
+      <p className={styles.axis} data-end="high">
+        ⬇ 높은 숫자 (100에 가까움)
+      </p>
       <p className="sr-only" role="status">
         {announcement}
       </p>
-      {game.myOrder ? (
-        <p role="status" className={styles.notice}>
-          순서를 제출했어요. 결과를 기다려주세요.
-        </p>
-      ) : (
-        <GameRoundActions>
-          <button className={styles.primary} type="submit" form={orderForm} disabled={locked}>
-            순서 제출
+      {!game.myOrder && (
+        <div className={cg.dgDock}>
+          <button className={cg.button} type="submit" disabled={locked}>
+            <Send size={16} aria-hidden="true" /> 이 순서로 제출
           </button>
-        </GameRoundActions>
+        </div>
       )}
     </form>
   );
 }
 
-function Results({ game, name }: { game: TemperatureView; name: (id: string | null) => string }) {
+function Review({
+  game,
+  name,
+  me,
+}: {
+  game: TemperatureView;
+  name: (id: string | null) => string;
+  me: string | null;
+}) {
   const result = game.result;
   if (!result) return null;
-  return (
-    <div className={styles.result} aria-label="이번 결과">
-      {result.mode === "basic" ? (
-        <>
-          {result.skipped ? (
-            <h3>이번 차례는 건너뛰었어요</h3>
-          ) : (
-            <h3>
-              비밀 숫자 <strong>{result.answer}</strong>
-            </h3>
-          )}
-          {!result.skipped && result.guesses.length === 0 && (
-            <p>이번 차례에 제출한 숫자가 없어요.</p>
-          )}
-          <ul className={styles.resultList}>
-            {result.guesses.map((entry) => (
-              <li key={entry.id}>
-                <span>{name(entry.id)}</span>
+  if (result.mode === "basic") {
+    if (result.skipped) return null;
+    const guesses = [...result.guesses].sort((a, b) => a.distance - b.distance);
+    return (
+      <section className={styles.review} aria-label="이번 결과">
+        {result.answer !== null && game.topic && (
+          <Scale
+            low={game.topic.low}
+            high={game.topic.high}
+            markers={[
+              ...guesses.map((entry) => ({ value: entry.value, label: name(entry.id) })),
+              { value: result.answer, label: "정답", main: true },
+            ]}
+          />
+        )}
+        {guesses.length === 0 ? (
+          <p className={styles.empty}>이번 차례에 제출한 숫자가 없어요.</p>
+        ) : (
+          <ol className={styles.rows}>
+            {guesses.map((entry) => (
+              <li key={entry.id} data-self={entry.id === me} data-win={entry.points > 0}>
+                <b>{entry.points ? "🥇" : "·"}</b>
                 <span>
-                  {entry.value} · 차이 {entry.distance}
+                  <strong>
+                    {name(entry.id)}
+                    {entry.id === me ? " (나)" : ""}
+                  </strong>
+                  <small>
+                    {entry.value}도 · 차이 {entry.distance}
+                  </small>
                 </span>
-                <b>{entry.points ? "+1점" : "0점"}</b>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <>
-          <h3>실제 숫자와 순서</h3>
-          <ol className={styles.resultList}>
-            {result.situations.map((situation) => (
-              <li key={situation.id}>
-                <span>
-                  <strong>{name(situation.id)}</strong> · {situation.text}
-                </span>
-                <b>{situation.value}</b>
+                <em>+{entry.points}점</em>
               </li>
             ))}
           </ol>
-          {result.comparablePairs === 0 && <p>비교할 수 있는 쌍이 없어 이번 라운드는 0점이에요.</p>}
-          {result.comparablePairs > 0 && !result.orders.length && (
-            <p>이번 라운드에 제출한 순서가 없어요.</p>
-          )}
-          {result.orders.map((entry) => (
-            <details className={styles.submittedOrder} key={entry.id}>
-              <summary>
-                {name(entry.id)} · {entry.correctPairs}/{result.comparablePairs}쌍 ·{" "}
-                {entry.points ? "+1점" : "0점"}
-              </summary>
-              <p>{entry.order.map(name).join(" → ")}</p>
-            </details>
+        )}
+      </section>
+    );
+  }
+  const orders = [...result.orders].sort((a, b) => b.correctPairs - a.correctPairs);
+  return (
+    <section className={styles.review} aria-label="이번 결과">
+      <p className={styles.axis} data-end="low">
+        ⬆ 실제로 낮은 숫자
+      </p>
+      <ol className={styles.truth}>
+        {result.situations.map((situation) => (
+          <li key={situation.id} style={heatStyle(situation.value)}>
+            <b>{situation.value}</b>
+            <span>
+              <strong>{name(situation.id)}</strong>
+              <p>{situation.text}</p>
+            </span>
+          </li>
+        ))}
+      </ol>
+      {result.comparablePairs === 0 ? (
+        <p className={styles.empty}>
+          모두 같은 숫자를 골라 비교할 수 없어서 이번 라운드는 0점이에요.
+        </p>
+      ) : orders.length === 0 ? (
+        <p className={styles.empty}>이번 라운드에 제출한 순서가 없어요.</p>
+      ) : (
+        <ol className={styles.rows}>
+          {orders.map((entry) => (
+            <li key={entry.id} data-self={entry.id === me} data-win={entry.points > 0}>
+              <b>{entry.points ? "🥇" : "·"}</b>
+              <span>
+                <strong>
+                  {name(entry.id)}
+                  {entry.id === me ? " (나)" : ""}
+                </strong>
+                <small>
+                  {entry.correctPairs}/{result.comparablePairs}쌍 맞힘 ·{" "}
+                  {entry.order.map(name).join(" → ")}
+                </small>
+              </span>
+              <em>+{entry.points}점</em>
+            </li>
           ))}
-        </>
+        </ol>
       )}
-      {game.stage === "review" && (
-        <p className={styles.notice}>같은 상황을 다르게 느낀 이유를 함께 이야기해보세요.</p>
-      )}
-    </div>
+    </section>
   );
 }
 
@@ -267,12 +341,12 @@ export function TemperatureGameStage({
   onAction: Send;
   onRefresh: () => void;
 }) {
-  const answerForm = useId();
-  const [number, setNumber] = useState("50");
+  const [number, setNumber] = useState(50);
   const [text, setText] = useState("");
   const [seconds, setSeconds] = useState(() =>
     Math.max(0, Math.ceil(((game.endsAt ?? game.serverNow) - game.serverNow) / 1000)),
   );
+  const [toast, setToast] = useState<{ id: string; text: string } | null>(null);
   const refreshed = useRef<number | null>(null);
   const refresh = useRef(onRefresh);
   refresh.current = onRefresh;
@@ -294,249 +368,448 @@ export function TemperatureGameStage({
   }, [game.endsAt, game.serverNow]);
 
   const me = room.viewer.id;
+  const mode = TEMPERATURE_MODE_INFO[game.settings.mode];
+  const basic = game.settings.mode === "basic";
+  const playing = !!me && game.roster.some((player) => player.id === me);
   const isClue = !!me && me === game.clueId;
   const finished = game.stage === "result" || game.stage === "aborted";
   const timedOut = game.endsAt !== null && seconds === 0;
   const locked = busy || timedOut;
   const name = (id: string | null) =>
     game.roster.find((player) => player.id === id)?.nickname ?? "참가자";
-  const validNumber = /^(0|[1-9]\d?|100)$/.test(number);
-  const ranked = [...game.roster].sort((a, b) => b.score - a.score);
+  const who = (id: string | null) => (id === me ? "나" : `${name(id)}님`);
+  const nextClue =
+    basic && game.turn < game.totalTurns && game.roster.length
+      ? game.roster[game.turn % game.roster.length]!.id
+      : null;
   const hostAction = (action: string) =>
     onAction({ action, revision: room.revision, turn: game.turn }, true);
   const submit = (action: string, payload: Record<string, unknown>) =>
     onAction({ action, runId: game.runId, turn: game.turn, ...payload });
 
+  const result = game.result;
+  const reviewSummary = (() => {
+    if (!result) return { title: "", detail: "" };
+    if (result.mode === "basic") {
+      if (result.skipped)
+        return { title: "이번 차례는 건너뛰었어요", detail: "점수 변화 없이 다음으로 넘어가요." };
+      const best = result.guesses.filter((entry) => entry.points > 0).map((entry) => who(entry.id));
+      return {
+        title: `비밀 숫자는 ${result.answer}도!`,
+        detail: best.length
+          ? `가장 가까운 사람: ${best.join(", ")} (+1점)`
+          : "제출한 사람이 없어요.",
+      };
+    }
+    const best = result.orders.filter((entry) => entry.points > 0).map((entry) => who(entry.id));
+    return {
+      title: "실제 순서가 공개됐어요",
+      detail: best.length
+        ? `가장 잘 맞힌 사람: ${best.join(", ")} (+1점)`
+        : "이번 라운드는 0점이에요.",
+    };
+  })();
+
+  const task: Task = (() => {
+    switch (game.stage) {
+      case "clue":
+        return isClue
+          ? {
+              emoji: "🗣️",
+              title: "비밀 숫자에 맞는 상황을 말해주세요",
+              detail:
+                "숫자는 말하지 말고 상황으로만 설명해요. 다 말하면 진행자가 숫자 고르기를 열어요.",
+              tone: "act",
+            }
+          : {
+              emoji: "👂",
+              title: `${name(game.clueId)}님의 설명을 들어요`,
+              detail: "설명이 끝나면 몇 도인지 고르는 화면이 열려요.",
+              tone: "watch",
+            };
+      case "guess":
+        if (isClue || !playing)
+          return {
+            emoji: "⏳",
+            title: "다들 숫자를 고르는 중이에요",
+            detail: `${game.submitted}/${game.expected}명이 제출했어요.`,
+            tone: "wait",
+          };
+        return game.myGuess !== null
+          ? {
+              emoji: "✅",
+              title: "제출했어요",
+              detail: `내 답 ${game.myGuess}도 · 모두 내면 정답이 공개돼요.`,
+              tone: "wait",
+            }
+          : {
+              emoji: "🌡️",
+              title: "몇 도일까요?",
+              detail: `${name(game.clueId)}님의 설명이 0~100 중 어디쯤인지 골라요.`,
+              tone: "act",
+            };
+      case "situations":
+        if (!playing)
+          return {
+            emoji: "✍️",
+            title: "모두 상황을 쓰는 중이에요",
+            detail: `${game.submitted}/${game.expected}명이 제출했어요.`,
+            tone: "watch",
+          };
+        return game.mySituation
+          ? {
+              emoji: "✅",
+              title: "제출했어요",
+              detail: `다른 사람을 기다려요 (${game.submitted}/${game.expected}명).`,
+              tone: "wait",
+            }
+          : {
+              emoji: "✍️",
+              title: "상황 하나와 숫자를 정해요",
+              detail: "주제에 맞는 상황을 짧게 쓰고, 몇 도인지 몰래 골라요.",
+              tone: "act",
+            };
+      case "ordering":
+        if (!game.mySituation)
+          return {
+            emoji: "🔢",
+            title: "줄 세우는 중이에요",
+            detail: "이번 라운드는 상황을 낸 사람만 줄을 세워요.",
+            tone: "watch",
+          };
+        return game.myOrder
+          ? {
+              emoji: "✅",
+              title: "제출했어요",
+              detail: `다른 사람을 기다려요 (${game.submitted}/${game.expected}명).`,
+              tone: "wait",
+            }
+          : {
+              emoji: "🔢",
+              title: "낮은 숫자부터 줄 세워요",
+              detail: "맨 위가 가장 낮은 숫자예요. 카드를 끌거나 ↑↓로 옮긴 뒤 제출해요.",
+              tone: "act",
+            };
+      case "review":
+        return {
+          emoji: "🎯",
+          title: reviewSummary.title,
+          detail: `${reviewSummary.detail}${
+            room.isHost
+              ? " 이야기를 나눈 뒤 ‘다음’을 눌러요."
+              : nextClue
+                ? ` 다음은 ${who(nextClue)} 차례예요.`
+                : ""
+          }`,
+          tone: "watch",
+        };
+      case "aborted":
+        return {
+          emoji: "⏹️",
+          title: "게임이 중단됐어요",
+          detail: "완료된 차례의 점수만 남아요.",
+          tone: "watch",
+        };
+      default:
+        return {
+          emoji: "🏁",
+          title: "게임 끝!",
+          detail: "최종 순위를 확인해요.",
+          tone: "watch",
+        };
+    }
+  })();
+
+  // Briefly announce each new step (who explains, when to pick, the reveal).
+  const announced = useRef<string | null>(null);
+  const phase = `${game.turn}:${game.stage}`;
+  useEffect(() => {
+    if (announced.current === phase) return;
+    announced.current = phase;
+    if (finished) return;
+    setToast({ id: phase, text: `${task.emoji} ${task.title}` });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 2_600);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const step = basic
+    ? ({ clue: 1, guess: 2, review: 3 }[game.stage as string] ?? -1)
+    : ({ situations: 0, ordering: 1, review: 2 }[game.stage as string] ?? -1);
+  const canGuess = game.stage === "guess" && playing && !isClue && game.myGuess === null;
+  const canWrite = game.stage === "situations" && playing && !game.mySituation;
+  const validText = text.trim().length >= 2;
+
   return (
-    <section className={styles.stage} aria-label="마음의 온도">
-      <header className={styles.header}>
-        <div>
-          <Thermometer size={21} aria-hidden="true" />
-          <h2>마음의 온도</h2>
+    <section className={cg.stage} aria-label="마음의 온도">
+      {toast && (
+        <div key={toast.id} className={cg.dgToast} role="status">
+          {toast.text}
         </div>
-        <span>{TEMPERATURE_MODE_LABELS[game.settings.mode]}</span>
-      </header>
-      <div className={styles.body}>
-        <div className={styles.progress}>
-          <span>
-            {game.round}/{game.settings.rounds} 라운드 · {stageLabels[game.stage]}
+      )}
+      <header className={cg.dgTop}>
+        <span className={cg.dgMode}>
+          {mode.emoji} {mode.title}
+        </span>
+        {!finished && (
+          <span className={cg.dgRound}>
+            라운드 {game.round}/{game.settings.rounds}
           </span>
-          {game.endsAt !== null && (
-            <span className={styles.timer} role="timer" aria-label={`남은 시간 ${seconds}초`}>
-              <Timer size={16} aria-hidden="true" />
-              {seconds}초
-            </span>
+        )}
+        {["guess", "situations", "ordering"].includes(game.stage) && (
+          <span
+            className={cg.dgRound}
+            aria-label={`${game.expected}명 중 ${game.submitted}명 제출`}
+          >
+            ✋ {game.submitted}/{game.expected}명
+          </span>
+        )}
+        {game.endsAt !== null ? (
+          <span
+            className={cg.clock}
+            data-urgent={seconds <= 10}
+            role="timer"
+            aria-label={`남은 시간 ${seconds}초`}
+          >
+            <Clock3 size={15} aria-hidden="true" />
+            {seconds}초
+          </span>
+        ) : (
+          <span />
+        )}
+      </header>
+
+      {step >= 0 && (
+        <ol className={cg.dgSteps} aria-label="진행 단계">
+          {mode.steps.map((s, index) => (
+            <li
+              key={s.title}
+              data-state={index < step ? "done" : index === step ? "now" : "next"}
+              aria-current={index === step ? "step" : undefined}
+            >
+              <span>{index < step ? "✓" : index + 1}</span>
+              <small>{s.title}</small>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      <div className={cg.dgTask} data-tone={task.tone}>
+        <span className={cg.dgTaskEmoji} aria-hidden="true">
+          {task.emoji}
+        </span>
+        <div>
+          <small>
+            {task.tone === "act" ? "내 할 일" : task.tone === "wait" ? "기다리는 중" : "지금은"}
+          </small>
+          <strong>{task.title}</strong>
+          <p>{task.detail}</p>
+        </div>
+      </div>
+
+      {!finished && game.topic && (
+        <div className={styles.topic}>
+          <small>오늘의 주제</small>
+          <h3>{game.topic.question}</h3>
+          {game.stage !== "guess" && game.stage !== "situations" && game.stage !== "review" && (
+            <Scale
+              low={game.topic.low}
+              high={game.topic.high}
+              markers={
+                game.mySecret !== null
+                  ? [{ value: game.mySecret, label: "내 비밀 숫자", main: true }]
+                  : []
+              }
+            />
           )}
         </div>
-        {!finished && game.topic && (
-          <div className={styles.topic}>
-            <h3>{game.topic.question}</h3>
-            <div className={styles.scale}>
-              <span>
-                <b>0</b>
-                {game.topic.low}
-              </span>
-              <span>
-                <b>100</b>
-                {game.topic.high}
-              </span>
-            </div>
-          </div>
-        )}
-        {game.mySecret !== null && (
-          <div className={styles.secret}>
-            <LockKeyhole size={18} aria-hidden="true" />
-            <div>
-              나만 보는 비밀 숫자<strong>{game.mySecret}</strong>
-            </div>
-          </div>
-        )}
-        {game.stage === "clue" && (
-          <div className={styles.notice}>
-            {isClue
-              ? "숫자에 어울리는 상황을 말로 설명하세요. 숫자 자체는 말하지 마세요."
-              : `${name(game.clueId)} 님의 설명을 들어보세요.`}
-            {room.isHost && (
-              <div className={styles.actions}>
-                <button
-                  className={styles.primary}
-                  type="button"
-                  disabled={locked}
-                  onClick={() => hostAction("temperature-open")}
-                >
-                  숫자 제출 열기
-                </button>
-                <button
-                  className={styles.secondary}
-                  type="button"
-                  disabled={locked}
-                  onClick={() => hostAction("temperature-skip")}
-                >
-                  이번 차례 건너뛰기
+      )}
+
+      {game.mySecret !== null && game.stage === "clue" && (
+        <div className={styles.secret} style={heatStyle(game.mySecret)}>
+          <span>🔒 나만 보는 비밀 숫자</span>
+          <strong>{game.mySecret}</strong>
+          <p>
+            0 = ‘{game.topic?.low}’, 100 = ‘{game.topic?.high}’. 이 숫자만큼의 상황을 예로 들어
+            말해요.
+          </p>
+        </div>
+      )}
+
+      {game.stage === "guess" && game.topic && (
+        <>
+          {canGuess ? (
+            <form
+              className={styles.answerForm}
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!locked) submit("temperature-guess", { value: number });
+              }}
+            >
+              <NumberPicker
+                value={number}
+                onChange={setNumber}
+                disabled={locked}
+                low={game.topic.low}
+                high={game.topic.high}
+              />
+              <div className={cg.dgDock}>
+                <button className={cg.button} type="submit" disabled={locked}>
+                  <Send size={16} aria-hidden="true" /> {number}도로 제출
                 </button>
               </div>
-            )}
-          </div>
-        )}
-        {game.stage === "guess" && (
-          <>
-            <p className={styles.help}>
-              예상 숫자 제출 {game.submitted}/{game.expected}명
-            </p>
-            {!me || isClue ? (
-              <p className={styles.notice}>참가자들의 예상 숫자를 기다려주세요.</p>
-            ) : game.myGuess !== null ? (
-              <p className={styles.notice} role="status">
-                내 예상 숫자 {game.myGuess}를 제출했어요.
-              </p>
-            ) : (
-              <form
-                id={answerForm}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (validNumber && !locked)
-                    submit("temperature-guess", { value: Number(number) });
-                }}
-              >
-                <NumberChoice value={number} onChange={setNumber} disabled={locked} />
-                <GameRoundActions>
-                  <button
-                    className={styles.primary}
-                    type="submit"
-                    form={answerForm}
-                    disabled={locked || !validNumber}
-                  >
-                    예상 숫자 제출
-                  </button>
-                </GameRoundActions>
-              </form>
-            )}
-          </>
-        )}
-        {game.stage === "situations" && (
-          <>
-            <p className={styles.help}>
-              상황 제출 {game.submitted}/{game.expected}명
-            </p>
-            {!me ? (
-              <p className={styles.notice}>참가자들이 상황과 숫자를 고르는 중이에요.</p>
-            ) : game.mySituation ? (
-              <p className={styles.notice} role="status">
-                내 상황과 숫자 {game.mySituation.value}를 제출했어요. {game.mySituation.text}
-              </p>
-            ) : (
-              <form
-                id={answerForm}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (validNumber && text.trim().length >= 2 && !locked)
-                    submit("temperature-situation", { text: text.trim(), value: Number(number) });
-                }}
-              >
-                <label className={styles.label}>
-                  나의 상황
-                  <textarea
-                    value={text}
-                    onChange={(event) => setText(event.target.value)}
-                    maxLength={160}
-                    minLength={2}
-                    required
-                    disabled={locked}
-                    placeholder="예: 중요한 발표에서 자료가 열리지 않았다"
-                  />
-                </label>
-                <p className={styles.help}>실명, 연락처 등 개인 정보는 입력하지 마세요.</p>
-                <NumberChoice value={number} onChange={setNumber} disabled={locked} />
-                <GameRoundActions>
-                  <button
-                    className={styles.primary}
-                    type="submit"
-                    form={answerForm}
-                    disabled={locked || !validNumber || text.trim().length < 2}
-                  >
-                    상황과 숫자 제출
-                  </button>
-                </GameRoundActions>
-              </form>
-            )}
-          </>
-        )}
-        {game.stage === "ordering" && (
-          <>
-            <p className={styles.help}>
-              순서 제출 {game.submitted}/{game.expected}명
-            </p>
-            {me && game.mySituation ? (
-              <>
-                <p className={styles.notice}>내가 고른 숫자는 {game.mySituation.value}예요.</p>
-                <OrderCards
-                  game={game}
-                  viewerId={me}
+            </form>
+          ) : (
+            <Scale
+              low={game.topic.low}
+              high={game.topic.high}
+              markers={
+                game.myGuess !== null
+                  ? [{ value: game.myGuess, label: "내 답", main: true }]
+                  : game.mySecret !== null
+                    ? [{ value: game.mySecret, label: "내 비밀 숫자", main: true }]
+                    : []
+              }
+            />
+          )}
+        </>
+      )}
+
+      {game.stage === "situations" && game.topic && (
+        <>
+          {canWrite ? (
+            <form
+              className={styles.answerForm}
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (validText && !locked)
+                  submit("temperature-situation", { text: text.trim(), value: number });
+              }}
+            >
+              <label className={styles.label}>
+                <span>
+                  1. 상황 쓰기 <small>{text.trim().length}/160</small>
+                </span>
+                <textarea
+                  value={text}
+                  onChange={(event) => setText(event.target.value)}
+                  maxLength={160}
+                  minLength={2}
+                  required
                   disabled={locked}
-                  onSubmit={(order) => submit("temperature-order", { order })}
+                  placeholder="예: 중요한 발표에서 자료가 열리지 않았다"
                 />
-              </>
-            ) : (
-              <>
-                <p className={styles.notice}>
-                  {!me
-                    ? "참가자들이 상황의 순서를 추리하고 있어요."
-                    : "이번 라운드는 상황을 제출한 사람만 순서를 맞혀요."}
-                </p>
-                <ul className={styles.resultList}>
-                  {game.situations.map((item) => (
-                    <li key={item.id}>
-                      <strong>{name(item.id)}</strong>
-                      <span>{item.text}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
+                <small>실명·연락처 같은 개인 정보는 쓰지 마세요.</small>
+              </label>
+              <p className={styles.stepLabel}>2. 이 상황은 몇 도일까요? (다른 사람에겐 비밀)</p>
+              <NumberPicker
+                value={number}
+                onChange={setNumber}
+                disabled={locked}
+                low={game.topic.low}
+                high={game.topic.high}
+              />
+              <div className={cg.dgDock}>
+                <button className={cg.button} type="submit" disabled={locked || !validText}>
+                  <Send size={16} aria-hidden="true" />
+                  {validText ? `상황과 ${number}도 제출` : "상황을 먼저 써주세요"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            game.mySituation && (
+              <div className={styles.mine} style={heatStyle(game.mySituation.value)}>
+                <b>{game.mySituation.value}</b>
+                <span>
+                  <small>내가 낸 상황</small>
+                  <p>{game.mySituation.text}</p>
+                </span>
+              </div>
+            )
+          )}
+        </>
+      )}
+
+      {game.stage === "ordering" &&
+        (me && game.mySituation ? (
+          <>
+            <div className={styles.mine} style={heatStyle(game.mySituation.value)}>
+              <b>{game.mySituation.value}</b>
+              <span>
+                <small>힌트 · 내 상황의 숫자</small>
+                <p>{game.mySituation.text}</p>
+              </span>
+            </div>
+            <OrderCards
+              game={game}
+              viewerId={me}
+              disabled={locked}
+              onSubmit={(order) => submit("temperature-order", { order })}
+            />
           </>
-        )}
-        {timedOut && (
-          <p className={styles.help} role="status">
-            다음 단계를 불러오고 있어요.
-          </p>
-        )}
-        <Results game={game} name={name} />
-        {game.stage === "review" && room.isHost && (
+        ) : (
+          <ul className={styles.orderCards}>
+            {game.situations.map((item) => (
+              <li key={item.id} className={styles.orderCard}>
+                <div>
+                  <strong>{name(item.id)}</strong>
+                  <p>{item.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ))}
+
+      {timedOut && (
+        <p className={styles.empty} role="status">
+          시간이 끝났어요. 다음 단계를 불러오고 있어요…
+        </p>
+      )}
+
+      {game.stage === "review" && <Review game={game} name={name} me={me} />}
+
+      {game.stage === "clue" && room.isHost && (
+        <div className={`${cg.dgDock} ${styles.hostDock}`}>
           <button
-            className={styles.primary}
+            className={cg.button}
+            type="button"
+            disabled={locked}
+            onClick={() => hostAction("temperature-open")}
+          >
+            설명 끝 · 숫자 고르기 열기
+          </button>
+          <button
+            className={cg.secondary}
+            type="button"
+            disabled={locked}
+            onClick={() => hostAction("temperature-skip")}
+          >
+            <SkipForward size={15} aria-hidden="true" /> 이번 차례 건너뛰기
+          </button>
+        </div>
+      )}
+      {game.stage === "review" && room.isHost && (
+        <div className={cg.dgDock}>
+          <button
+            className={cg.button}
             type="button"
             disabled={busy}
             onClick={() => hostAction("temperature-next")}
           >
             {game.turn === game.totalTurns
               ? "최종 순위 보기"
-              : game.settings.mode === "basic"
-                ? "다음 차례"
+              : basic
+                ? `다음 차례 · ${nextClue ? `${name(nextClue)}님 설명` : "계속"}`
                 : "다음 라운드"}
           </button>
-        )}
-        {game.stage === "aborted" && (
-          <p className={styles.notice}>호스트가 게임을 중단했어요. 완료된 차례의 점수만 남아요.</p>
-        )}
-        {ranked.length > 0 && (
-          <div className={styles.scores}>
-            <h3>
-              <Trophy size={17} aria-hidden="true" /> {finished ? "최종 순위" : "누적 점수"}
-            </h3>
-            <ol className={styles.resultList}>
-              {ranked.map((player) => (
-                <li key={player.id} data-me={player.id === me}>
-                  <span>
-                    {ranked.findIndex((item) => item.score === player.score) + 1}위 ·{" "}
-                    {player.nickname}
-                  </span>
-                  <b>{player.score}점</b>
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {finished && game.stage === "result" && <CreativeWinners players={game.roster} />}
+      {(finished || game.stage === "review") && <CreativeScores players={game.roster} self={me} />}
     </section>
   );
 }

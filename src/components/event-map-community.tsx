@@ -989,7 +989,6 @@ export function EventMapCommunity({
                     setDraft((previous) => ({ ...previous, address }))
                   }
                   disabled={submitting}
-                  allowSharedPlaces={false}
                   addressMaxLength={200}
                   idPrefix="emap-venue"
                 />

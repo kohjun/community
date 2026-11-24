@@ -42,6 +42,9 @@ export type DetectedObjectBox = {
   height: number;
 };
 
+/** Lowest detector score kept; callers decide per mission what counts as a real sighting. */
+export const OBJECT_SCORE_FLOOR = 0.2;
+
 let filesetPromise: Promise<
   Awaited<ReturnType<typeof import("@mediapipe/tasks-vision").FilesetResolver.forVisionTasks>>
 > | null = null;
@@ -64,21 +67,15 @@ export async function getObjectDetector(): Promise<ObjectDetector> {
         import("@mediapipe/tasks-vision"),
         getFileset(),
       ]);
-      try {
-        return await Detector.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: OBJECT_MODEL_PATH, delegate: "GPU" },
-          runningMode: "VIDEO",
-          scoreThreshold: 0.3,
-          maxResults: 8,
-        });
-      } catch {
-        return await Detector.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: OBJECT_MODEL_PATH, delegate: "CPU" },
-          runningMode: "VIDEO",
-          scoreThreshold: 0.3,
-          maxResults: 8,
-        });
-      }
+      // CPU (XNNPACK) only. With the GPU delegate this EfficientDet model loads without error but
+      // returns zero detections for frames the CPU path labels correctly (a mug at 0.55, a chair at
+      // 0.59), so the old "GPU first" choice silently broke 물건 찾기.
+      return await Detector.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: OBJECT_MODEL_PATH, delegate: "CPU" },
+        runningMode: "VIDEO",
+        scoreThreshold: OBJECT_SCORE_FLOOR,
+        maxResults: 12,
+      });
     })().catch((err) => {
       objectDetectorPromise = null;
       throw err;
@@ -130,15 +127,39 @@ export function preloadSnapVision(models: { object: boolean; face: boolean }) {
   if (models.face) void getFaceLandmarker().catch(() => {});
 }
 
+let cropCanvas: HTMLCanvasElement | null = null;
+
+/**
+ * Detects objects in the current video frame. With `crop` < 1 it looks at the centered part of
+ * the frame only, so objects held farther away fill more of the model's small input; boxes are
+ * always returned in whole-frame coordinates (0..1).
+ */
 export function runObjectDetection(
   detector: ObjectDetector,
   video: HTMLVideoElement,
   timestampMs: number,
+  crop = 1,
 ): DetectedObjectBox[] {
   if (video.readyState < 2 || video.videoWidth <= 0 || video.videoHeight <= 0) return [];
-  const result = detector.detectForVideo(video, timestampMs);
   const w = video.videoWidth;
   const h = video.videoHeight;
+  let source: HTMLVideoElement | HTMLCanvasElement = video;
+  let sx = 0,
+    sy = 0;
+  if (crop < 1) {
+    const sw = Math.round(w * crop),
+      sh = Math.round(h * crop);
+    sx = Math.round((w - sw) / 2);
+    sy = Math.round((h - sh) / 2);
+    cropCanvas ??= document.createElement("canvas");
+    if (cropCanvas.width !== sw || cropCanvas.height !== sh) {
+      cropCanvas.width = sw;
+      cropCanvas.height = sh;
+    }
+    cropCanvas.getContext("2d")?.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+    source = cropCanvas;
+  }
+  const result = detector.detectForVideo(source, timestampMs);
   const out: DetectedObjectBox[] = [];
   for (const det of result.detections) {
     const top = det.categories[0];
@@ -147,13 +168,29 @@ export function runObjectDetection(
     out.push({
       label: top.categoryName.toLowerCase(),
       score: top.score,
-      x: Math.max(0, Math.min(1, box.originX / w)),
-      y: Math.max(0, Math.min(1, box.originY / h)),
+      x: Math.max(0, Math.min(1, (sx + box.originX) / w)),
+      y: Math.max(0, Math.min(1, (sy + box.originY) / h)),
       width: Math.max(0, Math.min(1, box.width / w)),
       height: Math.max(0, Math.min(1, box.height / h)),
     });
   }
   return out;
+}
+
+/** Counts distinct objects: overlapping boxes (one mug seen as "cup" and "bowl") count once. */
+export function countDistinctBoxes(boxes: DetectedObjectBox[]): number {
+  const kept: DetectedObjectBox[] = [];
+  for (const box of [...boxes].sort((a, b) => b.score - a.score)) {
+    const overlaps = kept.some((k) => {
+      const ix = Math.max(0, Math.min(k.x + k.width, box.x + box.width) - Math.max(k.x, box.x));
+      const iy = Math.max(0, Math.min(k.y + k.height, box.y + box.height) - Math.max(k.y, box.y));
+      const inter = ix * iy;
+      const union = k.width * k.height + box.width * box.height - inter;
+      return union > 0 && inter / union > 0.45;
+    });
+    if (!overlaps) kept.push(box);
+  }
+  return kept.length;
 }
 
 export function runFaceTelemetry(

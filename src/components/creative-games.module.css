@@ -52,7 +52,7 @@
   gap: 7px;
   border-radius: 999px;
   padding: 9px 13px;
-  background: var(--sl-paper);
+  background: #f3f6f9;
   font-size: 14px;
   font-variant-numeric: tabular-nums;
   font-weight: 750;
@@ -147,7 +147,7 @@
   color: #fff;
 }
 .secondary {
-  background: var(--sl-paper-2);
+  background: #f1f5f9;
   color: #334155;
   border: 1px solid #e2e8f0;
 }
@@ -164,7 +164,7 @@
   align-items: center;
 }
 .canvasWrap {
-  background: var(--sl-paper);
+  background: #f3f6fa;
   border: 1px solid #e3e9ef;
   border-radius: 16px;
   overflow: hidden;
@@ -187,7 +187,7 @@
   align-items: center;
   flex-wrap: wrap;
   padding: 10px;
-  background: var(--sl-paper);
+  background: #f8fafc;
   border-bottom: 1px solid #e3e9ef;
 }
 .tool {
@@ -218,8 +218,8 @@
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: var(--sl-paper);
-  color: var(--sl-ink-3);
+  background: #f8fafc;
+  color: #64748b;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -247,7 +247,7 @@
   aspect-ratio: 4/3;
   overflow: hidden;
   border-radius: 14px;
-  background: var(--sl-paper-2);
+  background: #f1f5f9;
   display: grid;
   place-items: center;
 }
@@ -262,7 +262,7 @@
   width: 100%;
   max-height: 380px;
   border-radius: 14px;
-  background: var(--sl-paper-2);
+  background: #f1f5f9;
 }
 .mediaAudio {
   width: 100%;
@@ -313,7 +313,7 @@
   flex: 0 0 28px;
   height: 28px;
   border-radius: 8px;
-  background: var(--sl-paper-2);
+  background: #f1f5f9;
   font-weight: 750;
 }
 .scoreboard {
@@ -396,7 +396,7 @@
   display: grid;
   gap: 8px;
   padding: 14px;
-  background: var(--sl-paper);
+  background: #f8fafc;
   border: 1px solid #e5eaf0;
   border-radius: 14px;
 }
@@ -457,14 +457,6 @@
 .photoTools a {
   font-size: 12px;
   color: #426384;
-}
-.roundHelp {
-  color: #526174;
-  font-size: 0.8125rem;
-}
-.roundHelp summary {
-  cursor: pointer;
-  padding-block: 8px;
 }
 .finish {
   background: linear-gradient(140deg, #f1f8ff, #fff);
@@ -615,57 +607,14 @@
 }
 @media (max-width: 640px) {
   .submitBar {
-    gap: 5px;
-  }
-  .submitBar > p {
-    margin: 0;
-    text-align: center;
-    font-size: 12px;
-  }
-  .stage {
-    gap: 8px;
-  }
-  .heading h2 {
-    font-size: 1.125rem;
-  }
-  .instruction {
-    padding: 8px 10px;
-  }
-  .form {
-    gap: 8px;
-  }
-  .mediaAudio {
-    margin: 0;
-  }
-  .stage[data-clue-step="guess"] .photo:not([data-large="true"]) {
-    block-size: clamp(84px, 16dvh, 142px);
-    aspect-ratio: auto;
-  }
-  .stage[data-clue-step="guess"] .map {
-    block-size: clamp(155px, 30dvh, 275px);
-  }
-  .stage[data-clue-step="guess"] .grid {
-    gap: 7px;
-  }
-  .stage[data-clue-step="guess"] .submissionStatus {
-    display: none;
-  }
-  .stage[data-clue-step="guess"] .options {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-  }
-  .stage[data-clue-step="guess"] .option {
-    min-block-size: 48px;
-    padding: 6px;
-    gap: 5px;
-    overflow-wrap: anywhere;
-  }
-  .stage[data-clue-step="guess"] .option > span {
-    padding: 4px;
-  }
-  .stage .canvas {
-    max-inline-size: clamp(206px, 53dvh, 100%);
-    margin-inline: auto;
+    position: sticky;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, 0.98);
+    padding: 12px;
+    border: 1px solid #e5eaf0;
+    border-radius: 14px;
+    z-index: 3;
+    box-shadow: 0 5px 24px #16385910;
   }
 }
 
@@ -781,7 +730,7 @@
   display: grid;
   gap: 0.625rem;
   padding: 0.875rem 1rem;
-  background: var(--sl-paper);
+  background: #f5f8fc;
   border-radius: 0.875rem;
 }
 .submissionStatus > div {
@@ -828,4 +777,1073 @@
   .fields {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---------- 낙서톡: mode picker ---------- */
+.drawModes {
+  display: grid;
+  gap: 10px;
+}
+
+.form label.drawMode {
+  position: relative;
+  display: flex;
+  /* Page-level `label { flex-direction: column }` rules must not stack the card. */
+  flex-direction: row;
+  margin: 0;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 40px 14px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.drawMode:hover {
+  border-color: #9dc8fb;
+}
+
+.drawMode[data-selected="true"] {
+  border-color: #0a84fe;
+  background: #f3f8ff;
+  box-shadow: 0 0 0 3px rgb(10 132 254 / 12%);
+}
+
+.drawMode[data-disabled="true"] {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.drawMode:focus-within {
+  outline: 2px solid #0a84fe;
+  outline-offset: 2px;
+}
+
+.drawMode:not(:has(> input:checked)) .modeCheck {
+  visibility: hidden;
+}
+
+.drawModeEmoji {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #f1f5f9;
+  font-size: 24px;
+}
+
+.drawMode[data-selected="true"] .drawModeEmoji {
+  background: #dbeafe;
+}
+
+.drawModeBody {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.drawModeTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.drawModeTitle strong {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.drawModeTitle em {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #475569;
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.drawMode[data-selected="true"] .drawModeTitle em {
+  background: #0a84fe;
+  color: #ffffff;
+}
+
+.drawModeBody > small {
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.drawModeFlow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.drawModeFlow i {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #64748b;
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 650;
+}
+
+.drawModeFlow i:not(:last-child)::after {
+  content: "→";
+  color: #94a3b8;
+}
+
+.drawPlan {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  background: #f8fbff;
+}
+
+.drawPlan header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.drawPlan header strong {
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.drawPlan header span {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #e0edff;
+  color: #0b5cad;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.drawPlan ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.drawPlan li {
+  display: flex;
+  gap: 10px;
+}
+
+.drawPlan li b {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #0a84fe;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.drawPlan li strong {
+  display: block;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.drawPlan li p {
+  margin: 1px 0 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.drawEstimate {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+/* ---------- 낙서톡: game screen ---------- */
+.dgTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.dgTop > :last-child {
+  margin-left: auto;
+}
+
+.dgMode {
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: #eaf4ff;
+  color: #095eac;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.dgRound {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dgSteps {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dgSteps li {
+  flex: 1 1 0;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 0;
+  text-align: center;
+}
+
+.dgSteps li span {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dgSteps li small {
+  overflow: hidden;
+  max-width: 100%;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dgSteps li[data-state="done"] span {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.dgSteps li[data-state="now"] span {
+  background: #0a84fe;
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgb(10 132 254 / 18%);
+}
+
+.dgSteps li[data-state="now"] small {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.dgTask {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.dgTask[data-tone="wait"] {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.dgTask[data-tone="watch"] {
+  background: #eef6ff;
+  color: #0f172a;
+}
+
+.dgTaskEmoji {
+  flex: none;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.dgTask small {
+  display: block;
+  margin-bottom: 2px;
+  color: #93c5fd;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.dgTask[data-tone="wait"] small,
+.dgTask[data-tone="watch"] small {
+  color: #0a84fe;
+}
+
+.dgTask strong {
+  display: block;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
+.stage .dgTask p {
+  margin-top: 3px;
+  color: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  opacity: 0.85;
+  word-break: keep-all;
+}
+
+.dgWait {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 16px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 650;
+  word-break: keep-all;
+}
+
+.dgWait svg {
+  flex: none;
+  color: #0a84fe;
+}
+
+.dgWrite {
+  display: grid;
+  gap: 10px;
+}
+
+.dgPicture {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.dgPicture img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+}
+
+.dgField {
+  display: grid;
+  gap: 6px;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.stage .dgField input {
+  min-height: 54px;
+  padding: 12px 14px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.stage .dgField input:focus {
+  border-color: #0a84fe;
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(10 132 254 / 15%);
+}
+
+.dgFieldMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.dgIdea {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Submit / guess bar stays reachable above the phone's bottom navigation. */
+.dgDock {
+  position: sticky;
+  bottom: calc(var(--mobile-nav-height, 0px) + var(--mobile-safe-bottom, 0px) + 10px);
+  z-index: 6;
+  display: grid;
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 10px 30px rgb(15 23 42 / 14%);
+  backdrop-filter: blur(8px);
+}
+
+.dgDock .button {
+  min-height: 50px;
+  font-size: 15px;
+}
+
+.dgGuessBar {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.stage .dgGuessBar input {
+  min-width: 0;
+  min-height: 50px;
+  padding: 10px 14px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  font-size: 16px;
+}
+
+.dgCanvasLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.dgCanvasLabel em {
+  margin-left: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.dgGuesses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dgGuesses li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.dgGuesses li small {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.dgGuesses li[data-accepted="true"] {
+  background: #dcfce7;
+}
+
+.dgJudge {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+}
+
+.dgJudge header {
+  display: grid;
+  gap: 2px;
+}
+
+.dgJudge header strong {
+  font-size: 15px;
+}
+
+.dgJudge header small {
+  color: #64748b;
+  font-size: 12.5px;
+}
+
+.dgJudge ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dgJudge li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.dgJudge li[data-accepted="true"] {
+  background: #dcfce7;
+}
+
+.dgJudge li strong {
+  display: block;
+  font-size: 16px;
+}
+
+.dgJudge li small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.dgJudge li .button,
+.dgJudge li .secondary {
+  flex: none;
+  min-height: 40px;
+  padding: 8px 12px;
+}
+
+.storyList {
+  display: grid;
+  gap: 12px;
+}
+
+.story {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.story header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.story header strong {
+  font-size: 15px;
+}
+
+.story header span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.story header span[data-tone="win"] {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.story header span[data-tone="miss"] {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.story ol {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.story li {
+  position: relative;
+  display: flex;
+  gap: 10px;
+}
+
+.story li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 28px;
+  bottom: -10px;
+  left: 11px;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.story li b {
+  flex: none;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.story li > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.story li small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stage .story li p {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+
+.story li img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  object-fit: contain;
+}
+
+.storyVotes {
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.dgToast {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 60;
+  max-width: min(calc(100vw - 24px), 420px);
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: rgb(15 23 42 / 94%);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 14px 36px rgb(15 23 42 / 30%);
+  transform: translateX(-50%);
+  animation: dgToastIn 0.25s cubic-bezier(0.22, 0.8, 0.24, 1);
+}
+
+@keyframes dgToastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* ---------- Canvas toolbar: one scrollable row so the canvas starts high on phones ---------- */
+.toolbar {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.toolbar .tool {
+  flex: 0 0 auto;
+}
+
+.toolDivider {
+  flex: none;
+  width: 1px;
+  height: 24px;
+  margin: 0 2px;
+  background: #dbe3ec;
+}
+
+.widthDot {
+  display: block;
+  border-radius: 999px;
+  background: #0f172a;
+}
+
+@media (pointer: coarse) {
+  .toolbar .tool {
+    inline-size: 42px;
+    block-size: 42px;
+    flex: 0 0 42px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dgToast {
+    animation: none;
+  }
+}
+
+/* Drawing turn: the task card headline is the prompt to draw. */
+.dgTask[data-prompt="true"] {
+  border: 2px solid #0a84fe;
+  background: #f3f8ff;
+  color: #0f172a;
+}
+
+.dgTask[data-prompt="true"] small {
+  color: #0a84fe;
+}
+
+.dgTask[data-prompt="true"] strong {
+  font-size: 22px;
+}
+
+.dgWait > div {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+}
+
+.dgWait progress {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: #e2e8f0;
+  appearance: none;
+}
+
+.dgWait progress::-webkit-progress-bar {
+  background: #e2e8f0;
+}
+
+.dgWait progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: #0a84fe;
+}
+
+.dgWait progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: #0a84fe;
+}
+
+@container creative-game (max-width: 40rem) {
+  .dgTask {
+    gap: 12px;
+    padding: 13px 14px;
+  }
+
+  .dgTaskEmoji {
+    font-size: 28px;
+  }
+
+  .dgTask strong {
+    font-size: 17px;
+  }
+
+  .dgTask[data-prompt="true"] strong {
+    font-size: 20px;
+  }
+}
+
+/* ---------- 단서각 ---------- */
+.clueMedia {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.clueMediaFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.clueMediaFoot small {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.clueZoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.clueZoom i {
+  width: 22px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.clueZoom i[data-on="true"] {
+  background: #0a84fe;
+}
+
+.clueZoom b {
+  margin-left: 6px;
+  color: #0a67d2;
+  font-weight: 750;
+}
+
+.clueChoices > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.clueChoices label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1.5px solid #dfe5ec;
+  border-radius: 14px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.clueChoices label:hover {
+  border-color: #93c5fd;
+}
+
+.clueChoices label[data-selected="true"] {
+  border-color: #0a84fe;
+  background: #eff6ff;
+  box-shadow: 0 0 0 3px rgb(10 132 254 / 16%);
+}
+
+.clueChoices label:focus-within {
+  outline: 3px solid #0a67d2;
+  outline-offset: 2px;
+}
+
+.clueChoices label > span {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.clueChoices label[data-selected="true"] > span {
+  background: #0a84fe;
+  color: #fff;
+}
+
+.clueChoices:disabled label {
+  cursor: default;
+}
+
+.clueChoices:disabled label:not([data-selected="true"]) {
+  opacity: 0.55;
+}
+
+.clueChoiceResult {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clueChoiceResult li {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.clueChoiceResult li[data-correct="true"] {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.clueChoiceResult strong {
+  font-size: 14px;
+}
+
+.clueChoiceResult small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.clueMapBlock {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.clueMapBlock .map {
+  height: clamp(280px, 48vh, 440px);
+}
+
+.clueDock {
+  gap: 6px;
+}
+
+.clueDock small {
+  color: #94a3b8;
+  font-size: 11.5px;
+  text-align: center;
+}
+
+.stage .clueDock select {
+  min-height: 46px;
+  padding: 8px 12px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 15px;
+}
+
+.clueRanking {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clueRanking li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.clueRanking li[data-self="true"] {
+  border-color: #93c5fd;
+  background: #f5f9ff;
+}
+
+.clueRanking li > b {
+  text-align: center;
+  font-size: 18px;
+}
+
+.clueRanking li div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.clueRanking strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clueRanking small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.clueRanking em {
+  color: #0a67d2;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+@container creative-game (max-width: 40rem) {
+  .clueChoices label {
+    min-height: 54px;
+    font-size: 14px;
+  }
+
+  .clueChoiceResult {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* After the reveal the answer list matters more than the scene, so the view shrinks. */
+.clueMedia[data-compact="true"] :global(.naver-street-view),
+.clueMedia[data-compact="true"] .photo {
+  max-height: 34vh;
 }

@@ -96,8 +96,11 @@ export type NaverRuntime = {
 };
 
 export function naverMapsScriptUrl(clientId: string): string {
-  const query = new URLSearchParams({ ncpKeyId: clientId.trim(), submodules: "geocoder" });
-  return `https://oapi.map.naver.com/openapi/v3/maps.js?${query}`;
+  // One shared script for maps and 단서각 street view (panorama), so whichever loads first has both.
+  // NAVER builds the submodule file name from the raw value, so the comma must stay unencoded
+  // (`geocoder%2Cpanorama` would request a missing `maps-geocoder%2Cpanorama.js`).
+  const query = new URLSearchParams({ ncpKeyId: clientId.trim() });
+  return `https://oapi.map.naver.com/openapi/v3/maps.js?${query}&submodules=geocoder,panorama`;
 }
 
 export function getNaverMapsSDK(): NaverMapsSDK | null {

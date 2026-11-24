@@ -1,5 +1,4 @@
 import Link from "next/link";
-import credits from "../../../../public/games/clue/ATTRIBUTIONS.json";
 import styles from "@/components/creative-games.module.css";
 export const metadata = { title: "단서각 자료 출처 | Sliper" };
 export default function Page() {
@@ -12,28 +11,22 @@ export default function Page() {
         </Link>
       </div>
       <p className={styles.muted}>
-        사진은 원본 이용 조건에 따라 리사이즈·메타데이터 제거·WebP 변환했어요. 줌 아웃 모드에서는
-        일부 영역을 확대해 보여줘요. 각 사진과 변환본에는 아래의 원본 라이선스가 적용돼요.
+        단서각 기본 문제는 실제 거리를 촬영한 네이버 거리뷰예요. 네이버 지도 API의 거리뷰 화면으로
+        보여주며, 사진을 따로 내려받거나 저장하지 않아요. 거리뷰 이미지의 권리는 NAVER Corp.에
+        있어요.
       </p>
-      <div className={styles.gallery}>
-        {credits.photos.map((p) => (
-          <article key={p.asset} className={styles.frame}>
-            <strong>{p.author}</strong>
-            <p>{p.title.replaceAll("_", " ")}</p>
-            <a href={p.source} target="_blank" rel="noreferrer">
-              원본·저작자 확인
-            </a>
-            <a href={p.licenseUrl} target="_blank" rel="noreferrer">
-              {p.license} 이용 조건
-            </a>
-          </article>
-        ))}
-      </div>
-      <h3>소리 자료</h3>
       <p className={styles.muted}>
-        Team Sliper가 직접 합성한 신호·효과음 10개예요. 실제 현장 녹음이 아닌 재현 소리이며, 제3자의
-        음원이나 녹음물을 샘플링하지 않았어요.
+        호스트가 직접 출제한 문제와 ‘우리 사진’ 모드의 사진은 참가자가 올린 자료이며, 게임 종료 후
+        24시간이 지나면 삭제돼요.
       </p>
+      <a
+        className={styles.secondary}
+        href="https://www.ncloud.com/product/applicationService/maps"
+        target="_blank"
+        rel="noreferrer"
+      >
+        네이버 지도 API 안내
+      </a>
     </section>
   );
 }

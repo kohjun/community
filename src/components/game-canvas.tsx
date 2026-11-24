@@ -7,7 +7,7 @@ import {
   useState,
   type PointerEvent,
 } from "react";
-import { Eraser, PenLine, Undo2, Trash2, Wifi, LoaderCircle } from "lucide-react";
+import { Eraser, Undo2, Trash2, Wifi, LoaderCircle } from "lucide-react";
 import { appRequest } from "@/lib/api-client";
 import { paintInk, replayInk, type InkCommand, type InkEvent } from "@/domain/game-ink";
 import styles from "./creative-games.module.css";
@@ -210,6 +210,49 @@ export const GameCanvas = forwardRef<
     <div className={styles.canvasWrap}>
       {editable && (
         <div className={styles.toolbar} role="group" aria-label="그림 도구">
+          {/* Most-used first; "clear all" sits last so it is never hit by accident. */}
+          <button
+            type="button"
+            className={styles.tool}
+            disabled={!ready}
+            aria-label="마지막 선 되돌리기"
+            title="되돌리기"
+            onClick={() => {
+              flushing.current();
+              add({ op: "undo" });
+            }}
+          >
+            <Undo2 size={18} />
+          </button>
+          <button
+            type="button"
+            className={styles.tool}
+            aria-label="지우개"
+            title="지우개"
+            aria-pressed={colour === "#ffffff"}
+            onClick={() => {
+              flushing.current();
+              setColour("#ffffff");
+            }}
+          >
+            <Eraser size={18} />
+          </button>
+          <button
+            type="button"
+            className={styles.tool}
+            aria-label={`펜 굵기 ${width === 4 ? "가늘게" : width === 10 ? "보통" : "굵게"} · 눌러서 바꾸기`}
+            title="펜 굵기"
+            onClick={() => {
+              flushing.current();
+              setWidth((v) => (v === 4 ? 10 : v === 10 ? 20 : 4));
+            }}
+          >
+            <span
+              className={styles.widthDot}
+              style={{ inlineSize: width / 2 + 4, blockSize: width / 2 + 4 }}
+            />
+          </button>
+          <span className={styles.toolDivider} aria-hidden="true" />
           {["#111827", "#0A84FE", "#ef4444", "#f59e0b", "#22c55e", "#8b5cf6"].map((c) => (
             <button
               type="button"
@@ -226,46 +269,13 @@ export const GameCanvas = forwardRef<
               <span className={styles.colour} style={{ background: c }} />
             </button>
           ))}
-          <button
-            type="button"
-            className={styles.tool}
-            aria-label="지우개"
-            aria-pressed={colour === "#ffffff"}
-            onClick={() => {
-              flushing.current();
-              setColour("#ffffff");
-            }}
-          >
-            <Eraser size={17} />
-          </button>
-          <button
-            type="button"
-            className={styles.tool}
-            aria-label={`펜 굵기 ${width}`}
-            onClick={() => {
-              flushing.current();
-              setWidth((v) => (v === 4 ? 10 : v === 10 ? 20 : 4));
-            }}
-          >
-            <PenLine size={18} />
-          </button>
-          <button
-            type="button"
-            className={styles.tool}
-            disabled={!ready}
-            aria-label="마지막 선 되돌리기"
-            onClick={() => {
-              flushing.current();
-              add({ op: "undo" });
-            }}
-          >
-            <Undo2 size={17} />
-          </button>
+          <span className={styles.toolDivider} aria-hidden="true" />
           <button
             type="button"
             className={styles.tool}
             disabled={!ready}
             aria-label="그림 전체 지우기"
+            title="전체 지우기"
             onClick={() => {
               if (confirm("지금 그린 그림을 모두 지울까요?")) {
                 stroke.current = null;
@@ -273,7 +283,7 @@ export const GameCanvas = forwardRef<
               }
             }}
           >
-            <Trash2 size={17} />
+            <Trash2 size={18} />
           </button>
         </div>
       )}
