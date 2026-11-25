@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { BookOpen, MapPin, UserRound } from "lucide-react";
-import type { SiteNavigationOverride } from "@/domain/navigation";
+import { AUDIENCE_SWITCH_ENABLED, type SiteNavigationOverride } from "@/domain/navigation";
 import { NotificationBell } from "./notification-bell";
 import { SiteNavigation } from "./site-navigation";
 import { TestAccountControls } from "./test-account-controls";
@@ -57,7 +57,7 @@ export function SiteHeader({
               <TestAccountControls fallbackLogin />
             </div>
           </div>
-          <AudienceToggle />
+          {AUDIENCE_SWITCH_ENABLED && <AudienceToggle />}
         </div>
         <div className="sl-header__nav-row">
           <SiteNavigation {...(activeSection ? { activeSection } : {})} />

@@ -1,5 +1,6 @@
 "use client";
 import { useSyncExternalStore } from "react";
+import { AUDIENCE_SWITCH_ENABLED } from "@/domain/navigation";
 
 export type Audience = "participant" | "host";
 const KEY = "sliper.audience";
@@ -8,6 +9,7 @@ const EVENT = "sliper:audience";
 let memory: Audience = "participant";
 
 function read(): Audience {
+  if (!AUDIENCE_SWITCH_ENABLED) return "participant";
   try {
     const stored = window.localStorage.getItem(KEY);
     return stored === "host" || stored === "participant" ? stored : memory;

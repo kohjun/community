@@ -18,6 +18,8 @@ export type SiteNavigationOverride = CommunityNavigationSection | "events" | "ma
 export type ActiveNavigationSection = NavigationSection | SiteNavigationOverride;
 
 // Viewing mode changes presentation; authorization remains on the server.
+export const AUDIENCE_SWITCH_ENABLED = false;
+
 export const AUDIENCE_NAVIGATION = {
   participant: {
     primary: [
