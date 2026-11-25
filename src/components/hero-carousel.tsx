@@ -115,6 +115,7 @@ export function HeroCarousel() {
         <div className="sl-carousel__track" style={{ transform: `translateX(-${current * 100}%)` }}>
           {POSTERS.map((poster, i) => {
             const image = `/images/home/posters/${poster.id}`;
+            const imageVersion = poster.id === "web-games" ? "" : "?v=2";
             return (
               <div
                 key={poster.id}
@@ -136,8 +137,8 @@ export function HeroCarousel() {
                   </span>
                   <span className="sl-carousel__art">
                     <img
-                      src={`${image}-1440.webp`}
-                      srcSet={`${image}-720.webp 720w, ${image}-1440.webp 1440w`}
+                      src={`${image}-1440.webp${imageVersion}`}
+                      srcSet={`${image}-720.webp${imageVersion} 720w, ${image}-1440.webp${imageVersion} 1440w`}
                       sizes="(max-width: 720px) 100vw, (max-width: 1440px) 58vw, 720px"
                       alt=""
                       width={1440}
