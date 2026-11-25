@@ -30,15 +30,6 @@ export const BOARD_DESCRIPTIONS = {
   lab: "좋아하는 작품의 기법을 연구하고 새로운 이벤트로 각색해요",
   crew: "MC, 스태프, 기획 파트너. 다음 에피소드를 함께 만들어요",
 };
-export const AVATARS = ["spark", "heart", "game", "music", "planet", "smile"] as const;
-export const AVATAR_SYMBOLS = {
-  spark: "✦",
-  heart: "♡",
-  game: "⚑",
-  music: "♫",
-  planet: "◉",
-  smile: "☺",
-};
 export const LEVELS = [
   { name: "첫 에피소드", threshold: 0 },
   { name: "플레이 메이트", threshold: 30 },

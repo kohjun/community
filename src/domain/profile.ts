@@ -1,5 +1,6 @@
 import type { CategorySlug } from "./categories";
 import type { CommunityPost } from "./community";
+import type { ProfileAvatar } from "./profile-avatars";
 export const PROFILE_AGE_BANDS = ["20s", "30s", "40s", "50plus"] as const;
 export const PROFILE_GENDERS = ["female", "male", "other"] as const;
 export type ProfileAgeBand = (typeof PROFILE_AGE_BANDS)[number];
@@ -59,7 +60,7 @@ export interface MyProfile {
   nickname: string;
   bio: string;
   region: string;
-  avatar: "spark" | "heart" | "game" | "music" | "planet" | "smile";
+  avatar: ProfileAvatar;
   photoSrc: string | null;
   interests: CategorySlug[];
   joinedAt: string;

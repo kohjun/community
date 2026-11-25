@@ -10,6 +10,7 @@ import { CATEGORIES } from "@/domain/categories";
 import { communityRequest } from "@/lib/api-client";
 import { Button } from "./ui/button";
 import { ParticipationShell } from "./participation-shell";
+import { ProfileAvatarPicker } from "./profile-avatar-picker";
 
 export function ProfileOnboarding({
   initial,
@@ -25,6 +26,7 @@ export function ProfileOnboarding({
     region: initial.region,
     ageBand: initial.ageBand,
     gender: initial.gender,
+    avatar: initial.avatar,
     interests: initial.interests,
     consent: false,
   });
@@ -47,7 +49,6 @@ export function ProfileOnboarding({
     const parsed = onboardingInputSchema.safeParse({
       ...draft,
       bio: initial.bio,
-      avatar: initial.avatar,
     });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "입력한 정보를 확인해주세요.");
@@ -136,6 +137,11 @@ export function ProfileOnboarding({
                 ? "휴대폰 번호 인증 완료"
                 : "현재는 번호 형식만 확인해요. 문자 인증은 준비 중입니다."}
             </p>
+            <ProfileAvatarPicker
+              value={draft.avatar}
+              hasPhoto={!!initial.photoSrc}
+              onChange={(avatar) => setDraft((current) => ({ ...current, avatar }))}
+            />
             <details className="onboarding-optional">
               <summary>
                 취향과 활동정보 <span>선택</span>

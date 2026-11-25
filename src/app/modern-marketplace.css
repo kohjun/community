@@ -521,7 +521,7 @@
   margin-bottom: 20px;
   color: #63748b;
 }
-.player-avatar {
+.member-avatar.player-avatar {
   display: grid;
   place-items: center;
   width: 54px;
@@ -593,7 +593,7 @@
   padding: 32px;
   background: #fafcff;
 }
-.player-avatar-large {
+.member-avatar.player-avatar-large {
   width: 78px;
   height: 78px;
   margin-top: 5px;
@@ -1007,7 +1007,7 @@
     width: 100%;
     margin-top: 3px;
   }
-  .player-avatar-large {
+  .member-avatar.player-avatar-large {
     width: 63px;
     height: 63px;
   }

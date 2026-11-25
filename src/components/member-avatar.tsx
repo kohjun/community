@@ -1,37 +1,43 @@
 "use client";
-import { useState } from "react";
-import { AVATAR_SYMBOLS } from "@/domain/boards";
+import { useState, type ReactNode } from "react";
+import { getProfileAvatar } from "@/domain/profile-avatars";
 import { cn } from "@/lib/utils";
 
 export function MemberAvatar({
   nickname,
   avatar,
-  photoSrc,
+  photoSrc = null,
   className,
+  fallback,
 }: {
   nickname: string;
   avatar: string;
-  photoSrc: string | null;
+  photoSrc?: string | null;
   className?: string;
+  fallback?: ReactNode;
 }) {
-  const [failedSource, setFailedSource] = useState<string | null>(null);
-  const showPhoto = !!photoSrc && photoSrc !== failedSource;
+  const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
+  const [failedArt, setFailedArt] = useState<string | null>(null);
+  const option = getProfileAvatar(avatar);
+  const art = "src" in option ? option.src : null;
+  const upload = photoSrc && photoSrc !== failedPhoto ? photoSrc : null;
+  const source = upload ?? (art !== failedArt ? art : null);
   return (
     <span
       className={cn("member-avatar", className)}
       role="img"
-      aria-label={nickname + (showPhoto ? "의 프로필 사진" : "의 프로필 아이콘")}
+      aria-label={nickname + (upload ? "의 프로필 사진" : "의 프로필 아이콘")}
     >
-      {showPhoto ? (
+      {source ? (
         <img
-          src={photoSrc}
+          src={source}
           alt=""
           loading="lazy"
           decoding="async"
-          onError={() => setFailedSource(photoSrc)}
+          onError={() => (upload ? setFailedPhoto(upload) : setFailedArt(source))}
         />
       ) : (
-        (AVATAR_SYMBOLS[avatar as keyof typeof AVATAR_SYMBOLS] ?? "✦")
+        (fallback ?? ("symbol" in option ? option.symbol : "✦"))
       )}
     </span>
   );

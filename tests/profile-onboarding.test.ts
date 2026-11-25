@@ -13,6 +13,7 @@ import {
   safeProfileReturnTo,
 } from "../src/domain/profile";
 import { onboardingInputSchema, profileInputSchema } from "../src/domain/validation";
+import { PROFILE_AVATAR_IDS } from "../src/domain/profile-avatars";
 import { profileService } from "../src/server/profile-service";
 import { playerService } from "../src/server/player-service";
 import { AppError } from "../src/server/errors";
@@ -169,6 +170,31 @@ test("public player views never reveal the member phone, demographics or complet
     "01012345678",
   ])
     assert.equal(payload.includes(field), false, field);
+});
+test("members can select built-in avatars without changing private demographics or requiring a photo", async () => {
+  assert.equal(new Set(PROFILE_AVATAR_IDS).size, PROFILE_AVATAR_IDS.length);
+  assert.ok(PROFILE_AVATAR_IDS.every((id) => id.length <= 16));
+  const me = await service.completeOnboarding(owner, { ...input, avatar: "late-night-radio" });
+  assert.equal(me.avatar, "late-night-radio");
+  assert.equal(me.photoSrc, null);
+  assert.equal(me.ageBand, input.ageBand);
+  assert.equal(me.gender, input.gender);
+
+  const updated = await service.updateProfile(owner, { nickname: "새닉네임", avatar: "city-walk" });
+  assert.equal(updated.avatar, "city-walk");
+  const edited = await service.updateProfile(owner, { nickname: "새닉네임", bio: "새 소개" });
+  assert.equal(edited.avatar, "city-walk");
+  const visible = await playerService(db as unknown as Database).profile(other, me.publicId);
+  assert.equal(visible.avatar, "city-walk");
+
+  assert.equal(
+    profileInputSchema.safeParse({ nickname: "테스트", avatar: "/images/other.webp" }).success,
+    false,
+  );
+  assert.equal(
+    (await service.updateProfile(owner, { nickname: "새닉네임", avatar: "game" })).avatar,
+    "game",
+  );
 });
 test("return navigation accepts event paths while refusing external and obfuscated destinations", () => {
   assert.equal(safeProfileReturnTo("/events/abc?tab=apply#form"), "/events/abc?tab=apply#form");

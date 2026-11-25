@@ -14,6 +14,7 @@ import { ParticipationShell } from "./participation-shell";
 import { SafetyActions } from "./safety-actions";
 import { PlayerPortfolio } from "./player-portfolio";
 import { HostSubscriptionButton } from "./host-subscription-button";
+import { MemberAvatar } from "./member-avatar";
 export function PlayerProfile({
   initial,
   canAct = false,
@@ -53,9 +54,12 @@ export function PlayerProfile({
         ← 플레이어 찾기
       </Link>
       <section className="player-profile-heading participation-card">
-        <span className="player-avatar player-avatar-large">
-          <Users size={36} />
-        </span>
+        <MemberAvatar
+          className="player-avatar player-avatar-large"
+          nickname={data.nickname}
+          avatar={data.avatar}
+          fallback={<Users size={36} aria-hidden="true" />}
+        />
         <div>
           <span className="player-eyebrow">플레이어 프로필</span>
           <h1>{data.nickname}</h1>

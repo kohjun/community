@@ -3,7 +3,8 @@ import { z } from "zod";
 import { venueSchema } from "./discovery";
 import { postDocumentSchema, postDocumentImageIds, postDocumentToMarkdown } from "./post-document";
 import { CATEGORY_SLUGS } from "./categories";
-import { AVATARS, BOARD_TOPICS } from "./boards";
+import { BOARD_TOPICS } from "./boards";
+import { PROFILE_AVATAR_IDS } from "./profile-avatars";
 import { normalizePhoneNumber, PROFILE_AGE_BANDS, PROFILE_GENDERS } from "./profile";
 
 export const uuidSchema = z.uuid().transform((value) => value.toLowerCase());
@@ -205,7 +206,7 @@ export const profileInputSchema = z.strictObject({
   nickname: z.string().trim().min(2).max(24),
   bio: z.string().trim().max(300).default(""),
   region: z.string().trim().max(80).default(""),
-  avatar: z.enum(AVATARS).default("spark"),
+  avatar: z.enum(PROFILE_AVATAR_IDS).optional(),
   interests: z
     .array(categorySlugSchema)
     .max(CATEGORY_SLUGS.length)

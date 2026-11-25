@@ -4,6 +4,7 @@ import type { Database } from "../db/connection";
 import { activityEvents, bookmarks, comments, posts, profilePhotos, profiles } from "../db/schema";
 import { profileInputSchema, onboardingInputSchema } from "../domain/validation";
 import type { MyProfile } from "../domain/profile";
+import { getProfileAvatar } from "../domain/profile-avatars";
 import type { PostProjector } from "./post-reader";
 import { preciseTimestamp } from "./pagination";
 import { AppError, requireActor } from "./errors";
@@ -92,7 +93,7 @@ export function profileService(db: Database, projectPosts: PostProjector) {
       nickname: profile.nickname,
       bio: profile.bio,
       region: profile.region,
-      avatar: profile.avatar as MyProfile["avatar"],
+      avatar: getProfileAvatar(profile.avatar).id,
       photoSrc: photo ? `/api/profile-photos/${photo.id}` : null,
       interests: profile.interests as MyProfile["interests"],
       joinedAt: profile.createdAt.toISOString(),

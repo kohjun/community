@@ -934,28 +934,6 @@
   font-size: 18px;
   font-weight: 700;
 }
-.avatar-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0 23px;
-}
-.avatar-picker button {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  border: 1px solid #e5ebf2;
-  border-radius: 10px;
-  background: var(--sl-paper);
-  font-size: 25px;
-  color: #63748b;
-}
-.avatar-picker button.selected {
-  color: #63748b;
-  background: #eff6ff;
-  border-color: #aad2ff;
-}
 .interest-picker {
   display: flex;
   flex-wrap: wrap;

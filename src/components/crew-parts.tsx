@@ -4,7 +4,7 @@ import Link from "next/link";
 import { RecordBacklink } from "./record-discovery";
 import { useState, type FormEvent } from "react";
 import { CheckCircle2, Users } from "lucide-react";
-import { AVATAR_SYMBOLS } from "@/domain/boards";
+import { MemberAvatar } from "./member-avatar";
 import type {
   CrewDetail,
   CrewMember,
@@ -20,11 +20,7 @@ import { Markdown } from "./markdown";
 export const CREW_ROLE_LABELS = { owner: "리더", manager: "운영진", member: "멤버" };
 type Mutate = (path: string, body?: unknown, method?: string, message?: string) => Promise<boolean>;
 export function CrewAvatar({ nickname, avatar }: { nickname: string; avatar: string }) {
-  return (
-    <span className="crew-avatar" role="img" aria-label={nickname + "의 프로필 아이콘"}>
-      {AVATAR_SYMBOLS[avatar as keyof typeof AVATAR_SYMBOLS] ?? "✦"}
-    </span>
-  );
+  return <MemberAvatar className="crew-avatar" nickname={nickname} avatar={avatar} />;
 }
 export function CrewJoinPanel({
   crew,

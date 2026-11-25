@@ -2951,8 +2951,12 @@ body {
   flex: 1 1 496px;
   min-width: 0;
 }
+.sl-header__search .sl-search-wrap {
+  width: 70%;
+  margin-inline: auto;
+}
 
-/* Let the search field occupy the space between the brand and the header actions. */
+/* Center the search field between the brand and header actions. */
 .sl-header__search .sl-search {
   height: 38px;
   padding: 0 4px;

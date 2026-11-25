@@ -55,7 +55,7 @@
   border-radius: 50%;
   margin-left: 8px;
 }
-.profile-onboarding fieldset {
+.profile-onboarding form > fieldset {
   border: 0;
   padding: 0;
   margin: 0;

@@ -7,6 +7,7 @@ import { PLAYER_ROLES, PLAYER_ROLE_LABELS, type PlayerDirectoryView } from "@/do
 import { appRequest } from "@/lib/api-client";
 import { ParticipationShell } from "./participation-shell";
 import { ExampleGallery } from "./example-gallery";
+import { MemberAvatar } from "./member-avatar";
 export interface PlayerFilters {
   role: string;
   region: string;
@@ -148,9 +149,12 @@ export function PlayerDirectory({
             href={`/players/${player.publicId}`}
           >
             <div className="player-card-top">
-              <span className="player-avatar">
-                <Users size={24} />
-              </span>
+              <MemberAvatar
+                className="player-avatar"
+                nickname={player.nickname}
+                avatar={player.avatar}
+                fallback={<Users size={24} aria-hidden="true" />}
+              />
               <ArrowUpRight size={18} />
             </div>
             <h2>{player.nickname}</h2>

@@ -38,7 +38,7 @@ import {
 } from "../domain/crew";
 import { uuidSchema } from "../domain/validation";
 import { membershipActive } from "../domain/safety";
-import { AVATARS } from "../domain/boards";
+import { getProfileAvatar } from "../domain/profile-avatars";
 import { AppError, requireActor } from "./errors";
 import { authorVisible, contentVisible } from "./safety-visibility";
 import { enforceRequestLimit } from "./request-limits";
@@ -50,8 +50,7 @@ import { enqueueCrewChatPush } from "./push-events";
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type QueryDb = Database | Tx;
 type Crew = typeof crews.$inferSelect;
-const avatar = (value: string) =>
-  AVATARS.includes(value as (typeof AVATARS)[number]) ? value : "spark";
+const avatar = (value: string) => getProfileAvatar(value).id;
 const countMembers = sql<number>`(select count(*)::int from sliper.crew_members m where m.crew_id=sliper.crews.id)`;
 const countEvents = (actor: string | null) =>
   sql<number>`(select count(*)::int from sliper.crew_events e join sliper.posts p on p.id=e.post_id where e.crew_id=sliper.crews.id and p.status='published' and not exists(select 1 from sliper.content_restrictions r where r.target_type='post' and r.target_id=p.id and r.hidden) and ${authorVisible(sql`p.author_id`, actor)})`;

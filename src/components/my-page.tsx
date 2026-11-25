@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { CATEGORIES } from "@/domain/categories";
 import type { AftercarePage } from "@/domain/event-aftercare";
-import { AVATARS, AVATAR_SYMBOLS, activityLevel } from "@/domain/boards";
+import { activityLevel } from "@/domain/boards";
 import { profileInputSchema } from "@/domain/validation";
 import {
   isProfileReadyForApplication,
@@ -34,6 +34,7 @@ import { ParticipationShell } from "./participation-shell";
 import { TestAccountControls } from "./test-account-controls";
 import { PushSettings } from "./push-settings";
 import { MemberAvatar } from "./member-avatar";
+import { ProfileAvatarPicker } from "./profile-avatar-picker";
 import { useReadPosts } from "@/lib/use-read-posts";
 import { EventAftercare } from "./event-aftercare";
 import { MyPageNavigation } from "./workspace-navigation";
@@ -396,24 +397,11 @@ export function MyPage({
                         }}
                       />
                     </div>
-                    <label className="field-label">
-                      프로필 아이콘
-                      <small>사진이 없을 때 표시돼요.</small>
-                    </label>
-                    <div className="avatar-picker">
-                      {AVATARS.map((avatar) => (
-                        <button
-                          key={avatar}
-                          type="button"
-                          aria-label={`${avatar} 아이콘`}
-                          aria-pressed={draft.avatar === avatar}
-                          className={draft.avatar === avatar ? "selected" : ""}
-                          onClick={() => setDraft((current) => ({ ...current, avatar }))}
-                        >
-                          {AVATAR_SYMBOLS[avatar]}
-                        </button>
-                      ))}
-                    </div>
+                    <ProfileAvatarPicker
+                      value={draft.avatar}
+                      hasPhoto={!!profile.photoSrc}
+                      onChange={(avatar) => setDraft((current) => ({ ...current, avatar }))}
+                    />
                     <div className="form-grid">
                       <label className="field-label">
                         닉네임{" "}
