@@ -14,6 +14,7 @@ import type { Audience } from "@/lib/audience";
 import { EVENT_RECRUITMENTS_HREF } from "@/domain/meetup-types";
 import { HOSTED_EVENTS_HREF } from "@/domain/workspace-navigation";
 import { HeroCarousel } from "./hero-carousel";
+import { DynamicHeaderSearch } from "./dynamic-search-box";
 
 const PARTICIPANT_QUICK = [
   {
@@ -76,6 +77,7 @@ export function HomeHero({ audience, onHost }: { audience: Audience; onHost: () 
       <h1 id="sl-hero-title" className="sl-sr-only">
         슬쩍 나와서 리얼하게 노는 퍼블릭 커뮤니티 Sliper
       </h1>
+      <DynamicHeaderSearch className="sl-hero-search" />
       <div className="sl-hero__stage">
         <aside
           className="sl-hero-quick"

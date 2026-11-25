@@ -85,21 +85,13 @@ export function useRotatingPlaceholder(
 export function DynamicHeaderSearch({
   value,
   onChange,
-  onClear,
-  onSelectKeyword,
   onSubmitQuery,
-  inputRef,
-  open = false,
   className,
   ariaLabel = "모임·이야기 통합 검색",
 }: {
   value?: string;
   onChange?: (next: string) => void;
-  onClear?: () => void;
-  onSelectKeyword?: (keyword: string) => void;
   onSubmitQuery?: (keyword: string) => void;
-  inputRef?: React.RefObject<HTMLInputElement | null>;
-  open?: boolean;
   className?: string;
   ariaLabel?: string;
 }) {
@@ -135,13 +127,9 @@ export function DynamicHeaderSearch({
 
   function applyKeyword(keyword: string) {
     setFocused(false);
-    if (onSelectKeyword) {
-      onSelectKeyword(keyword);
-      return;
-    }
     if (controlled) {
       onChange(keyword);
-      onSubmitQuery?.(keyword);
+      requestAnimationFrame(() => onSubmitQuery?.(keyword));
       return;
     }
     setLocalQuery(keyword);
@@ -157,9 +145,6 @@ export function DynamicHeaderSearch({
     }
     setFocused(false);
     if (controlled) {
-      if (window.matchMedia("(max-width:720px)").matches) {
-        event.currentTarget.querySelector("input")?.blur();
-      }
       onSubmitQuery?.(trimmed);
       return;
     }
@@ -169,15 +154,14 @@ export function DynamicHeaderSearch({
   return (
     <div
       ref={wrapperRef}
-      className={cn("sl-search-wrap", open && "is-open", className)}
+      className={cn("sl-search-wrap", className)}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
       }}
     >
-      <form className={cn("sl-search", open && "is-open")} role="search" onSubmit={handleSubmit}>
+      <form className="sl-search" role="search" onSubmit={handleSubmit}>
         <div className="sl-search__field">
           <input
-            ref={inputRef}
             type="search"
             maxLength={100}
             aria-label={ariaLabel}
@@ -202,12 +186,8 @@ export function DynamicHeaderSearch({
           <button
             type="button"
             onClick={() => {
-              if (controlled) {
-                onChange("");
-                onClear?.();
-              } else {
-                setLocalQuery("");
-              }
+              if (controlled) onChange("");
+              else setLocalQuery("");
             }}
             aria-label="검색 지우기"
           >
@@ -272,25 +252,6 @@ export function DynamicHeaderSearch({
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * Compact header link-pill with a live sequentially rotating placeholder for non-feed subpages.
- * Clicking navigates directly to `/search` (and on mobile stays compact as an icon).
- */
-export function DynamicHeaderSearchLink() {
-  const suggestions = useSearchSuggestions();
-  const { index, current } = useRotatingPlaceholder(suggestions.placeholders, false);
-  return (
-    <Link className="sl-search-link" href="/search" aria-label="모임·이야기 통합 검색">
-      <span className="sl-search-link__ticker">
-        <span key={index} className="sl-search__ticker-text">
-          {current.prompt}
-        </span>
-      </span>
-      <Search size={18} aria-hidden="true" />
-    </Link>
   );
 }
 

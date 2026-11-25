@@ -7,7 +7,7 @@ import { SiteNavigation } from "./site-navigation";
 import { TestAccountControls } from "./test-account-controls";
 import { SliperMark } from "./sliper-mark";
 import { AudienceToggle } from "./audience-toggle";
-import { DynamicHeaderSearchLink } from "./dynamic-search-box";
+import { DynamicHeaderSearch } from "./dynamic-search-box";
 
 /** Brand mark and wordmark shared by header and footer. */
 export function SiteBrand({ mark = true }: { mark?: boolean }) {
@@ -40,20 +40,22 @@ export function SiteHeader({
             <SiteBrand mark />
             <span className="sl-header__slogan">일상에 예능 한 스푼</span>
           </div>
+          <div className="sl-header__search">{search ?? <DynamicHeaderSearch />}</div>
           <div className="sl-header__tools">
-            {search ?? <DynamicHeaderSearchLink />}
             <span className="sl-header__notifications">
               <NotificationBell />
             </span>
-            <Link
-              className="sl-icon-button sl-header__desktop-only"
-              href="/mypage"
-              aria-label="마이페이지"
-              title="마이페이지"
-            >
-              <UserRound size={19} aria-hidden="true" />
-            </Link>
-            <TestAccountControls fallbackLogin />
+            <div className="sl-header__desktop-only">
+              <Link
+                className="sl-icon-button"
+                href="/mypage"
+                aria-label="마이페이지"
+                title="마이페이지"
+              >
+                <UserRound size={19} aria-hidden="true" />
+              </Link>
+              <TestAccountControls fallbackLogin />
+            </div>
           </div>
           <AudienceToggle />
         </div>

@@ -1,7 +1,6 @@
 "use client";
 import { loginHref } from "@/domain/login-return";
 import { useRouter } from "next/navigation";
-import { flushSync } from "react-dom";
 import { useAdSenseContentGuard } from "./adsense-provider";
 import type { FeedQuery } from "@/domain/community";
 import { communityLocation } from "@/domain/community-location";
@@ -19,7 +18,6 @@ import {
   Home,
   List,
   Pencil,
-  Search,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -151,8 +149,6 @@ export function SliperCommunity({
   );
   const [choosingRecruitment, setChoosingRecruitment] = useState(false);
   const [audience] = useAudience();
-  const [searchOpen, setSearchOpen] = useState(!!initialQuery.search);
-  const searchInput = useRef<HTMLInputElement>(null);
   const wide = useMediaQuery("(min-width: 1080px)");
   useEffect(() => {
     if (!initialComposeTopic) return;
@@ -499,42 +495,17 @@ export function SliperCommunity({
               : "home"
         }
         search={
-          <>
-            <button
-              type="button"
-              className="sl-icon-button sl-search-toggle"
-              aria-label={searchOpen ? "검색 닫기" : "검색 열기"}
-              aria-expanded={searchOpen}
-              onClick={() => {
-                // Commit before focusing so mobile browsers open the keyboard within the tap.
-                flushSync(() => setSearchOpen(!searchOpen));
-                if (!searchOpen) searchInput.current?.focus();
-              }}
-            >
-              {searchOpen ? <X size={20} /> : <Search size={20} />}
-            </button>
-            <DynamicHeaderSearch
-              inputRef={searchInput}
-              open={searchOpen}
-              value={query}
-              ariaLabel="커뮤니티 검색"
-              onChange={(next) => {
-                setQuery(next);
-                if (view !== "stories") setView("home");
-              }}
-              onSubmitQuery={() => {
-                feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-              onSelectKeyword={(keyword) => {
-                setQuery(keyword);
-                if (view !== "stories") setView("home");
-                setSearchOpen(false);
-                requestAnimationFrame(() => {
-                  feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                });
-              }}
-            />
-          </>
+          <DynamicHeaderSearch
+            value={query}
+            ariaLabel="커뮤니티 검색"
+            onChange={(next) => {
+              setQuery(next);
+              if (view !== "stories") setView("home");
+            }}
+            onSubmitQuery={() => {
+              feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          />
         }
       />
 
